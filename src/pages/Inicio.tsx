@@ -1,27 +1,48 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Droplets, Users, BookOpen, Target, ChevronRight } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Droplets, Users, BookOpen, Target, ChevronRight, Play, Mail } from "lucide-react"
 import { Link } from "react-router-dom"
+import { useState } from "react"
 
 const Inicio = () => {
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-xl water-gradient p-8 text-white">
         <div className="relative z-10">
           <h1 className="text-4xl font-bold mb-4">
-            Bienvenido a Mi Cole con Agua Segura
+            ¡Te damos la bienvenida a Mi Cole con Agua Segura!
           </h1>
           <p className="text-xl opacity-90 mb-6 max-w-2xl">
             Acompañamos a docentes de secundaria en zonas andinas del Perú para desarrollar 
             sesiones pedagógicas innovadoras sobre seguridad hídrica.
           </p>
-          <Button variant="secondary" size="lg" className="gap-2">
-            <BookOpen className="w-5 h-5" />
-            Comenzar Diagnóstico
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+          <Dialog open={isVideoOpen} onOpenChange={setIsVideoOpen}>
+            <DialogTrigger asChild>
+              <Button variant="secondary" size="lg" className="gap-2">
+                <Play className="w-5 h-5" />
+                Ver video de bienvenida
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Video de Bienvenida - Mi Cole con Agua Segura</DialogTitle>
+              </DialogHeader>
+              <div className="aspect-video">
+                <iframe
+                  src="https://www.youtube.com/embed/dQw4w9WgXcQ" // Placeholder URL - cambiar cuando tengas el video real
+                  title="Video de Bienvenida"
+                  className="w-full h-full rounded-lg"
+                  allowFullScreen
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
         <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10" />
       </div>
@@ -128,6 +149,36 @@ const Inicio = () => {
                 <span className="text-xs text-muted-foreground">Guías y soporte</span>
               </Button>
             </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Program Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Sobre el Programa</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground leading-relaxed mb-6">
+            Esta app es parte del <em>Programa virtual de fortalecimiento de capacidades para la integración de estrategias pedagógicas para la seguridad hídrica con inteligencia artificial</em>, una iniciativa educativa del proyecto "Agua para Ciudades Andinas del Perú", organizado por <em>Helvetas Perú</em> y <em>Equilibria</em>, con el financiamiento de <em>EUROCLIMA+</em> y la <em>AFD</em>, y el apoyo de aliados como la <em>UGEL Abancay</em>, <em>SUNASS</em> y <em>EMUSAP Abancay</em>.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={() => window.location.href = 'mailto:luis.alban@helvetas.org?subject=Consulta sobre Mi Cole con Agua Segura'}
+            >
+              <Mail className="w-4 h-4" />
+              Contactar a Helvetas Perú
+            </Button>
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={() => window.location.href = 'mailto:luva@equilibria.lat?subject=Consulta sobre Mi Cole con Agua Segura'}
+            >
+              <Mail className="w-4 h-4" />
+              Contactar a Equilibria
+            </Button>
           </div>
         </CardContent>
       </Card>
