@@ -156,7 +156,7 @@ const Inicio = () => {
       {/* Program Information */}
       <Card>
         <CardHeader>
-          <CardTitle>Sobre el Programa</CardTitle>
+          <CardTitle>Sobre la app Mi Cole con Agua Segura</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground leading-relaxed mb-6">
@@ -182,6 +182,43 @@ const Inicio = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Partner Organizations Logos */}
+      <div className="bg-background py-8">
+        <div className="flex flex-wrap justify-center items-center gap-8 max-w-5xl mx-auto">
+          {/* Placeholder for logos - replace with actual logo images when available */}
+          <div className="text-center space-y-2">
+            <div className="w-32 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+              Agua para Ciudades Andinas
+            </div>
+          </div>
+          <div className="text-center space-y-2">
+            <div className="w-32 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+              Global Gateway
+            </div>
+          </div>
+          <div className="text-center space-y-2">
+            <div className="w-32 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+              EUROCLIMA+
+            </div>
+          </div>
+          <div className="text-center space-y-2">
+            <div className="w-32 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+              AFD
+            </div>
+          </div>
+          <div className="text-center space-y-2">
+            <div className="w-32 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+              Helvetas Perú
+            </div>
+          </div>
+          <div className="text-center space-y-2">
+            <div className="w-32 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+              Equilibria
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
