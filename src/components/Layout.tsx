@@ -2,7 +2,8 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
 import { Button } from "@/components/ui/button"
-import { Waves, User } from "lucide-react"
+import { User } from "lucide-react"
+import { WaterLogo } from "@/components/WaterLogo"
 
 interface LayoutProps {
   children: React.ReactNode
@@ -21,7 +22,7 @@ export function Layout({ children }: LayoutProps) {
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
                 <div className="flex items-center gap-2">
-                  <Waves className="w-6 h-6 text-primary" />
+                  <WaterLogo size={28} />
                   <span className="text-xl font-bold water-text-gradient">
                     Mi Cole con Agua Segura
                   </span>
