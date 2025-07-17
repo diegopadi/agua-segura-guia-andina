@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password: "AguaSegura2025", // Default password
       options: {
+        emailRedirectTo: `${window.location.origin}/`,
         data: {
           full_name: fullName,
         },

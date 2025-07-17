@@ -110,7 +110,7 @@ export function ProfileForm({ onSuccess, initialData }: ProfileFormProps) {
       const { error } = await supabase
         .from('profiles')
         .upsert({
-          id: user.id,
+          user_id: user.id,
           full_name: data.full_name,
           area_docencia: data.area_docencia,
           ie_name: data.ie_name,

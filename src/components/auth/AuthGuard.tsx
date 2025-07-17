@@ -36,7 +36,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single();
 
       const isProfileComplete = profile && 
@@ -44,7 +44,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
         profile.ie_name && 
         profile.terms_accepted_at;
 
-      setProfileExists(isProfileComplete);
+      setProfileExists(!!isProfileComplete);
 
       if (!isProfileComplete) {
         setAuthStep('profile');
