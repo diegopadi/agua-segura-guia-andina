@@ -1,8 +1,7 @@
 
 import { useState } from "react"
-import { Home, BookOpen, FileText, HelpCircle, ChevronRight, Droplets } from "lucide-react"
+import { Home, BookOpen, FileText, HelpCircle, Droplets, ChevronRight } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
-import { BookDropletLogo } from "@/components/BookDropletLogo"
 
 import {
   Sidebar,
@@ -38,7 +37,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full water-gradient flex items-center justify-center">
-            <BookDropletLogo className="text-white" size={20} />
+            <Droplets className="w-5 h-5 text-white" />
           </div>
           {state === "expanded" && (
             <div>

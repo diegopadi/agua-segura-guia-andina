@@ -2,8 +2,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
 import { Button } from "@/components/ui/button"
-import { User } from "lucide-react"
-import { BookDropletLogo } from "@/components/BookDropletLogo"
+import { Waves, User } from "lucide-react"
 
 interface LayoutProps {
   children: React.ReactNode
@@ -22,7 +21,7 @@ export function Layout({ children }: LayoutProps) {
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
                 <div className="flex items-center gap-2">
-                  <BookDropletLogo className="text-primary" size={24} />
+                  <Waves className="w-6 h-6 text-primary" />
                   <span className="text-xl font-bold water-text-gradient">
                     Mi Cole con Agua Segura
                   </span>
