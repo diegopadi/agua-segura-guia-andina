@@ -5,6 +5,7 @@ import { useToast } from "./use-toast";
 
 export interface Profile {
   id: string;
+  user_id: string;
   full_name: string | null;
   photo_url: string | null;
   area_docencia: string | null;
@@ -43,7 +44,7 @@ export function useProfile() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -68,7 +69,7 @@ export function useProfile() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .upsert({ id: user.id, ...updates });
+        .upsert({ user_id: user.id, ...updates });
 
       if (error) throw error;
 
