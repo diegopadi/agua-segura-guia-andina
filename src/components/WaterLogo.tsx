@@ -8,5 +8,12 @@ export function WaterLogo({
 }: WaterLogoProps) {
   const fontSize = size / 24; // Escala basada en el tamaño por defecto
 
-  return;
+  return (
+    <span 
+      className={`font-bold text-primary ${className}`}
+      style={{ fontSize: `${fontSize}rem` }}
+    >
+      Mi Cole
+    </span>
+  );
 }
