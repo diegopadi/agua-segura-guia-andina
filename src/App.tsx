@@ -9,6 +9,9 @@ import { AuthGuard } from "./components/auth/AuthGuard";
 import { Layout } from "./components/Layout";
 import Inicio from "./pages/Inicio";
 import Etapa1 from "./pages/Etapa1";
+import Acelerador1 from "./pages/etapa1/Acelerador1";
+import Acelerador2 from "./pages/etapa1/Acelerador2";
+import Acelerador3 from "./pages/etapa1/Acelerador3";
 import Etapa2 from "./pages/Etapa2";
 import Etapa3 from "./pages/Etapa3";
 import Documentos from "./pages/Documentos";
@@ -29,6 +32,9 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Inicio />} />
                 <Route path="/etapa1" element={<Etapa1 />} />
+                <Route path="/etapa1/acelerador1" element={<Acelerador1 />} />
+                <Route path="/etapa1/acelerador2" element={<Acelerador2 />} />
+                <Route path="/etapa1/acelerador3" element={<Acelerador3 />} />
                 <Route path="/etapa2" element={<Etapa2 />} />
                 <Route path="/etapa3" element={<Etapa3 />} />
                 <Route path="/documentos" element={<Documentos />} />

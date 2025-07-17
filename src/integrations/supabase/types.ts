@@ -14,6 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
+      acelerador_sessions: {
+        Row: {
+          acelerador_number: number
+          created_at: string
+          current_step: number
+          id: string
+          session_data: Json | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acelerador_number: number
+          created_at?: string
+          current_step?: number
+          id?: string
+          session_data?: Json | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acelerador_number?: number
+          created_at?: string
+          current_step?: number
+          id?: string
+          session_data?: Json | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      diagnostic_reports: {
+        Row: {
+          created_at: string
+          document_number: number
+          file_url: string | null
+          id: string
+          metadata: Json | null
+          session_id: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_number: number
+          file_url?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document_number?: number
+          file_url?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_reports_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "acelerador_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       files: {
         Row: {
           created_at: string
@@ -40,6 +117,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      form_responses: {
+        Row: {
+          created_at: string
+          id: string
+          question_number: number
+          response_data: Json | null
+          response_text: string | null
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          question_number: number
+          response_data?: Json | null
+          response_text?: string | null
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          question_number?: number
+          response_data?: Json | null
+          response_text?: string | null
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_responses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "acelerador_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -95,6 +210,30 @@ export type Database = {
           terms_accepted_at?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
