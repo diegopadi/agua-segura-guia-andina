@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { useProfile } from "@/hooks/useProfile"
+import { useNavigate } from "react-router-dom"
 import { ReportViewer } from "./ReportViewer"
 
 interface ReportGeneratorProps {
@@ -31,6 +32,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
   const { user } = useAuth()
   const { profile, updateProfile } = useProfile()
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [report, setReport] = useState<ReportStatus | null>(null)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -182,8 +184,21 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
           current_step: 6 
         })
         .eq('id', session.id)
+      
+      toast({
+        title: "¡Acelerador completado!",
+        description: "Has finalizado exitosamente el diagnóstico institucional"
+      })
+      
+      // Navigate back to Etapa 1
+      navigate('/etapa1')
     } catch (error) {
       console.error('Error marking session complete:', error)
+      toast({
+        title: "Error",
+        description: "No se pudo completar la sesión. Intenta nuevamente.",
+        variant: "destructive"
+      })
     }
   }
 

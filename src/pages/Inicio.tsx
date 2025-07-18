@@ -2,12 +2,19 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Droplets, Users, BookOpen, Target, ChevronRight, Play, Mail } from "lucide-react"
+import { Droplets, Users, BookOpen, Target, ChevronRight, Play, Mail, Loader2 } from "lucide-react"
 import { Link } from "react-router-dom"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAcceleratorProgress } from "@/hooks/useAcceleratorProgress"
 
 const Inicio = () => {
-  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const [isVideoOpen, setIsVideoOpen] = useState(false)
+  const { progress, loading, refreshProgress } = useAcceleratorProgress()
+
+  // Refresh progress when component mounts (user might be coming back from an accelerator)
+  useEffect(() => {
+    refreshProgress()
+  }, [])
 
   return (
     <div className="space-y-8">
@@ -63,9 +70,21 @@ const Inicio = () => {
               Evalúa el contexto hídrico de tu institución educativa
             </CardDescription>
             <div className="mt-4">
-              <div className="text-sm text-muted-foreground mb-2">Progreso: 0%</div>
+              <div className="text-sm text-muted-foreground mb-2">
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Cargando...
+                  </div>
+                ) : (
+                  `Progreso: ${progress.accelerator1}%`
+                )}
+              </div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full w-0"></div>
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-500 ease-out" 
+                  style={{ width: `${progress.accelerator1}%` }}
+                ></div>
               </div>
             </div>
           </CardContent>
@@ -85,9 +104,21 @@ const Inicio = () => {
               Crea sesiones adaptadas a tu realidad local
             </CardDescription>
             <div className="mt-4">
-              <div className="text-sm text-muted-foreground mb-2">Progreso: 0%</div>
+              <div className="text-sm text-muted-foreground mb-2">
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Cargando...
+                  </div>
+                ) : (
+                  `Progreso: ${progress.accelerator2}%`
+                )}
+              </div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-secondary h-2 rounded-full w-0"></div>
+                <div 
+                  className="bg-secondary h-2 rounded-full transition-all duration-500 ease-out" 
+                  style={{ width: `${progress.accelerator2}%` }}
+                ></div>
               </div>
             </div>
           </CardContent>
@@ -107,9 +138,21 @@ const Inicio = () => {
               Ejecuta y evalúa las sesiones con tus estudiantes
             </CardDescription>
             <div className="mt-4">
-              <div className="text-sm text-muted-foreground mb-2">Progreso: 0%</div>
+              <div className="text-sm text-muted-foreground mb-2">
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Cargando...
+                  </div>
+                ) : (
+                  `Progreso: ${progress.accelerator3}%`
+                )}
+              </div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-accent h-2 rounded-full w-0"></div>
+                <div 
+                  className="bg-accent h-2 rounded-full transition-all duration-500 ease-out" 
+                  style={{ width: `${progress.accelerator3}%` }}
+                ></div>
               </div>
             </div>
           </CardContent>
