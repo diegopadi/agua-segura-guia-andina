@@ -55,7 +55,7 @@ serve(async (req) => {
     const { data: template, error: templateError } = await supabase
       .from('templates')
       .select('content')
-      .eq('name', 'Plantilla 2')
+      .eq('name', 'plantilla2')
       .single();
 
     if (templateError) {
@@ -117,14 +117,19 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
 
     console.log('Generating comprehensive report...');
     
+    // Add timeout wrapper
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           { 
             role: 'system', 
@@ -137,6 +142,8 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
       }),
     });
 
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
       const errorData = await response.text();
       console.error('OpenAI API error:', errorData);
@@ -213,6 +220,20 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
 
   } catch (error) {
     console.error('Error in generate-report function:', error);
+    
+    // Update any stuck report to error status
+    if (sessionId) {
+      try {
+        await supabase
+          .from('diagnostic_reports')
+          .update({ status: 'error' })
+          .eq('session_id', sessionId)
+          .eq('status', 'generating');
+      } catch (updateError) {
+        console.error('Failed to update report status:', updateError);
+      }
+    }
+    
     return new Response(
       JSON.stringify({ 
         error: error.message,

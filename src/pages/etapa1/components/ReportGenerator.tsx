@@ -224,15 +224,26 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
 
             {report.status === 'generating' && (
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-3">
-                  <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                  <div>
-                    <p className="font-medium text-blue-900">Generando documento...</p>
-                    <p className="text-sm text-blue-700">
-                      La IA está procesando toda tu información y creando el reporte PDF. 
-                      Esto puede tomar 1-2 minutos.
-                    </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                    <div>
+                      <p className="font-medium text-blue-900">Generando documento...</p>
+                      <p className="text-sm text-blue-700">
+                        La IA está procesando toda tu información y creando el reporte PDF. 
+                        Esto puede tomar 1-2 minutos.
+                      </p>
+                    </div>
                   </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={checkExistingReport}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Verificar estado
+                  </Button>
                 </div>
               </div>
             )}
@@ -259,14 +270,24 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
 
             {report.status === 'error' && (
               <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
-                  <div>
-                    <p className="font-medium text-red-900">Error al generar el reporte</p>
-                    <p className="text-sm text-red-700">
-                      Hubo un problema durante la generación. Intenta nuevamente.
-                    </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    <div>
+                      <p className="font-medium text-red-900">Error al generar el reporte</p>
+                      <p className="text-sm text-red-700">
+                        Hubo un problema durante la generación. Intenta nuevamente.
+                      </p>
+                    </div>
                   </div>
+                  <Button 
+                    onClick={generateReport} 
+                    disabled={generating}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Reintentar
+                  </Button>
                 </div>
               </div>
             )}
