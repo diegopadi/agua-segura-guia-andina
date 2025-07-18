@@ -2,11 +2,12 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Download, FileText, CheckCircle, AlertTriangle, RefreshCw, ExternalLink } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { FileText, CheckCircle, AlertTriangle, RefreshCw, ExternalLink, Eye } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { useProfile } from "@/hooks/useProfile"
+import { ReportViewer } from "./ReportViewer"
 
 interface ReportGeneratorProps {
   session: any
@@ -16,9 +17,14 @@ interface ReportGeneratorProps {
 interface ReportStatus {
   id: string
   status: 'pending' | 'generating' | 'completed' | 'error'
-  file_url?: string
   document_number: number
   created_at: string
+  metadata: {
+    report_content?: string
+    html_content?: string
+    institution_name?: string
+    completeness_score?: number
+  }
 }
 
 const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
@@ -28,6 +34,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
   const [report, setReport] = useState<ReportStatus | null>(null)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showViewer, setShowViewer] = useState(false)
 
   useEffect(() => {
     checkExistingReport()
@@ -46,6 +53,10 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
 
       if (data && data.length > 0) {
         setReport(data[0] as ReportStatus)
+        // If report is completed, show viewer automatically
+        if (data[0].status === 'completed') {
+          setShowViewer(true)
+        }
       }
     } catch (error) {
       console.error('Error checking existing report:', error)
@@ -55,6 +66,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
   const generateReport = async () => {
     setGenerating(true)
     setError(null)
+    setShowViewer(false)
 
     try {
       // Get next document number
@@ -99,7 +111,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
 
       toast({
         title: "¡Reporte generado!",
-        description: "Tu diagnóstico institucional está listo para descargar"
+        description: "Tu diagnóstico institucional está listo para visualizar"
       })
 
     } catch (error) {
@@ -127,6 +139,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
 
     setGenerating(true)
     setError(null)
+    setShowViewer(false)
 
     try {
       // Delete existing report
@@ -157,64 +170,6 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
         variant: "destructive"
       })
       setGenerating(false)
-    }
-  }
-
-  const downloadReport = async () => {
-    if (!report?.file_url) return
-
-    try {
-      // Show loading state
-      toast({
-        title: "Preparando descarga",
-        description: "Descargando el archivo Word (.docx)..."
-      })
-
-      // Fetch the HTML content
-      const response = await fetch(report.file_url)
-      if (!response.ok) throw new Error('Error al acceder al archivo')
-      
-      const htmlContent = await response.text()
-      
-      // Create blob with proper encoding for DOCX
-      const blob = new Blob([htmlContent], { 
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
-      })
-      
-      // Create download link
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      
-      // Generate descriptive filename
-      const institutionName = profile?.ie_name || 'Institucion'
-      const sanitizedName = institutionName.replace(/[^a-zA-Z0-9]/g, '_')
-      const date = new Date().toISOString().split('T')[0]
-      const filename = `Diagnostico_${sanitizedName}_${date}.docx`
-      
-      link.href = url
-      link.download = filename
-      link.style.display = 'none'
-      
-      // Trigger download
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      // Clean up
-      URL.revokeObjectURL(url)
-      
-      toast({
-        title: "Descarga completada",
-        description: "El reporte Word (.docx) se ha descargado correctamente"
-      })
-      
-    } catch (error) {
-      console.error('Download error:', error)
-      toast({
-        title: "Error de descarga",
-        description: "No se pudo descargar el archivo. Intenta nuevamente.",
-        variant: "destructive"
-      })
     }
   }
 
@@ -250,6 +205,18 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
     }
   }
 
+  // If showing viewer, render it
+  if (showViewer && report?.status === 'completed' && report.metadata.html_content) {
+    return (
+      <ReportViewer
+        htmlContent={report.metadata.html_content}
+        markdownContent={report.metadata.report_content || ''}
+        reportData={report}
+        onRedoAnalysis={redoAnalysis}
+      />
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -258,7 +225,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
           Paso 6: Generar Reporte de Diagnóstico
         </CardTitle>
         <CardDescription>
-          Crea tu reporte Word profesional con el análisis completo del diagnóstico institucional
+          Crea tu reporte profesional con el análisis completo del diagnóstico institucional
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -325,9 +292,9 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
                   <div className="flex items-center gap-3">
                     <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
                     <div>
-                      <p className="font-medium text-blue-900">Generando documento...</p>
+                      <p className="font-medium text-blue-900">Generando reporte...</p>
                       <p className="text-sm text-blue-700">
-                       La IA está procesando toda tu información y creando el reporte HTML. 
+                        La IA está procesando toda tu información y creando el reporte. 
                         Esto puede tomar 1-2 minutos.
                       </p>
                     </div>
@@ -367,9 +334,12 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
                       <RefreshCw className="w-4 h-4" />
                       Rehacer Análisis
                     </Button>
-                    <Button onClick={downloadReport} className="gap-2">
-                      <Download className="w-4 h-4" />
-                      Descargar Word (.docx)
+                    <Button 
+                      onClick={() => setShowViewer(true)} 
+                      className="gap-2"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Ver Reporte
                     </Button>
                   </div>
                 </div>
@@ -446,10 +416,24 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600" />
-                Anexos con evidencias
+                Visor interno con opciones de copia e impresión
               </li>
             </ul>
           </div>
+        </div>
+
+        {/* New features callout */}
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border">
+          <h4 className="font-medium text-purple-900 mb-2">📋 Nuevo: Visor de Reporte Integrado</h4>
+          <p className="text-sm text-purple-800 mb-3">
+            Ahora puedes ver tu reporte directamente en la aplicación con opciones para:
+          </p>
+          <ul className="text-sm text-purple-700 space-y-1">
+            <li>• <strong>Copiar contenido completo</strong> para pegar en Word u otros editores</li>
+            <li>• <strong>Imprimir o guardar como PDF</strong> directamente desde el navegador</li>
+            <li>• <strong>Seleccionar secciones específicas</strong> para copiar partes del reporte</li>
+            <li>• <strong>Vista optimizada</strong> con tablas y formato profesional</li>
+          </ul>
         </div>
 
         {/* Actions */}
@@ -484,12 +468,11 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
                   Rehacer Análisis
                 </Button>
                 <Button 
-                  variant="outline" 
-                  onClick={downloadReport} 
+                  onClick={() => setShowViewer(true)} 
                   className="gap-2"
                 >
-                  <Download className="w-4 h-4" />
-                  Descargar Word (.docx)
+                  <Eye className="w-4 h-4" />
+                  Ver Reporte
                 </Button>
                 <Button onClick={markSessionComplete} className="gap-2">
                   <CheckCircle className="w-4 h-4" />
@@ -502,9 +485,9 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
 
         {/* Next steps */}
         {report?.status === 'completed' && (
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border">
-            <h4 className="font-medium text-purple-900 mb-2">Próximos pasos</h4>
-            <p className="text-sm text-purple-800 mb-3">
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border">
+            <h4 className="font-medium text-green-900 mb-2">Próximos pasos</h4>
+            <p className="text-sm text-green-800 mb-3">
               ¡Felicitaciones! Has completado el Acelerador 1. Ahora puedes:
             </p>
             <div className="flex flex-wrap gap-2">

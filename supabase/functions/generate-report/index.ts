@@ -1,124 +1,99 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-import { Document, Paragraph, TextRun, HeadingLevel, Table, TableCell, TableRow, WidthType, AlignmentType, Packer } from "https://esm.sh/docx@7.8.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
-// Helper function to parse markdown content  
-function parseMarkdownToSections(content: string) {
-  const sections: any[] = [];
+// Function to convert markdown content to clean HTML
+function markdownToHtml(content: string): string {
+  let html = content;
+
+  // Handle tables first
   const lines = content.split('\n');
-  
+  let processedLines: string[] = [];
+  let inTable = false;
+  let tableHtml = '';
+
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+    const line = lines[i];
     
-    // Skip empty lines
-    if (!line) continue;
-    
-    // Headers
-    if (line.startsWith('###')) {
-      sections.push(new Paragraph({
-        text: line.replace('###', '').trim(),
-        heading: HeadingLevel.HEADING_3,
-        spacing: { before: 300, after: 200 }
-      }));
-    } else if (line.startsWith('##')) {
-      sections.push(new Paragraph({
-        text: line.replace('##', '').trim(),
-        heading: HeadingLevel.HEADING_2,
-        spacing: { before: 400, after: 200 }
-      }));
-    } else if (line.startsWith('#')) {
-      sections.push(new Paragraph({
-        text: line.replace('#', '').trim(),
-        heading: HeadingLevel.HEADING_1,
-        spacing: { before: 400, after: 200 }
-      }));
-    }
-    // Tables (simple markdown table detection)
-    else if (line.includes('|') && line.split('|').length > 2) {
-      const tableLines = [line];
-      let j = i + 1;
-      
-      // Collect all table lines
-      while (j < lines.length && lines[j].includes('|')) {
-        tableLines.push(lines[j]);
-        j++;
-      }
-      
-      // Skip separator line if present
-      if (tableLines[1] && tableLines[1].includes('---')) {
-        tableLines.splice(1, 1);
-      }
-      
-      // Create table
-      const tableRows = tableLines.map(tableLine => {
-        const cells = tableLine.split('|').filter(cell => cell.trim()).map(cell => cell.trim());
-        return new TableRow({
-          children: cells.map(cellText => 
-            new TableCell({
-              children: [new Paragraph({ text: cellText })],
-              width: { size: 100 / cells.length, type: WidthType.PERCENTAGE }
-            })
-          )
-        });
-      });
-      
-      sections.push(new Table({
-        rows: tableRows,
-        width: { size: 100, type: WidthType.PERCENTAGE }
-      }));
-      
-      i = j - 1; // Skip processed lines
-    }
-    // Regular paragraphs
-    else {
-      // Handle bold text
-      const children: TextRun[] = [];
-      const boldRegex = /\*\*(.*?)\*\*/g;
-      let lastIndex = 0;
-      let match;
-      
-      while ((match = boldRegex.exec(line)) !== null) {
-        // Add text before bold
-        if (match.index > lastIndex) {
-          children.push(new TextRun({
-            text: line.substring(lastIndex, match.index)
-          }));
+    if (line.includes('|') && !line.includes('---')) {
+      if (!inTable) {
+        inTable = true;
+        tableHtml = '<table style="border-collapse: collapse; width: 100%; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">';
+        
+        // Check if next line is separator to determine if this is header
+        const isHeader = i + 1 < lines.length && lines[i + 1].includes('---');
+        const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
+        
+        if (isHeader) {
+          tableHtml += '<thead><tr>';
+          cells.forEach(cell => {
+            tableHtml += `<th style="border: 1px solid #e5e7eb; padding: 12px; background-color: #f9fafb; font-weight: bold; color: #374151;">${cell}</th>`;
+          });
+          tableHtml += '</tr></thead><tbody>';
+        } else {
+          if (!tableHtml.includes('<tbody>')) {
+            tableHtml += '<tbody>';
+          }
+          tableHtml += '<tr>';
+          cells.forEach(cell => {
+            tableHtml += `<td style="border: 1px solid #e5e7eb; padding: 12px; color: #6b7280;">${cell}</td>`;
+          });
+          tableHtml += '</tr>';
         }
-        
-        // Add bold text
-        children.push(new TextRun({
-          text: match[1],
-          bold: true
-        }));
-        
-        lastIndex = match.index + match[0].length;
+      } else {
+        const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
+        tableHtml += '<tr>';
+        cells.forEach(cell => {
+          tableHtml += `<td style="border: 1px solid #e5e7eb; padding: 12px; color: #6b7280;">${cell}</td>`;
+        });
+        tableHtml += '</tr>';
       }
-      
-      // Add remaining text
-      if (lastIndex < line.length) {
-        children.push(new TextRun({
-          text: line.substring(lastIndex)
-        }));
+    } else if (line.includes('---') && inTable) {
+      // Skip separator line
+      continue;
+    } else {
+      if (inTable) {
+        tableHtml += '</tbody></table>';
+        processedLines.push(tableHtml);
+        tableHtml = '';
+        inTable = false;
       }
-      
-      if (children.length === 0) {
-        children.push(new TextRun({ text: line }));
-      }
-      
-      sections.push(new Paragraph({
-        children,
-        spacing: { after: 200 }
-      }));
+      processedLines.push(line);
     }
   }
+
+  if (inTable) {
+    tableHtml += '</tbody></table>';
+    processedLines.push(tableHtml);
+  }
+
+  // Re-process the content with tables
+  let finalHtml = processedLines.join('\n');
   
-  return sections;
+  // Apply markdown transformations
+  finalHtml = finalHtml
+    // Headers
+    .replace(/^### (.*$)/gim, '<h3 style="color: #1e40af; margin-top: 30px; margin-bottom: 15px; font-size: 1.25rem; font-weight: 600; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 style="color: #1e3a8a; margin-top: 35px; margin-bottom: 20px; font-size: 1.5rem; font-weight: 700; border-bottom: 3px solid #3b82f6; padding-bottom: 10px;">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 style="color: #1e40af; margin-top: 40px; margin-bottom: 25px; font-size: 2rem; font-weight: 800; text-align: center; border-bottom: 4px solid #2563eb; padding-bottom: 15px;">$1</h1>')
+    // Bold text
+    .replace(/\*\*(.*?)\*\*/gim, '<strong style="color: #374151; font-weight: 600;">$1</strong>')
+    // Lists
+    .replace(/^\* (.*$)/gim, '<li style="margin-bottom: 8px; color: #4b5563;">$1</li>')
+    .replace(/^- (.*$)/gim, '<li style="margin-bottom: 8px; color: #4b5563;">$1</li>')
+    // Line breaks
+    .replace(/\n\n/gim, '</p><p style="margin-bottom: 15px; line-height: 1.7; color: #374151;">')
+    .replace(/\n/gim, '<br>');
+
+  // Wrap in styled container
+  return `<div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; line-height: 1.7; color: #374151; max-width: 900px; margin: 0 auto; padding: 30px; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+    <p style="margin-bottom: 15px; line-height: 1.7; color: #374151;">${finalHtml}</p>
+  </div>`;
 }
 
 serve(async (req) => {
@@ -218,7 +193,7 @@ INSTRUCCIONES:
 6. Mantén un tono profesional y educativo
 7. El reporte debe ser apto para presentar a directivos y autoridades educativas
 
-FORMATO: Genera un documento estructurado en formato markdown que pueda ser convertido a PDF/DOCX.
+FORMATO: Genera un documento estructurado en formato markdown que incluya tablas para datos comparativos.
 
 Incluye:
 - Portada con datos de la institución
@@ -251,7 +226,7 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
         messages: [
           { 
             role: 'system', 
-            content: 'Eres un consultor experto en educación y gestión institucional especializado en seguridad hídrica y sostenibilidad. Generas reportes profesionales de diagnóstico institucional.' 
+            content: 'Eres un consultor experto en educación y gestión institucional especializado en seguridad hídrica y sostenibilidad. Generas reportes profesionales de diagnóstico institucional en formato markdown con tablas bien estructuradas.' 
           },
           { role: 'user', content: reportPrompt }
         ],
@@ -273,142 +248,8 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
     
     console.log('Report generated successfully');
 
-    // Generate DOCX document
-    console.log('Generating DOCX document...');
-    
-    // Parse markdown content to sections
-    const sections = parseMarkdownToSections(reportContent);
-    
-    // Create DOCX document
-    const doc = new Document({
-      styles: {
-        paragraphStyles: [
-          {
-            id: "title",
-            name: "Title",
-            basedOn: "Normal",
-            next: "Normal",
-            paragraph: {
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 400 }
-            },
-            run: {
-              size: 32,
-              bold: true,
-              color: "0066CC"
-            }
-          },
-          {
-            id: "subtitle",
-            name: "Subtitle", 
-            basedOn: "Normal",
-            next: "Normal",
-            paragraph: {
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 200 }
-            },
-            run: {
-              size: 24,
-              bold: true,
-              color: "333333"
-            }
-          }
-        ]
-      },
-      sections: [{
-        properties: {},
-        children: [
-          // Title
-          new Paragraph({
-            text: "REPORTE DE DIAGNÓSTICO INSTITUCIONAL",
-            style: "title"
-          }),
-          
-          // Institution info
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: "Institución: ",
-                bold: true,
-                color: "0066CC"
-              }),
-              new TextRun({
-                text: profile?.ie_name || 'No especificado'
-              })
-            ],
-            spacing: { after: 100 }
-          }),
-          
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: "Región: ",
-                bold: true,
-                color: "0066CC"
-              }),
-              new TextRun({
-                text: profile?.ie_region || 'No especificado'
-              })
-            ],
-            spacing: { after: 100 }
-          }),
-          
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: "Provincia: ",
-                bold: true,
-                color: "0066CC"
-              }),
-              new TextRun({
-                text: profile?.ie_province || 'No especificado'
-              })
-            ],
-            spacing: { after: 100 }
-          }),
-          
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: "Distrito: ",
-                bold: true,
-                color: "0066CC"
-              }),
-              new TextRun({
-                text: profile?.ie_district || 'No especificado'
-              })
-            ],
-            spacing: { after: 100 }
-          }),
-          
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: "Fecha de generación: ",
-                bold: true,
-                color: "0066CC"
-              }),
-              new TextRun({
-                text: new Date().toLocaleDateString('es-ES', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })
-              })
-            ],
-            spacing: { after: 400 }
-          }),
-          
-          // Content sections
-          ...sections
-        ]
-      }]
-    });
-
-    // Generate DOCX buffer
-    const docxBuffer = await Packer.toBuffer(doc);
-    
-    console.log('DOCX document generated, uploading to storage...');
+    // Convert markdown to HTML
+    const htmlContent = markdownToHtml(reportContent);
 
     // Get next document number for this user
     const { data: lastReport } = await supabase
@@ -421,28 +262,9 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
 
     const nextDocNumber = (lastReport?.document_number || 0) + 1;
 
-    // Upload DOCX file to storage
-    const fileName = `reporte-diagnostico-${userId}-${nextDocNumber}-${Date.now()}.docx`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('user_uploads')
-      .upload(fileName, docxBuffer, {
-        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        upsert: false
-      });
+    console.log('Saving report to database...');
 
-    if (uploadError) {
-      console.error('Failed to upload DOCX file:', uploadError);
-      throw new Error('Failed to upload DOCX file');
-    }
-
-    // Get public URL for the uploaded file
-    const { data: urlData } = supabase.storage
-      .from('user_uploads')
-      .getPublicUrl(fileName);
-
-    console.log('DOCX file uploaded successfully, saving report...');
-
-    // Save the report with file URL
+    // Save the report with HTML content
     const { data: savedReport, error: saveError } = await supabase
       .from('diagnostic_reports')
       .insert({
@@ -450,14 +272,12 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
         session_id: sessionId,
         document_number: nextDocNumber,
         status: 'completed',
-        file_url: urlData.publicUrl,
         metadata: {
           report_content: reportContent,
+          html_content: htmlContent,
           generated_at: new Date().toISOString(),
           institution_name: profile?.ie_name,
           completeness_score: session.session_data?.completeness_score,
-          file_name: fileName,
-          file_size: docxBuffer.byteLength
         }
       })
       .select()
@@ -489,8 +309,8 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
         report_id: savedReport.id,
         document_number: nextDocNumber,
         content: reportContent,
-        file_url: urlData.publicUrl,
-        download_available: true
+        html_content: htmlContent,
+        viewer_available: true
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
