@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, TableRow, Table, TableCell, WidthType } from 'https://esm.sh/docx@8.5.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -155,94 +156,126 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
     
     console.log('Report generated successfully');
 
-    // Create HTML content for PDF generation
-    console.log('Generating HTML file for download...');
+    // Create Word document
+    console.log('Generating Word document...');
     
-    const htmlContent = `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte de Diagnóstico Institucional</title>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            line-height: 1.6; 
-            margin: 40px; 
-            color: #333; 
+    // Parse report content to extract sections
+    const sections = reportContent.split(/#{1,3}\s/);
+    const paragraphs = [];
+
+    // Title page
+    paragraphs.push(
+      new Paragraph({
+        text: "REPORTE DE DIAGNÓSTICO INSTITUCIONAL",
+        heading: HeadingLevel.TITLE,
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: "Institución: ", bold: true }),
+          new TextRun(profile?.ie_name || 'No especificado')
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: "Región: ", bold: true }),
+          new TextRun(profile?.ie_region || 'No especificado')
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: "Provincia: ", bold: true }),
+          new TextRun(profile?.ie_province || 'No especificado')
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: "Distrito: ", bold: true }),
+          new TextRun(profile?.ie_district || 'No especificado')
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: "Fecha de generación: ", bold: true }),
+          new TextRun(new Date().toLocaleDateString('es-ES', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }))
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 }
+      })
+    );
+
+    // Process content sections
+    const contentLines = reportContent.split('\n');
+    for (const line of contentLines) {
+      if (line.trim()) {
+        if (line.startsWith('###')) {
+          paragraphs.push(new Paragraph({
+            text: line.replace('###', '').trim(),
+            heading: HeadingLevel.HEADING_3,
+            spacing: { before: 300, after: 200 }
+          }));
+        } else if (line.startsWith('##')) {
+          paragraphs.push(new Paragraph({
+            text: line.replace('##', '').trim(),
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 400, after: 200 }
+          }));
+        } else if (line.startsWith('#')) {
+          paragraphs.push(new Paragraph({
+            text: line.replace('#', '').trim(),
+            heading: HeadingLevel.HEADING_1,
+            spacing: { before: 400, after: 200 }
+          }));
+        } else if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
+          paragraphs.push(new Paragraph({
+            text: line.replace(/^[-•]\s*/, ''),
+            bullet: { level: 0 },
+            spacing: { after: 100 }
+          }));
+        } else {
+          paragraphs.push(new Paragraph({
+            text: line.trim(),
+            spacing: { after: 200 }
+          }));
         }
-        h1 { 
-            color: #2c3e50; 
-            border-bottom: 3px solid #3498db; 
-            padding-bottom: 10px; 
-        }
-        h2 { 
-            color: #34495e; 
-            margin-top: 30px; 
-        }
-        h3 { 
-            color: #7f8c8d; 
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 2px solid #ecf0f1;
-            padding-bottom: 20px;
-        }
-        .metadata {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 5px;
-            margin-bottom: 30px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        @media print {
-            body { margin: 20px; }
-            .header { page-break-after: avoid; }
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>REPORTE DE DIAGNÓSTICO INSTITUCIONAL</h1>
-        <div class="metadata">
-            <strong>Institución:</strong> ${profile?.ie_name || 'No especificado'}<br>
-            <strong>Región:</strong> ${profile?.ie_region || 'No especificado'}<br>
-            <strong>Provincia:</strong> ${profile?.ie_province || 'No especificado'}<br>
-            <strong>Distrito:</strong> ${profile?.ie_district || 'No especificado'}<br>
-            <strong>Fecha de generación:</strong> ${new Date().toLocaleDateString('es-ES', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-        </div>
-    </div>
+      }
+    }
+
+    // Footer
+    paragraphs.push(
+      new Paragraph({ text: "", spacing: { before: 600 } }),
+      new Paragraph({
+        text: "Documento generado automáticamente por el Sistema de Diagnóstico Institucional",
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 400 }
+      })
+    );
+
+    // Create document
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: paragraphs
+      }]
+    });
+
+    // Generate Word file buffer
+    const wordBuffer = await Packer.toBuffer(doc);
     
-    ${reportContent.replace(/\n/g, '<br>').replace(/#{4,}/g, '<hr>').replace(/#{3}\s/g, '<h3>').replace(/#{2}\s/g, '<h2>').replace(/#{1}\s/g, '<h1>')}
-    
-    <div style="margin-top: 50px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 20px;">
-        <small>Documento generado automáticamente por el Sistema de Diagnóstico Institucional</small>
-    </div>
-</body>
-</html>`;
-    
-    // Convert HTML to Uint8Array for upload
-    const htmlBuffer = new TextEncoder().encode(htmlContent);
-    
-    console.log('HTML file generated, uploading to storage...');
+    console.log('Word document generated, uploading to storage...');
 
     // Get next document number for this user
     const { data: lastReport } = await supabase
@@ -255,18 +288,18 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
 
     const nextDocNumber = (lastReport?.document_number || 0) + 1;
 
-    // Upload HTML file to storage
-    const fileName = `reporte-diagnostico-${userId}-${nextDocNumber}-${Date.now()}.html`;
+    // Upload Word file to storage
+    const fileName = `reporte-diagnostico-${userId}-${nextDocNumber}-${Date.now()}.docx`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('user_uploads')
-      .upload(fileName, htmlBuffer, {
-        contentType: 'text/html',
+      .upload(fileName, wordBuffer, {
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         upsert: false
       });
 
     if (uploadError) {
-      console.error('Failed to upload HTML file:', uploadError);
-      throw new Error('Failed to upload HTML file');
+      console.error('Failed to upload Word file:', uploadError);
+      throw new Error('Failed to upload Word file');
     }
 
     // Get public URL for the uploaded file
@@ -274,7 +307,7 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
       .from('user_uploads')
       .getPublicUrl(fileName);
 
-    console.log('HTML file uploaded successfully, saving report...');
+    console.log('Word file uploaded successfully, saving report...');
 
     // Save the report with file URL
     const { data: savedReport, error: saveError } = await supabase
@@ -291,7 +324,7 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
           institution_name: profile?.ie_name,
           completeness_score: session.session_data?.completeness_score,
           file_name: fileName,
-          file_size: htmlBuffer.byteLength
+          file_size: wordBuffer.byteLength
         }
       })
       .select()

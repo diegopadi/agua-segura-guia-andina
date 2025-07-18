@@ -161,7 +161,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
           Paso 6: Generar Reporte de Diagnóstico
         </CardTitle>
         <CardDescription>
-          Crea tu documento PDF profesional con el análisis completo del diagnóstico institucional
+          Crea tu documento Word profesional con el análisis completo del diagnóstico institucional
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -230,7 +230,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
                     <div>
                       <p className="font-medium text-blue-900">Generando documento...</p>
                       <p className="text-sm text-blue-700">
-                        La IA está procesando toda tu información y creando el reporte PDF. 
+                        La IA está procesando toda tu información y creando el reporte Word. 
                         Esto puede tomar 1-2 minutos.
                       </p>
                     </div>
@@ -262,7 +262,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
                   </div>
                   <Button onClick={downloadReport} className="gap-2">
                     <Download className="w-4 h-4" />
-                    Descargar PDF
+                    Descargar Word
                   </Button>
                 </div>
               </div>
@@ -366,14 +366,14 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
               </Button>
             ) : report.status === 'completed' ? (
               <>
-                <Button 
-                  variant="outline" 
-                  onClick={downloadReport} 
-                  className="gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Descargar nuevamente
-                </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={downloadReport} 
+                    className="gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Descargar Word
+                  </Button>
                 <Button onClick={markSessionComplete} className="gap-2">
                   <CheckCircle className="w-4 h-4" />
                   Finalizar acelerador
