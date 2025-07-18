@@ -30,10 +30,16 @@ const PEIUploader = ({ session, onNext, onPrev }: PEIUploaderProps) => {
     if (!file) return
 
     // Validate file type
-    if (file.type !== 'application/pdf') {
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/msword' // .doc
+    ]
+    
+    if (!allowedTypes.includes(file.type)) {
       toast({
         title: "Error",
-        description: "Solo se permiten archivos PDF",
+        description: "Solo se permiten archivos PDF, Word (.doc, .docx)",
         variant: "destructive"
       })
       return
@@ -54,7 +60,7 @@ const PEIUploader = ({ session, onNext, onPrev }: PEIUploaderProps) => {
 
     try {
       // Create unique filename
-      const fileExt = 'pdf'
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'pdf'
       const fileName = `${user?.id}/pei_${Date.now()}.${fileExt}`
 
       // Upload to Supabase Storage
@@ -151,10 +157,10 @@ const PEIUploader = ({ session, onNext, onPrev }: PEIUploaderProps) => {
               <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Subir archivo PEI</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Haz clic aquí o arrastra tu archivo PDF del PEI
+                Haz clic aquí o arrastra tu archivo del PEI
               </p>
               <p className="text-xs text-muted-foreground">
-                Solo archivos PDF, máximo 10MB
+                Archivos PDF, Word (.doc, .docx), máximo 10MB
               </p>
             </div>
           ) : (
@@ -196,7 +202,7 @@ const PEIUploader = ({ session, onNext, onPrev }: PEIUploaderProps) => {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf"
+            accept=".pdf,.doc,.docx"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -212,7 +218,7 @@ const PEIUploader = ({ session, onNext, onPrev }: PEIUploaderProps) => {
                 <li>• El PEI será analizado automáticamente con IA para identificar oportunidades de integración</li>
                 <li>• La información extraída se usará para personalizar las siguientes preguntas</li>
                 <li>• Tus datos están protegidos y solo tú tienes acceso a este análisis</li>
-                <li>• El archivo debe estar en formato PDF y no superar los 10MB</li>
+                <li>• El archivo debe estar en formato PDF o Word (.doc, .docx) y no superar los 10MB</li>
               </ul>
             </div>
           </div>
