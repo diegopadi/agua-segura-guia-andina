@@ -44,7 +44,7 @@ const CompletenessAnalysis = ({ session, onNext, onPrev }: CompletenessAnalysisP
       const { data, error: functionError } = await supabase.functions.invoke('analyze-pei', {
         body: {
           sessionId: session.id,
-          peiContent: session.session_data?.pei_content || '',
+          peiFile: session.session_data?.pei_file,
           questions: session.session_data?.form_responses || {}
         }
       })

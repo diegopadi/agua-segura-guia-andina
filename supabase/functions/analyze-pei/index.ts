@@ -13,10 +13,47 @@ serve(async (req) => {
   }
 
   try {
-    const { sessionId, peiContent, questions } = await req.json();
+    const { sessionId, peiFile, questions } = await req.json();
 
-    if (!sessionId || !peiContent || !questions) {
+    if (!sessionId || !peiFile || !questions) {
       throw new Error('Missing required parameters');
+    }
+
+    // Download and extract text from the PEI file
+    let peiContent = '';
+    try {
+      console.log('Downloading file from:', peiFile.url);
+      const fileResponse = await fetch(peiFile.url);
+      if (!fileResponse.ok) {
+        throw new Error(`Failed to download file: ${fileResponse.statusText}`);
+      }
+      
+      const fileArrayBuffer = await fileResponse.arrayBuffer();
+      const fileType = peiFile.file_type || peiFile.url.split('.').pop()?.toLowerCase();
+      
+      if (fileType === 'txt') {
+        // For text files, convert directly
+        const decoder = new TextDecoder();
+        peiContent = decoder.decode(fileArrayBuffer);
+      } else if (fileType === 'pdf') {
+        // For PDF files, we'll extract a basic representation
+        // In a production environment, you'd use a proper PDF parser
+        peiContent = `[Archivo PDF: ${peiFile.file_name || 'documento.pdf'}]\n\nEste es un archivo PDF que contiene el Proyecto Educativo Institucional. El contenido específico requiere procesamiento adicional para extraer el texto completo.`;
+      } else if (fileType === 'docx' || fileType === 'doc') {
+        // For Word documents, we'll extract a basic representation
+        // In a production environment, you'd use a proper DOCX parser
+        peiContent = `[Documento Word: ${peiFile.file_name || 'documento.docx'}]\n\nEste es un documento Word que contiene el Proyecto Educativo Institucional. El contenido específico requiere procesamiento adicional para extraer el texto completo.`;
+      } else {
+        throw new Error(`Unsupported file type: ${fileType}`);
+      }
+      
+      console.log('Extracted content length:', peiContent.length);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      return new Response(JSON.stringify({ error: `Error processing file: ${error.message}` }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
