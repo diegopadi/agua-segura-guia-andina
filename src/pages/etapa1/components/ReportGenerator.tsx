@@ -160,9 +160,61 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
     }
   }
 
-  const downloadReport = () => {
-    if (report?.file_url) {
-      window.open(report.file_url, '_blank')
+  const downloadReport = async () => {
+    if (!report?.file_url) return
+
+    try {
+      // Show loading state
+      toast({
+        title: "Preparando descarga",
+        description: "Descargando el archivo HTML..."
+      })
+
+      // Fetch the HTML content
+      const response = await fetch(report.file_url)
+      if (!response.ok) throw new Error('Error al acceder al archivo')
+      
+      const htmlContent = await response.text()
+      
+      // Create blob with proper encoding
+      const blob = new Blob([htmlContent], { 
+        type: 'text/html;charset=utf-8' 
+      })
+      
+      // Create download link
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      
+      // Generate descriptive filename
+      const institutionName = profile?.ie_name || 'Institucion'
+      const sanitizedName = institutionName.replace(/[^a-zA-Z0-9]/g, '_')
+      const date = new Date().toISOString().split('T')[0]
+      const filename = `Diagnostico_${sanitizedName}_${date}.html`
+      
+      link.href = url
+      link.download = filename
+      link.style.display = 'none'
+      
+      // Trigger download
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // Clean up
+      URL.revokeObjectURL(url)
+      
+      toast({
+        title: "Descarga completada",
+        description: "El reporte HTML se ha descargado correctamente"
+      })
+      
+    } catch (error) {
+      console.error('Download error:', error)
+      toast({
+        title: "Error de descarga",
+        description: "No se pudo descargar el archivo. Intenta nuevamente.",
+        variant: "destructive"
+      })
     }
   }
 

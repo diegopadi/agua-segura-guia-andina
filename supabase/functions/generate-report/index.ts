@@ -244,10 +244,15 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
     </div>
     
     <div class="content">
-        ${reportContent.replace(/#{1,3}\s*/g, match => {
-          const level = match.trim().length;
-          return level === 1 ? '<h1>' : level === 2 ? '<h2>' : '<h3>';
-        }).replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}
+        ${reportContent
+          .replace(/#{1,3}\s*/g, match => {
+            const level = match.trim().length;
+            return level === 1 ? '<h1>' : level === 2 ? '<h2>' : '<h3>';
+          })
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n\n/g, '</p><p>')
+          .replace(/\n/g, '<br>')
+          .replace(/---/g, '<hr>')}
     </div>
     
     <div class="footer">
@@ -256,7 +261,7 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
 </body>
 </html>`;
 
-    // Convert HTML to buffer
+    // Convert HTML to buffer with proper UTF-8 encoding
     const htmlBuffer = new TextEncoder().encode(htmlContent);
     
     console.log('HTML document generated, uploading to storage...');
@@ -277,7 +282,7 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('user_uploads')
       .upload(fileName, htmlBuffer, {
-        contentType: 'text/html',
+        contentType: 'text/html;charset=utf-8',
         upsert: false
       });
 
