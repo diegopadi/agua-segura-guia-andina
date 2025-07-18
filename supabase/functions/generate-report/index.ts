@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+import { Document, Paragraph, TextRun, HeadingLevel, Table, TableCell, TableRow, WidthType, AlignmentType, BorderStyle } from "https://esm.sh/docx@8.5.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -155,116 +156,255 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
     
     console.log('Report generated successfully');
 
-    // Create HTML document
-    console.log('Generating HTML document...');
+    // Generate DOCX document
+    console.log('Generating DOCX document...');
     
-    const htmlContent = `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte de Diagnóstico Institucional</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            max-width: 210mm;
-            margin: 0 auto;
-            padding: 20px;
-            color: #333;
-            background: white;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 3px solid #0066cc;
-            padding-bottom: 20px;
-        }
-        .header h1 {
-            color: #0066cc;
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-        .institution-info {
-            background: #f8f9fa;
-            padding: 15px;
-            border-left: 4px solid #0066cc;
-            margin: 20px 0;
-        }
-        .institution-info p {
-            margin: 5px 0;
-        }
-        .institution-info strong {
-            color: #0066cc;
-        }
-        h1, h2, h3 {
-            color: #0066cc;
-            margin-top: 30px;
-            margin-bottom: 15px;
-        }
-        h1 { font-size: 24px; }
-        h2 { font-size: 20px; }
-        h3 { font-size: 16px; }
-        ul, ol {
-            margin: 10px 0;
-            padding-left: 25px;
-        }
-        li {
-            margin-bottom: 5px;
-        }
-        .footer {
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 2px solid #0066cc;
-            text-align: center;
-            color: #666;
-            font-size: 12px;
-        }
-        @media print {
-            body { padding: 0; }
-            .header { page-break-after: always; }
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>REPORTE DE DIAGNÓSTICO INSTITUCIONAL</h1>
-        <div class="institution-info">
-            <p><strong>Institución:</strong> ${profile?.ie_name || 'No especificado'}</p>
-            <p><strong>Región:</strong> ${profile?.ie_region || 'No especificado'}</p>
-            <p><strong>Provincia:</strong> ${profile?.ie_province || 'No especificado'}</p>
-            <p><strong>Distrito:</strong> ${profile?.ie_district || 'No especificado'}</p>
-            <p><strong>Fecha de generación:</strong> ${new Date().toLocaleDateString('es-ES', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}</p>
-        </div>
-    </div>
+    // Parse markdown content to sections
+    const sections = parseMarkdownToSections(reportContent);
     
-    <div class="content">
-        ${reportContent
-          .replace(/#{1,3}\s*/g, match => {
-            const level = match.trim().length;
-            return level === 1 ? '<h1>' : level === 2 ? '<h2>' : '<h3>';
-          })
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\n\n/g, '</p><p>')
-          .replace(/\n/g, '<br>')
-          .replace(/---/g, '<hr>')}
-    </div>
-    
-    <div class="footer">
-        <p>Documento generado automáticamente por el Sistema de Diagnóstico Institucional</p>
-    </div>
-</body>
-</html>`;
+    // Create DOCX document
+    const doc = new Document({
+      styles: {
+        paragraphStyles: [
+          {
+            id: "title",
+            name: "Title",
+            basedOn: "Normal",
+            next: "Normal",
+            paragraph: {
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 400 }
+            },
+            run: {
+              size: 32,
+              bold: true,
+              color: "0066CC"
+            }
+          },
+          {
+            id: "subtitle",
+            name: "Subtitle", 
+            basedOn: "Normal",
+            next: "Normal",
+            paragraph: {
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 200 }
+            },
+            run: {
+              size: 24,
+              bold: true,
+              color: "333333"
+            }
+          }
+        ]
+      },
+      sections: [{
+        properties: {},
+        children: [
+          // Title
+          new Paragraph({
+            text: "REPORTE DE DIAGNÓSTICO INSTITUCIONAL",
+            style: "title"
+          }),
+          
+          // Institution info
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Institución: ",
+                bold: true,
+                color: "0066CC"
+              }),
+              new TextRun({
+                text: profile?.ie_name || 'No especificado'
+              })
+            ],
+            spacing: { after: 100 }
+          }),
+          
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Región: ",
+                bold: true,
+                color: "0066CC"
+              }),
+              new TextRun({
+                text: profile?.ie_region || 'No especificado'
+              })
+            ],
+            spacing: { after: 100 }
+          }),
+          
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Provincia: ",
+                bold: true,
+                color: "0066CC"
+              }),
+              new TextRun({
+                text: profile?.ie_province || 'No especificado'
+              })
+            ],
+            spacing: { after: 100 }
+          }),
+          
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Distrito: ",
+                bold: true,
+                color: "0066CC"
+              }),
+              new TextRun({
+                text: profile?.ie_district || 'No especificado'
+              })
+            ],
+            spacing: { after: 100 }
+          }),
+          
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Fecha de generación: ",
+                bold: true,
+                color: "0066CC"
+              }),
+              new TextRun({
+                text: new Date().toLocaleDateString('es-ES', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })
+              })
+            ],
+            spacing: { after: 400 }
+          }),
+          
+          // Content sections
+          ...sections
+        ]
+      }]
+    });
 
-    // Convert HTML to buffer with proper UTF-8 encoding
-    const htmlBuffer = new TextEncoder().encode(htmlContent);
+    // Generate DOCX buffer
+    const docxBuffer = await doc.toBuffer();
     
-    console.log('HTML document generated, uploading to storage...');
+    console.log('DOCX document generated, uploading to storage...');
+
+// Helper function to parse markdown content
+function parseMarkdownToSections(content: string) {
+  const sections: any[] = [];
+  const lines = content.split('\n');
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Skip empty lines
+    if (!line) continue;
+    
+    // Headers
+    if (line.startsWith('###')) {
+      sections.push(new Paragraph({
+        text: line.replace('###', '').trim(),
+        heading: HeadingLevel.HEADING_3,
+        spacing: { before: 300, after: 200 }
+      }));
+    } else if (line.startsWith('##')) {
+      sections.push(new Paragraph({
+        text: line.replace('##', '').trim(),
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 400, after: 200 }
+      }));
+    } else if (line.startsWith('#')) {
+      sections.push(new Paragraph({
+        text: line.replace('#', '').trim(),
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400, after: 200 }
+      }));
+    }
+    // Tables (simple markdown table detection)
+    else if (line.includes('|') && line.split('|').length > 2) {
+      const tableLines = [line];
+      let j = i + 1;
+      
+      // Collect all table lines
+      while (j < lines.length && lines[j].includes('|')) {
+        tableLines.push(lines[j]);
+        j++;
+      }
+      
+      // Skip separator line if present
+      if (tableLines[1] && tableLines[1].includes('---')) {
+        tableLines.splice(1, 1);
+      }
+      
+      // Create table
+      const tableRows = tableLines.map(tableLine => {
+        const cells = tableLine.split('|').filter(cell => cell.trim()).map(cell => cell.trim());
+        return new TableRow({
+          children: cells.map(cellText => 
+            new TableCell({
+              children: [new Paragraph({ text: cellText })],
+              width: { size: 100 / cells.length, type: WidthType.PERCENTAGE }
+            })
+          )
+        });
+      });
+      
+      sections.push(new Table({
+        rows: tableRows,
+        width: { size: 100, type: WidthType.PERCENTAGE }
+      }));
+      
+      i = j - 1; // Skip processed lines
+    }
+    // Regular paragraphs
+    else {
+      // Handle bold text
+      const children: TextRun[] = [];
+      const boldRegex = /\*\*(.*?)\*\*/g;
+      let lastIndex = 0;
+      let match;
+      
+      while ((match = boldRegex.exec(line)) !== null) {
+        // Add text before bold
+        if (match.index > lastIndex) {
+          children.push(new TextRun({
+            text: line.substring(lastIndex, match.index)
+          }));
+        }
+        
+        // Add bold text
+        children.push(new TextRun({
+          text: match[1],
+          bold: true
+        }));
+        
+        lastIndex = match.index + match[0].length;
+      }
+      
+      // Add remaining text
+      if (lastIndex < line.length) {
+        children.push(new TextRun({
+          text: line.substring(lastIndex)
+        }));
+      }
+      
+      if (children.length === 0) {
+        children.push(new TextRun({ text: line }));
+      }
+      
+      sections.push(new Paragraph({
+        children,
+        spacing: { after: 200 }
+      }));
+    }
+  }
+  
+  return sections;
+}
 
     // Get next document number for this user
     const { data: lastReport } = await supabase
@@ -277,18 +417,18 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
 
     const nextDocNumber = (lastReport?.document_number || 0) + 1;
 
-    // Upload HTML file to storage
-    const fileName = `reporte-diagnostico-${userId}-${nextDocNumber}-${Date.now()}.html`;
+    // Upload DOCX file to storage
+    const fileName = `reporte-diagnostico-${userId}-${nextDocNumber}-${Date.now()}.docx`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('user_uploads')
-      .upload(fileName, htmlBuffer, {
-        contentType: 'text/html;charset=utf-8',
+      .upload(fileName, docxBuffer, {
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         upsert: false
       });
 
     if (uploadError) {
-      console.error('Failed to upload HTML file:', uploadError);
-      throw new Error('Failed to upload HTML file');
+      console.error('Failed to upload DOCX file:', uploadError);
+      throw new Error('Failed to upload DOCX file');
     }
 
     // Get public URL for the uploaded file
@@ -296,7 +436,7 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
       .from('user_uploads')
       .getPublicUrl(fileName);
 
-    console.log('HTML file uploaded successfully, saving report...');
+    console.log('DOCX file uploaded successfully, saving report...');
 
     // Save the report with file URL
     const { data: savedReport, error: saveError } = await supabase
@@ -313,7 +453,7 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
           institution_name: profile?.ie_name,
           completeness_score: session.session_data?.completeness_score,
           file_name: fileName,
-          file_size: htmlBuffer.byteLength
+          file_size: docxBuffer.byteLength
         }
       })
       .select()

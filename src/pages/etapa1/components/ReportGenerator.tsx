@@ -167,7 +167,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
       // Show loading state
       toast({
         title: "Preparando descarga",
-        description: "Descargando el archivo HTML..."
+        description: "Descargando el archivo Word (.docx)..."
       })
 
       // Fetch the HTML content
@@ -176,9 +176,9 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
       
       const htmlContent = await response.text()
       
-      // Create blob with proper encoding
+      // Create blob with proper encoding for DOCX
       const blob = new Blob([htmlContent], { 
-        type: 'text/html;charset=utf-8' 
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
       })
       
       // Create download link
@@ -189,7 +189,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
       const institutionName = profile?.ie_name || 'Institucion'
       const sanitizedName = institutionName.replace(/[^a-zA-Z0-9]/g, '_')
       const date = new Date().toISOString().split('T')[0]
-      const filename = `Diagnostico_${sanitizedName}_${date}.html`
+      const filename = `Diagnostico_${sanitizedName}_${date}.docx`
       
       link.href = url
       link.download = filename
@@ -205,7 +205,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
       
       toast({
         title: "Descarga completada",
-        description: "El reporte HTML se ha descargado correctamente"
+        description: "El reporte Word (.docx) se ha descargado correctamente"
       })
       
     } catch (error) {
@@ -258,7 +258,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
           Paso 6: Generar Reporte de Diagnóstico
         </CardTitle>
         <CardDescription>
-          Crea tu reporte HTML profesional con el análisis completo del diagnóstico institucional
+          Crea tu reporte Word profesional con el análisis completo del diagnóstico institucional
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -369,7 +369,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
                     </Button>
                     <Button onClick={downloadReport} className="gap-2">
                       <Download className="w-4 h-4" />
-                      Descargar Reporte (HTML)
+                      Descargar Word (.docx)
                     </Button>
                   </div>
                 </div>
@@ -489,7 +489,7 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
                   className="gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  Descargar Reporte (HTML)
+                  Descargar Word (.docx)
                 </Button>
                 <Button onClick={markSessionComplete} className="gap-2">
                   <CheckCircle className="w-4 h-4" />
