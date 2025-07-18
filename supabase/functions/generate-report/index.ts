@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+// @ts-ignore
+import jsPDF from 'https://esm.sh/jspdf@2.5.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -155,6 +157,65 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
     
     console.log('Report generated successfully');
 
+    // Generate PDF from report content
+    console.log('Generating PDF...');
+    const pdf = new jsPDF();
+    
+    // Configure PDF settings
+    pdf.setFont('helvetica');
+    pdf.setFontSize(16);
+    
+    // Add title page
+    pdf.text('REPORTE DE DIAGNÓSTICO INSTITUCIONAL', 20, 30);
+    pdf.setFontSize(12);
+    pdf.text(`Institución: ${profile?.ie_name || 'No especificado'}`, 20, 50);
+    pdf.text(`Región: ${profile?.ie_region || 'No especificado'}`, 20, 60);
+    pdf.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 20, 70);
+    
+    // Split content into lines for PDF
+    const lines = reportContent.split('\n');
+    let yPosition = 90;
+    
+    for (const line of lines) {
+      if (yPosition > 280) { // Check if we need a new page
+        pdf.addPage();
+        yPosition = 20;
+      }
+      
+      // Handle different markdown elements
+      if (line.startsWith('# ')) {
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(line.substring(2), 20, yPosition);
+        yPosition += 10;
+      } else if (line.startsWith('## ')) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(line.substring(3), 20, yPosition);
+        yPosition += 8;
+      } else if (line.startsWith('### ')) {
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(line.substring(4), 20, yPosition);
+        yPosition += 7;
+      } else if (line.trim() !== '') {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        // Split long lines
+        const splitText = pdf.splitTextToSize(line, 170);
+        pdf.text(splitText, 20, yPosition);
+        yPosition += splitText.length * 5;
+      } else {
+        yPosition += 5; // Empty line spacing
+      }
+    }
+    
+    // Convert PDF to blob
+    const pdfBlob = pdf.output('blob');
+    const pdfBuffer = await pdfBlob.arrayBuffer();
+    
+    console.log('PDF generated, uploading to storage...');
+
     // Get next document number for this user
     const { data: lastReport } = await supabase
       .from('diagnostic_reports')
@@ -166,7 +227,28 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
 
     const nextDocNumber = (lastReport?.document_number || 0) + 1;
 
-    // Save the report
+    // Upload PDF to storage
+    const fileName = `reporte-diagnostico-${userId}-${nextDocNumber}-${Date.now()}.pdf`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('user_uploads')
+      .upload(fileName, pdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Failed to upload PDF:', uploadError);
+      throw new Error('Failed to upload PDF file');
+    }
+
+    // Get public URL for the uploaded file
+    const { data: urlData } = supabase.storage
+      .from('user_uploads')
+      .getPublicUrl(fileName);
+
+    console.log('PDF uploaded successfully, saving report...');
+
+    // Save the report with file URL
     const { data: savedReport, error: saveError } = await supabase
       .from('diagnostic_reports')
       .insert({
@@ -174,11 +256,14 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
         session_id: sessionId,
         document_number: nextDocNumber,
         status: 'completed',
+        file_url: urlData.publicUrl,
         metadata: {
           report_content: reportContent,
           generated_at: new Date().toISOString(),
           institution_name: profile?.ie_name,
-          completeness_score: session.session_data?.completeness_score
+          completeness_score: session.session_data?.completeness_score,
+          file_name: fileName,
+          file_size: pdfBuffer.byteLength
         }
       })
       .select()
@@ -210,6 +295,7 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
         report_id: savedReport.id,
         document_number: nextDocNumber,
         content: reportContent,
+        file_url: urlData.publicUrl,
         download_available: true
       }),
       { 
