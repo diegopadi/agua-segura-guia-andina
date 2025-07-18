@@ -87,6 +87,8 @@ const DynamicForm = ({ session, onNext, onPrev }: DynamicFormProps) => {
           question_number: questionNumber,
           response_text: responseText,
           response_data: responseData
+        }, {
+          onConflict: 'session_id,question_number'
         })
 
       if (error) throw error
