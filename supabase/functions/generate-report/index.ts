@@ -1,8 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-// @ts-ignore
-import jsPDF from 'https://esm.sh/jspdf@2.5.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -157,64 +155,94 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
     
     console.log('Report generated successfully');
 
-    // Generate PDF from report content
-    console.log('Generating PDF...');
-    const pdf = new jsPDF();
+    // Create HTML content for PDF generation
+    console.log('Generating HTML file for download...');
     
-    // Configure PDF settings
-    pdf.setFont('helvetica');
-    pdf.setFontSize(16);
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Diagnóstico Institucional</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6; 
+            margin: 40px; 
+            color: #333; 
+        }
+        h1 { 
+            color: #2c3e50; 
+            border-bottom: 3px solid #3498db; 
+            padding-bottom: 10px; 
+        }
+        h2 { 
+            color: #34495e; 
+            margin-top: 30px; 
+        }
+        h3 { 
+            color: #7f8c8d; 
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 20px;
+        }
+        .metadata {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        @media print {
+            body { margin: 20px; }
+            .header { page-break-after: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>REPORTE DE DIAGNÓSTICO INSTITUCIONAL</h1>
+        <div class="metadata">
+            <strong>Institución:</strong> ${profile?.ie_name || 'No especificado'}<br>
+            <strong>Región:</strong> ${profile?.ie_region || 'No especificado'}<br>
+            <strong>Provincia:</strong> ${profile?.ie_province || 'No especificado'}<br>
+            <strong>Distrito:</strong> ${profile?.ie_district || 'No especificado'}<br>
+            <strong>Fecha de generación:</strong> ${new Date().toLocaleDateString('es-ES', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+        </div>
+    </div>
     
-    // Add title page
-    pdf.text('REPORTE DE DIAGNÓSTICO INSTITUCIONAL', 20, 30);
-    pdf.setFontSize(12);
-    pdf.text(`Institución: ${profile?.ie_name || 'No especificado'}`, 20, 50);
-    pdf.text(`Región: ${profile?.ie_region || 'No especificado'}`, 20, 60);
-    pdf.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 20, 70);
+    ${reportContent.replace(/\n/g, '<br>').replace(/#{4,}/g, '<hr>').replace(/#{3}\s/g, '<h3>').replace(/#{2}\s/g, '<h2>').replace(/#{1}\s/g, '<h1>')}
     
-    // Split content into lines for PDF
-    const lines = reportContent.split('\n');
-    let yPosition = 90;
+    <div style="margin-top: 50px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 20px;">
+        <small>Documento generado automáticamente por el Sistema de Diagnóstico Institucional</small>
+    </div>
+</body>
+</html>`;
     
-    for (const line of lines) {
-      if (yPosition > 280) { // Check if we need a new page
-        pdf.addPage();
-        yPosition = 20;
-      }
-      
-      // Handle different markdown elements
-      if (line.startsWith('# ')) {
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(line.substring(2), 20, yPosition);
-        yPosition += 10;
-      } else if (line.startsWith('## ')) {
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(line.substring(3), 20, yPosition);
-        yPosition += 8;
-      } else if (line.startsWith('### ')) {
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(line.substring(4), 20, yPosition);
-        yPosition += 7;
-      } else if (line.trim() !== '') {
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        // Split long lines
-        const splitText = pdf.splitTextToSize(line, 170);
-        pdf.text(splitText, 20, yPosition);
-        yPosition += splitText.length * 5;
-      } else {
-        yPosition += 5; // Empty line spacing
-      }
-    }
+    // Convert HTML to Uint8Array for upload
+    const htmlBuffer = new TextEncoder().encode(htmlContent);
     
-    // Convert PDF to blob
-    const pdfBlob = pdf.output('blob');
-    const pdfBuffer = await pdfBlob.arrayBuffer();
-    
-    console.log('PDF generated, uploading to storage...');
+    console.log('HTML file generated, uploading to storage...');
 
     // Get next document number for this user
     const { data: lastReport } = await supabase
@@ -227,18 +255,18 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
 
     const nextDocNumber = (lastReport?.document_number || 0) + 1;
 
-    // Upload PDF to storage
-    const fileName = `reporte-diagnostico-${userId}-${nextDocNumber}-${Date.now()}.pdf`;
+    // Upload HTML file to storage
+    const fileName = `reporte-diagnostico-${userId}-${nextDocNumber}-${Date.now()}.html`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('user_uploads')
-      .upload(fileName, pdfBuffer, {
-        contentType: 'application/pdf',
+      .upload(fileName, htmlBuffer, {
+        contentType: 'text/html',
         upsert: false
       });
 
     if (uploadError) {
-      console.error('Failed to upload PDF:', uploadError);
-      throw new Error('Failed to upload PDF file');
+      console.error('Failed to upload HTML file:', uploadError);
+      throw new Error('Failed to upload HTML file');
     }
 
     // Get public URL for the uploaded file
@@ -246,7 +274,7 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
       .from('user_uploads')
       .getPublicUrl(fileName);
 
-    console.log('PDF uploaded successfully, saving report...');
+    console.log('HTML file uploaded successfully, saving report...');
 
     // Save the report with file URL
     const { data: savedReport, error: saveError } = await supabase
@@ -263,7 +291,7 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
           institution_name: profile?.ie_name,
           completeness_score: session.session_data?.completeness_score,
           file_name: fileName,
-          file_size: pdfBuffer.byteLength
+          file_size: htmlBuffer.byteLength
         }
       })
       .select()
