@@ -21,9 +21,9 @@ function markdownToHtml(content: string): string {
     const line = lines[i];
     
     if (line.includes('|') && !line.includes('---')) {
-      if (!inTable) {
-        inTable = true;
-        tableHtml = '<table style="border-collapse: collapse; width: 100%; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">';
+        if (!inTable) {
+          inTable = true;
+          tableHtml = '<div style="overflow-x: auto; margin: 20px 0;"><table style="border-collapse: collapse; width: 100%; min-width: 600px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">';
         
         // Check if next line is separator to determine if this is header
         const isHeader = i + 1 < lines.length && lines[i + 1].includes('---');
@@ -40,16 +40,16 @@ function markdownToHtml(content: string): string {
             tableHtml += '<tbody>';
           }
           tableHtml += '<tr>';
-          cells.forEach(cell => {
-            tableHtml += `<td style="border: 1px solid #e5e7eb; padding: 12px; color: #6b7280;">${cell}</td>`;
-          });
+        cells.forEach(cell => {
+          tableHtml += `<td style="border: 1px solid #e5e7eb; padding: 12px; color: #6b7280; word-break: break-all; overflow-wrap: break-word; max-width: 300px;">${cell}</td>`;
+        });
           tableHtml += '</tr>';
         }
       } else {
         const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
         tableHtml += '<tr>';
         cells.forEach(cell => {
-          tableHtml += `<td style="border: 1px solid #e5e7eb; padding: 12px; color: #6b7280;">${cell}</td>`;
+          tableHtml += `<td style="border: 1px solid #e5e7eb; padding: 12px; color: #6b7280; word-break: break-all; overflow-wrap: break-word; max-width: 300px;">${cell}</td>`;
         });
         tableHtml += '</tr>';
       }
@@ -58,7 +58,7 @@ function markdownToHtml(content: string): string {
       continue;
     } else {
       if (inTable) {
-        tableHtml += '</tbody></table>';
+        tableHtml += '</tbody></table></div>';
         processedLines.push(tableHtml);
         tableHtml = '';
         inTable = false;
@@ -68,7 +68,7 @@ function markdownToHtml(content: string): string {
   }
 
   if (inTable) {
-    tableHtml += '</tbody></table>';
+    tableHtml += '</tbody></table></div>';
     processedLines.push(tableHtml);
   }
 

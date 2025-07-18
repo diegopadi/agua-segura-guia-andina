@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Copy, Printer, RotateCcw } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
@@ -148,14 +149,12 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
       {/* Content viewer */}
       <Card>
         <CardContent className="p-0">
-          <div 
-            className="prose max-w-none p-6 overflow-auto max-h-[80vh]"
-            dangerouslySetInnerHTML={{ __html: htmlContent }}
-            style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: 'hsl(var(--border)) transparent',
-            }}
-          />
+          <ScrollArea className="h-[80vh] w-full">
+            <div 
+              className="prose max-w-none p-6"
+              dangerouslySetInnerHTML={{ __html: htmlContent }}
+            />
+          </ScrollArea>
         </CardContent>
       </Card>
 
