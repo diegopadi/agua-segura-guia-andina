@@ -1,20 +1,137 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-import { Document, Paragraph, TextRun, HeadingLevel, Table, TableCell, TableRow, WidthType, AlignmentType, BorderStyle } from "https://esm.sh/docx@8.5.0"
+import { Document, Paragraph, TextRun, HeadingLevel, Table, TableCell, TableRow, WidthType, AlignmentType, BorderStyle, Packer } from "https://esm.sh/docx@8.5.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to parse markdown content  
+function parseMarkdownToSections(content: string) {
+  const sections: any[] = [];
+  const lines = content.split('\n');
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Skip empty lines
+    if (!line) continue;
+    
+    // Headers
+    if (line.startsWith('###')) {
+      sections.push(new Paragraph({
+        text: line.replace('###', '').trim(),
+        heading: HeadingLevel.HEADING_3,
+        spacing: { before: 300, after: 200 }
+      }));
+    } else if (line.startsWith('##')) {
+      sections.push(new Paragraph({
+        text: line.replace('##', '').trim(),
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 400, after: 200 }
+      }));
+    } else if (line.startsWith('#')) {
+      sections.push(new Paragraph({
+        text: line.replace('#', '').trim(),
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400, after: 200 }
+      }));
+    }
+    // Tables (simple markdown table detection)
+    else if (line.includes('|') && line.split('|').length > 2) {
+      const tableLines = [line];
+      let j = i + 1;
+      
+      // Collect all table lines
+      while (j < lines.length && lines[j].includes('|')) {
+        tableLines.push(lines[j]);
+        j++;
+      }
+      
+      // Skip separator line if present
+      if (tableLines[1] && tableLines[1].includes('---')) {
+        tableLines.splice(1, 1);
+      }
+      
+      // Create table
+      const tableRows = tableLines.map(tableLine => {
+        const cells = tableLine.split('|').filter(cell => cell.trim()).map(cell => cell.trim());
+        return new TableRow({
+          children: cells.map(cellText => 
+            new TableCell({
+              children: [new Paragraph({ text: cellText })],
+              width: { size: 100 / cells.length, type: WidthType.PERCENTAGE }
+            })
+          )
+        });
+      });
+      
+      sections.push(new Table({
+        rows: tableRows,
+        width: { size: 100, type: WidthType.PERCENTAGE }
+      }));
+      
+      i = j - 1; // Skip processed lines
+    }
+    // Regular paragraphs
+    else {
+      // Handle bold text
+      const children: TextRun[] = [];
+      const boldRegex = /\*\*(.*?)\*\*/g;
+      let lastIndex = 0;
+      let match;
+      
+      while ((match = boldRegex.exec(line)) !== null) {
+        // Add text before bold
+        if (match.index > lastIndex) {
+          children.push(new TextRun({
+            text: line.substring(lastIndex, match.index)
+          }));
+        }
+        
+        // Add bold text
+        children.push(new TextRun({
+          text: match[1],
+          bold: true
+        }));
+        
+        lastIndex = match.index + match[0].length;
+      }
+      
+      // Add remaining text
+      if (lastIndex < line.length) {
+        children.push(new TextRun({
+          text: line.substring(lastIndex)
+        }));
+      }
+      
+      if (children.length === 0) {
+        children.push(new TextRun({ text: line }));
+      }
+      
+      sections.push(new Paragraph({
+        children,
+        spacing: { after: 200 }
+      }));
+    }
+  }
+  
+  return sections;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let sessionId, userId;
+
   try {
-    const { sessionId, userId } = await req.json();
+    const { sessionId: reqSessionId, userId: reqUserId } = await req.json();
+    sessionId = reqSessionId;
+    userId = reqUserId;
 
     if (!sessionId || !userId) {
       throw new Error('Missing required parameters');
@@ -289,122 +406,9 @@ El reporte debe tener entre 8-12 páginas de contenido substantivo.
     });
 
     // Generate DOCX buffer
-    const docxBuffer = await doc.toBuffer();
+    const docxBuffer = await Packer.toBuffer(doc);
     
     console.log('DOCX document generated, uploading to storage...');
-
-// Helper function to parse markdown content
-function parseMarkdownToSections(content: string) {
-  const sections: any[] = [];
-  const lines = content.split('\n');
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    
-    // Skip empty lines
-    if (!line) continue;
-    
-    // Headers
-    if (line.startsWith('###')) {
-      sections.push(new Paragraph({
-        text: line.replace('###', '').trim(),
-        heading: HeadingLevel.HEADING_3,
-        spacing: { before: 300, after: 200 }
-      }));
-    } else if (line.startsWith('##')) {
-      sections.push(new Paragraph({
-        text: line.replace('##', '').trim(),
-        heading: HeadingLevel.HEADING_2,
-        spacing: { before: 400, after: 200 }
-      }));
-    } else if (line.startsWith('#')) {
-      sections.push(new Paragraph({
-        text: line.replace('#', '').trim(),
-        heading: HeadingLevel.HEADING_1,
-        spacing: { before: 400, after: 200 }
-      }));
-    }
-    // Tables (simple markdown table detection)
-    else if (line.includes('|') && line.split('|').length > 2) {
-      const tableLines = [line];
-      let j = i + 1;
-      
-      // Collect all table lines
-      while (j < lines.length && lines[j].includes('|')) {
-        tableLines.push(lines[j]);
-        j++;
-      }
-      
-      // Skip separator line if present
-      if (tableLines[1] && tableLines[1].includes('---')) {
-        tableLines.splice(1, 1);
-      }
-      
-      // Create table
-      const tableRows = tableLines.map(tableLine => {
-        const cells = tableLine.split('|').filter(cell => cell.trim()).map(cell => cell.trim());
-        return new TableRow({
-          children: cells.map(cellText => 
-            new TableCell({
-              children: [new Paragraph({ text: cellText })],
-              width: { size: 100 / cells.length, type: WidthType.PERCENTAGE }
-            })
-          )
-        });
-      });
-      
-      sections.push(new Table({
-        rows: tableRows,
-        width: { size: 100, type: WidthType.PERCENTAGE }
-      }));
-      
-      i = j - 1; // Skip processed lines
-    }
-    // Regular paragraphs
-    else {
-      // Handle bold text
-      const children: TextRun[] = [];
-      const boldRegex = /\*\*(.*?)\*\*/g;
-      let lastIndex = 0;
-      let match;
-      
-      while ((match = boldRegex.exec(line)) !== null) {
-        // Add text before bold
-        if (match.index > lastIndex) {
-          children.push(new TextRun({
-            text: line.substring(lastIndex, match.index)
-          }));
-        }
-        
-        // Add bold text
-        children.push(new TextRun({
-          text: match[1],
-          bold: true
-        }));
-        
-        lastIndex = match.index + match[0].length;
-      }
-      
-      // Add remaining text
-      if (lastIndex < line.length) {
-        children.push(new TextRun({
-          text: line.substring(lastIndex)
-        }));
-      }
-      
-      if (children.length === 0) {
-        children.push(new TextRun({ text: line }));
-      }
-      
-      sections.push(new Paragraph({
-        children,
-        spacing: { after: 200 }
-      }));
-    }
-  }
-  
-  return sections;
-}
 
     // Get next document number for this user
     const { data: lastReport } = await supabase
@@ -500,6 +504,10 @@ function parseMarkdownToSections(content: string) {
     // Update any stuck report to error status
     if (sessionId) {
       try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
         await supabase
           .from('diagnostic_reports')
           .update({ status: 'error' })
