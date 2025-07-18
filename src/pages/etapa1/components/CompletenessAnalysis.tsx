@@ -40,12 +40,12 @@ const CompletenessAnalysis = ({ session, onNext, onPrev }: CompletenessAnalysisP
     setError(null)
 
     try {
-      // Call the analyze-completeness edge function
-      const { data, error: functionError } = await supabase.functions.invoke('analyze-completeness', {
+      // Call the analyze-pei edge function
+      const { data, error: functionError } = await supabase.functions.invoke('analyze-pei', {
         body: {
-          session_id: session.id,
-          pei_file: session.session_data?.pei_file,
-          form_responses: session.session_data?.form_responses
+          sessionId: session.id,
+          peiContent: session.session_data?.pei_content || '',
+          questions: session.session_data?.form_responses || {}
         }
       })
 

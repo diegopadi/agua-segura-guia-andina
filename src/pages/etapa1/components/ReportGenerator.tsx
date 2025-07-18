@@ -81,13 +81,11 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
 
       setReport(reportData as ReportStatus)
 
-      // Call the generate-diagnostic-report edge function
-      const { data, error: functionError } = await supabase.functions.invoke('generate-diagnostic-report', {
+      // Call the generate-report edge function
+      const { data, error: functionError } = await supabase.functions.invoke('generate-report', {
         body: {
-          report_id: reportData.id,
-          session_data: session.session_data,
-          user_profile: profile,
-          document_number: nextDocNumber
+          sessionId: session.id,
+          userId: user?.id
         }
       })
 
