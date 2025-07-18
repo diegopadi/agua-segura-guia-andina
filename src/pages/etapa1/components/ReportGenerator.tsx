@@ -115,6 +115,51 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
     }
   }
 
+  const redoAnalysis = async () => {
+    if (!report) return
+
+    // Confirm action
+    const confirmed = window.confirm(
+      '¿Estás seguro de que quieres rehacer el análisis? Se descartará el reporte actual y se generará uno nuevo.'
+    )
+    
+    if (!confirmed) return
+
+    setGenerating(true)
+    setError(null)
+
+    try {
+      // Delete existing report
+      const { error: deleteError } = await supabase
+        .from('diagnostic_reports')
+        .delete()
+        .eq('id', report.id)
+
+      if (deleteError) throw deleteError
+
+      // Clear current report state
+      setReport(null)
+
+      // Generate new report
+      await generateReport()
+
+      toast({
+        title: "Análisis regenerado",
+        description: "Se ha iniciado la generación de un nuevo reporte"
+      })
+
+    } catch (error) {
+      console.error('Error redoing analysis:', error)
+      setError('No se pudo rehacer el análisis. Intenta nuevamente.')
+      toast({
+        title: "Error",
+        description: "No se pudo rehacer el análisis. Verifica tu conexión e intenta nuevamente.",
+        variant: "destructive"
+      })
+      setGenerating(false)
+    }
+  }
+
   const downloadReport = () => {
     if (report?.file_url) {
       window.open(report.file_url, '_blank')
@@ -260,10 +305,21 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
                       </p>
                     </div>
                   </div>
-                  <Button onClick={downloadReport} className="gap-2">
-                    <Download className="w-4 h-4" />
-                    Descargar Reporte (HTML)
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={redoAnalysis} 
+                      disabled={generating}
+                      className="gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Rehacer Análisis
+                    </Button>
+                    <Button onClick={downloadReport} className="gap-2">
+                      <Download className="w-4 h-4" />
+                      Descargar Reporte (HTML)
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -366,14 +422,23 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
               </Button>
             ) : report.status === 'completed' ? (
               <>
-                  <Button 
-                    variant="outline" 
-                    onClick={downloadReport} 
-                    className="gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Descargar Reporte (HTML)
-                  </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={redoAnalysis} 
+                  disabled={generating}
+                  className="gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Rehacer Análisis
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={downloadReport} 
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Descargar Reporte (HTML)
+                </Button>
                 <Button onClick={markSessionComplete} className="gap-2">
                   <CheckCircle className="w-4 h-4" />
                   Finalizar acelerador
