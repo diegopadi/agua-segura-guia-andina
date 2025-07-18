@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { FileText, CheckCircle, AlertTriangle, RefreshCw, ExternalLink, Eye } from "lucide-react"
+import { FileText, CheckCircle, AlertTriangle, RefreshCw, ExternalLink, Eye, ArrowLeft } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
@@ -208,12 +208,40 @@ const ReportGenerator = ({ session, onPrev }: ReportGeneratorProps) => {
   // If showing viewer, render it
   if (showViewer && report?.status === 'completed' && report.metadata.html_content) {
     return (
-      <ReportViewer
-        htmlContent={report.metadata.html_content}
-        markdownContent={report.metadata.report_content || ''}
-        reportData={report}
-        onRedoAnalysis={redoAnalysis}
-      />
+      <div className="space-y-6">
+        {/* Navigation Controls */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <Button onClick={onPrev} variant="outline" className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Paso anterior
+              </Button>
+              <div className="text-center">
+                <p className="text-sm font-medium text-primary">Paso 6 de 6: Reporte completado</p>
+                <p className="text-xs text-muted-foreground">
+                  Tu diagnóstico institucional está listo
+                </p>
+              </div>
+              <Button 
+                onClick={markSessionComplete}
+                className="flex items-center gap-2"
+              >
+                Finalizar acelerador
+                <CheckCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Report Viewer */}
+        <ReportViewer
+          htmlContent={report.metadata.html_content}
+          markdownContent={report.metadata.report_content || ''}
+          reportData={report}
+          onRedoAnalysis={redoAnalysis}
+        />
+      </div>
     )
   }
 
