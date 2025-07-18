@@ -80,6 +80,8 @@ const SupplementaryQuestions = ({ session, onNext, onPrev }: SupplementaryQuesti
           question_number: questionNumber,
           response_text: responseText,
           response_data: { is_additional: true, priority: questions[questionIndex].priority }
+        }, {
+          onConflict: 'session_id,question_number'
         })
 
       if (error) throw error
