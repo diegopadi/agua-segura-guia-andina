@@ -29,11 +29,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get Template 1 for analysis criteria
+    // Get plantilla1 for analysis criteria
     const { data: template, error: templateError } = await supabase
       .from('templates')
       .select('content')
-      .eq('name', 'Plantilla 1')
+      .eq('name', 'plantilla1')
       .single();
 
     if (templateError) {
@@ -61,22 +61,17 @@ INSTRUCCIONES:
 
 FORMATO DE RESPUESTA (JSON):
 {
-  "completeness_score": 85,
-  "analysis": {
-    "strengths": ["fortaleza 1", "fortaleza 2"],
-    "weaknesses": ["debilidad 1", "debilidad 2"],
-    "missing_info": {
-      "section_name": ["info faltante 1", "info faltante 2"]
-    }
-  },
-  "supplementary_questions": [
+  "overall_completeness": 85,
+  "missing_areas": ["área 1 que necesita atención", "área 2 que necesita atención"],
+  "recommendations": ["recomendación 1", "recomendación 2"],
+  "strengths": ["fortaleza 1", "fortaleza 2"],
+  "additional_questions": [
     {
       "question": "Pregunta específica basada en lo que falta",
-      "category": "contexto_hidrico|infraestructura|pedagogia|recursos",
-      "priority": "alta|media|baja"
+      "reason": "Razón por la cual esta pregunta es importante",
+      "priority": "high|medium|low"
     }
-  ],
-  "recommendations": ["recomendación 1", "recomendación 2"]
+  ]
 }
 
 Responde SOLO en formato JSON válido, sin texto adicional.
@@ -91,7 +86,7 @@ Responde SOLO en formato JSON válido, sin texto adicional.
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           { 
             role: 'system', 
