@@ -162,14 +162,29 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
                 <Settings className="w-5 h-5 text-green-600" />
                 <h3 className="font-semibold text-green-800">Configuración del instrumento lista</h3>
               </div>
-              <div className="grid md:grid-cols-2 gap-3 text-sm">
-                {Object.entries(session.session_data.instrument_design).slice(0, 4).map(([key, value]) => (
-                  <div key={key} className="text-green-700">
-                    <span className="font-medium capitalize">{key.replace('_', ' ')}:</span> {
-                      Array.isArray(value) ? value.join(', ') : String(value)
+              <div className="space-y-2">
+                <div className="grid md:grid-cols-2 gap-3 text-sm">
+                  <div className="text-green-700">
+                    <span className="font-medium">Grados escolares:</span> {
+                      session.session_data.instrument_design.grados_escolares?.join(', ') || 'No especificado'
                     }
                   </div>
-                ))}
+                  <div className="text-green-700">
+                    <span className="font-medium">Estudiantes disponibles:</span> {
+                      session.session_data.instrument_design.num_estudiantes_disponibles || 'No especificado'
+                    }
+                  </div>
+                  <div className="text-green-700">
+                    <span className="font-medium">Variables de interés:</span> {
+                      session.session_data.instrument_design.variables_interes?.join(', ') || 'No especificado'
+                    }
+                  </div>
+                  <div className="text-green-700">
+                    <span className="font-medium">Enfoque temático:</span> {
+                      session.session_data.instrument_design.enfoque_tematico || 'No especificado'
+                    }
+                  </div>
+                </div>
               </div>
             </div>
           )}
