@@ -210,6 +210,163 @@ export type Database = {
         }
         Relationships: []
       }
+      survey_participants: {
+        Row: {
+          completed_at: string | null
+          id: string
+          participant_token: string
+          started_at: string | null
+          status: string | null
+          survey_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          participant_token: string
+          started_at?: string | null
+          status?: string | null
+          survey_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          participant_token?: string
+          started_at?: string | null
+          status?: string | null
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_participants_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_questions: {
+        Row: {
+          created_at: string
+          id: string
+          options: Json | null
+          order_number: number
+          question_text: string
+          question_type: string
+          required: boolean | null
+          survey_id: string
+          variable_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          options?: Json | null
+          order_number: number
+          question_text: string
+          question_type?: string
+          required?: boolean | null
+          survey_id: string
+          variable_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          options?: Json | null
+          order_number?: number
+          question_text?: string
+          question_type?: string
+          required?: boolean | null
+          survey_id?: string
+          variable_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_questions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_responses: {
+        Row: {
+          id: string
+          participant_token: string
+          question_id: string
+          response_data: Json
+          submitted_at: string
+          survey_id: string
+        }
+        Insert: {
+          id?: string
+          participant_token: string
+          question_id: string
+          response_data: Json
+          submitted_at?: string
+          survey_id: string
+        }
+        Update: {
+          id?: string
+          participant_token?: string
+          question_id?: string
+          response_data?: Json
+          submitted_at?: string
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "survey_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_responses_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      surveys: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          participant_token: string | null
+          settings: Json | null
+          status: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          participant_token?: string | null
+          settings?: Json | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          participant_token?: string | null
+          settings?: Json | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           content: Json
