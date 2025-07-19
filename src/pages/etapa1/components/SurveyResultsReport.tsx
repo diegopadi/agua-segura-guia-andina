@@ -29,7 +29,7 @@ export function SurveyResultsReport({ session, onUpdate }: SurveyResultsReportPr
       const { data, error } = await supabase
         .from('survey_responses')
         .select('*')
-        .eq('survey_id', session.session_data.survey_id)
+        if (!session.session_data.survey_id) return
 
       if (error) throw error
 
