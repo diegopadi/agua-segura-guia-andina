@@ -332,6 +332,34 @@ export default function PublicSurvey() {
           </RadioGroup>
         )
 
+      case 'yes_no':
+        return (
+          <RadioGroup 
+            value={response || ''} 
+            onValueChange={(value) => handleResponseChange(question.id, value)}
+            className="flex gap-6 mt-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="Sí" id={`${question.id}-yes`} />
+              <Label 
+                htmlFor={`${question.id}-yes`}
+                className="text-sm cursor-pointer"
+              >
+                Sí
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="No" id={`${question.id}-no`} />
+              <Label 
+                htmlFor={`${question.id}-no`}
+                className="text-sm cursor-pointer"
+              >
+                No
+              </Label>
+            </div>
+          </RadioGroup>
+        )
+
       default:
         return (
           <Input
