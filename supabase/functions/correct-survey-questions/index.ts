@@ -10,7 +10,7 @@ serve(async (req) => {
   }
 
   try {
-    const { instrumentData, accelerator1Data } = await req.json();
+    const { originalQuestions, correctionRequest, instrumentData } = await req.json();
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -23,50 +23,44 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Eres un experto en educación hídrica y diseño de instrumentos de evaluación. Tu tarea es generar preguntas específicas para una encuesta estudiantil basada en:
+            content: `Eres un experto en educación hídrica y diseño de instrumentos de evaluación. Tu tarea es corregir preguntas específicas de una encuesta estudiantil basada en las solicitudes del docente.
 
-1. Las respuestas del docente sobre configuración del instrumento
-2. El diagnóstico previo del Acelerador 1 (FODA, hallazgos, prioridades)
-
-Debes generar entre 8-15 preguntas que evalúen competencias en seguridad hídrica según las áreas curriculares priorizadas.
-
-IMPORTANTE - RECOMENDACIONES DE MUESTREO:
-- Si el número de estudiantes es ≤30: recomienda MUESTREO POR CONVENIENCIA (usar toda la población disponible)
-- Si el número de estudiantes es >30: calcula muestreo estadístico tradicional
-- Para poblaciones pequeñas, explica que es más apropiado hacer un censo completo que intentar muestrear
+INSTRUCCIONES IMPORTANTES:
+- Solo modifica las preguntas que el docente solicite cambiar
+- Mantén la coherencia con el resto del cuestionario
+- Conserva el mismo número total de preguntas
+- Respeta el formato original de las preguntas
+- Mantén las variables y tipos de pregunta existentes a menos que se solicite cambiarlos
 
 Responde SOLO con un JSON válido con esta estructura:
 {
   "questions": [
     {
       "nro": 1,
-      "pregunta": "texto de la pregunta",
+      "pregunta": "texto de la pregunta corregida",
       "tipo": "multiple_choice|single_choice|text|scale|yes_no",
       "variable": "nombre_variable",
       "opciones": ["opcion1", "opcion2"] // solo para preguntas cerradas
     }
   ],
-  "sample_size": {
-    "total_students": número_estudiantes_disponibles,
-    "recommended": número_recomendado,
-    "statistical": número_estadístico_opcional,
-    "sampling_type": "convenience|statistical",
-    "explanation": "explicación del tipo de muestreo recomendado y justificación pedagógica"
-  }
+  "corrections_applied": ["descripción de cambios realizados"]
 }`
           },
           {
             role: 'user',
-            content: `Configuración del instrumento:
+            content: `Preguntas originales:
+${JSON.stringify(originalQuestions, null, 2)}
+
+Configuración del instrumento:
 ${JSON.stringify(instrumentData, null, 2)}
 
-Diagnóstico Acelerador 1:
-${JSON.stringify(accelerator1Data, null, 2)}
+Solicitud de corrección del docente:
+"${correctionRequest}"
 
-Genera las preguntas de evaluación diagnóstica con recomendaciones de muestreo inteligente.`
+Por favor, aplica las correcciones solicitadas manteniendo la coherencia del cuestionario.`
           }
         ],
-        temperature: 0.7,
+        temperature: 0.3,
         max_tokens: 2500
       }),
     });
@@ -78,9 +72,9 @@ Genera las preguntas de evaluación diagnóstica con recomendaciones de muestreo
     }
 
     const content = openAIResult.choices[0].message.content;
-    const surveyData = JSON.parse(content);
+    const correctedData = JSON.parse(content);
 
-    return new Response(JSON.stringify(surveyData), {
+    return new Response(JSON.stringify(correctedData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

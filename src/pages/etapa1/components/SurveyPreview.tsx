@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -55,7 +56,7 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
 
       if (surveyError) throw surveyError
 
-      // Create questions
+      // Create questions using the latest version (including corrections)
       const questionsToInsert = questionsData.questions.map((q: any, index: number) => ({
         survey_id: surveyData.id,
         question_text: q.pregunta,
@@ -93,6 +94,49 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
     }
   }
 
+  const updateSurveyQuestions = async () => {
+    if (!survey || !session.session_data.corrections_made) return
+
+    try {
+      // Delete existing questions
+      await supabase
+        .from('survey_questions')
+        .delete()
+        .eq('survey_id', survey.id)
+
+      // Insert updated questions
+      const questionsData = session.session_data.ai_analysis
+      const questionsToInsert = questionsData.questions.map((q: any, index: number) => ({
+        survey_id: survey.id,
+        question_text: q.pregunta,
+        question_type: q.tipo,
+        options: q.opciones || [],
+        variable_name: q.variable,
+        order_number: q.nro || index + 1,
+        required: true
+      }))
+
+      const { error } = await supabase
+        .from('survey_questions')
+        .insert(questionsToInsert)
+
+      if (error) throw error
+
+      toast({
+        title: "Preguntas actualizadas",
+        description: "Las correcciones han sido aplicadas a la encuesta"
+      })
+
+    } catch (error) {
+      console.error('Error updating questions:', error)
+      toast({
+        title: "Error",
+        description: "No se pudieron actualizar las preguntas",
+        variant: "destructive"
+      })
+    }
+  }
+
   const loadSurvey = async () => {
     try {
       const { data, error } = await supabase
@@ -105,6 +149,11 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
 
       setSurvey(data)
       setPublishedUrl(`${window.location.origin}/encuesta/${data.participant_token}`)
+
+      // Update questions if corrections were made
+      if (session.session_data.corrections_made) {
+        await updateSurveyQuestions()
+      }
     } catch (error) {
       console.error('Error loading survey:', error)
     }
@@ -114,6 +163,11 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
     if (!survey) return
 
     try {
+      // Ensure questions are up to date before publishing
+      if (session.session_data.corrections_made) {
+        await updateSurveyQuestions()
+      }
+
       const { error } = await supabase
         .from('surveys')
         .update({ status: 'active' })
@@ -126,7 +180,7 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
 
       toast({
         title: "Encuesta publicada",
-        description: "Los estudiantes ya pueden acceder a la encuesta"
+        description: "Los estudiantes ya pueden acceder a la encuesta con la versión final de las preguntas"
       })
     } catch (error) {
       console.error('Error publishing survey:', error)
@@ -181,6 +235,7 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
               <CardTitle>Vista Previa de la Encuesta</CardTitle>
               <CardDescription>
                 Revisa cómo verán los estudiantes la encuesta antes de publicarla
+                {session.session_data.corrections_made && " (con correcciones aplicadas)"}
               </CardDescription>
             </div>
           </div>
@@ -188,6 +243,19 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
         <CardContent>
           {survey && (
             <div className="space-y-6">
+              {/* Correction Status */}
+              {session.session_data.corrections_made && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-5 h-5 text-blue-600" />
+                    <h4 className="font-semibold text-blue-800">Correcciones aplicadas</h4>
+                  </div>
+                  <p className="text-blue-700 text-sm">
+                    Esta encuesta incluye las correcciones que solicitaste. Las preguntas mostradas reflejan la versión final.
+                  </p>
+                </div>
+              )}
+
               {/* Survey Info */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex items-center justify-between mb-4">
@@ -250,6 +318,7 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
                   <CardTitle className="text-lg">Vista Previa de Preguntas</CardTitle>
                   <CardDescription>
                     Así verán los estudiantes las preguntas de la encuesta
+                    {session.session_data.corrections_made && " (versión corregida)"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

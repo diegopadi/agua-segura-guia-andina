@@ -7,6 +7,7 @@ import { ArrowRight, Brain, RefreshCw, CheckCircle, AlertCircle, Settings } from
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/hooks/use-toast"
+import { QuestionCorrection } from "./QuestionCorrection"
 
 interface AIAnalysisProps {
   session: any
@@ -20,6 +21,9 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
   const [generatedData, setGeneratedData] = useState(session.session_data.ai_analysis || null)
   const [error, setError] = useState<string | null>(null)
   const [accelerator1Data, setAccelerator1Data] = useState<any>(null)
+  const [correctionAttempts, setCorrectionAttempts] = useState(
+    session.session_data.correction_attempts || 0
+  )
 
   useEffect(() => {
     loadAccelerator1Data()
@@ -71,7 +75,6 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
         accelerator1Data: accelerator1Data
       })
 
-      // Call Edge Function
       const { data, error } = await supabase.functions.invoke('generate-survey-questions', {
         body: {
           instrumentData: session.session_data.instrument_design,
@@ -83,7 +86,10 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
 
       console.log('AI Response:', data)
       setGeneratedData(data)
-      onUpdate({ ai_analysis: data })
+      onUpdate({ 
+        ai_analysis: data,
+        correction_attempts: correctionAttempts
+      })
 
       toast({
         title: "Análisis completado",
@@ -105,8 +111,26 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
 
   const regenerateQuestions = () => {
     setGeneratedData(null)
-    onUpdate({ ai_analysis: null })
+    onUpdate({ 
+      ai_analysis: null,
+      correction_attempts: 0
+    })
+    setCorrectionAttempts(0)
     generateSurveyQuestions()
+  }
+
+  const handleCorrection = (correctedQuestions: any[], newAttempts: number) => {
+    const updatedData = {
+      ...generatedData,
+      questions: correctedQuestions
+    }
+    setGeneratedData(updatedData)
+    setCorrectionAttempts(newAttempts)
+    onUpdate({ 
+      ai_analysis: updatedData,
+      correction_attempts: newAttempts,
+      corrections_made: true
+    })
   }
 
   // Auto-generate if configuration is ready and no previous analysis
@@ -229,27 +253,34 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
               {generatedData.sample_size && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Recomendación de Muestra</CardTitle>
+                    <CardTitle className="text-lg">Recomendación de Muestreo</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid md:grid-cols-2 gap-4 mb-4">
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <h4 className="font-semibold text-blue-800 mb-2">Muestra Recomendada</h4>
                         <div className="text-2xl font-bold text-blue-600 mb-1">
                           {generatedData.sample_size.recommended} estudiantes
                         </div>
-                        <p className="text-blue-700 text-sm">Para resultados confiables</p>
+                        <p className="text-blue-700 text-sm">
+                          {generatedData.sample_size.sampling_type === 'convenience' 
+                            ? 'Muestreo por conveniencia (población completa)'
+                            : 'Para resultados confiables'
+                          }
+                        </p>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="font-semibold text-gray-800 mb-2">Muestra Estadística</h4>
-                        <div className="text-2xl font-bold text-gray-600 mb-1">
-                          {generatedData.sample_size.statistical} estudiantes
+                      {generatedData.sample_size.statistical && generatedData.sample_size.sampling_type !== 'convenience' && (
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="font-semibold text-gray-800 mb-2">Muestra Estadística</h4>
+                          <div className="text-2xl font-bold text-gray-600 mb-1">
+                            {generatedData.sample_size.statistical} estudiantes
+                          </div>
+                          <p className="text-gray-700 text-sm">Para análisis estadístico robusto</p>
                         </div>
-                        <p className="text-gray-700 text-sm">Para análisis estadístico robusto</p>
-                      </div>
+                      )}
                     </div>
                     {generatedData.sample_size.explanation && (
-                      <div className="mt-4 p-3 bg-amber-50 rounded-lg">
+                      <div className="p-3 bg-amber-50 rounded-lg">
                         <p className="text-amber-800 text-sm">
                           <strong>Explicación:</strong> {generatedData.sample_size.explanation}
                         </p>
@@ -306,6 +337,14 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Question Correction Component */}
+              <QuestionCorrection
+                questions={generatedData.questions || []}
+                instrumentData={session.session_data.instrument_design}
+                correctionAttempts={correctionAttempts}
+                onCorrection={handleCorrection}
+              />
 
               <div className="flex justify-end">
                 <Button onClick={onNext}>
