@@ -30,12 +30,12 @@ const accelerators = [
   },
   {
     number: 2,
-    title: "Análisis de Recursos",
-    description: "Identifica y mapea los recursos disponibles para la educación hídrica",
-    icon: BookOpen,
+    title: "Evaluación Diagnóstica",
+    description: "Crea encuestas para evaluar el nivel inicial de competencias en seguridad hídrica",
+    icon: Users,
     color: "bg-green-500",
-    steps: 5,
-    estimatedTime: "30-45 min"
+    steps: 6,
+    estimatedTime: "40-60 min"
   },
   {
     number: 3,
