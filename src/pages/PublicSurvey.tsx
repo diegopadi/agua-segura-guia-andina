@@ -96,7 +96,14 @@ export default function PublicSurvey() {
         return
       }
 
-      setQuestions(questionsData)
+      setQuestions(questionsData.map(q => ({
+        id: q.id,
+        question_text: q.question_text,
+        question_type: q.question_type,
+        options: Array.isArray(q.options) ? q.options.map(String) : [],
+        required: q.required ?? false,
+        order_number: q.order_number
+      })))
       
     } catch (error) {
       console.error('Error loading survey:', error)
