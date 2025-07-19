@@ -1,11 +1,23 @@
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { ArrowRight, BarChart3, Users, RefreshCw, CheckCircle } from "lucide-react"
+import { ArrowRight, BarChart3, Users, RefreshCw, CheckCircle, Download, Trash2, AlertTriangle } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface ResponseCollectionProps {
   session: any
@@ -19,6 +31,8 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
   const [participants, setParticipants] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [clearingData, setClearingData] = useState(false)
+  const [downloadingData, setDownloadingData] = useState(false)
 
   useEffect(() => {
     loadSurveyData()
@@ -94,15 +108,121 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
     }
   }
 
+  const clearCollectedData = async () => {
+    if (!session.session_data.survey_id) return
+
+    setClearingData(true)
+    try {
+      // Delete all responses and participants for this survey
+      await supabase
+        .from('survey_responses')
+        .delete()
+        .eq('survey_id', session.session_data.survey_id)
+
+      await supabase
+        .from('survey_participants')
+        .delete()
+        .eq('survey_id', session.session_data.survey_id)
+
+      // Reload data
+      await loadResponses()
+
+      toast({
+        title: "Datos eliminados",
+        description: "Todos los datos recolectados han sido eliminados. La encuesta sigue activa."
+      })
+    } catch (error) {
+      console.error('Error clearing data:', error)
+      toast({
+        title: "Error",
+        description: "No se pudieron eliminar los datos",
+        variant: "destructive"
+      })
+    } finally {
+      setClearingData(false)
+    }
+  }
+
+  const downloadData = async () => {
+    if (!session.session_data.survey_id || responses.length === 0) return
+
+    setDownloadingData(true)
+    try {
+      // Get survey questions for headers
+      const { data: questions, error: questionsError } = await supabase
+        .from('survey_questions')
+        .select('*')
+        .eq('survey_id', session.session_data.survey_id)
+        .order('order_number')
+
+      if (questionsError) throw questionsError
+
+      // Prepare CSV data
+      const csvData = []
+      
+      // Headers
+      const headers = [
+        'Participante',
+        'Fecha_Respuesta',
+        'Pregunta_Numero',
+        'Pregunta_Texto',
+        'Respuesta',
+        'Variable'
+      ]
+      csvData.push(headers.join(','))
+
+      // Data rows
+      responses.forEach(response => {
+        const question = questions?.find(q => q.id === response.question_id)
+        const responseText = typeof response.response_data === 'object' 
+          ? JSON.stringify(response.response_data).replace(/"/g, '""')
+          : String(response.response_data || '').replace(/"/g, '""')
+        
+        const row = [
+          `"${response.participant_token.slice(-6)}"`,
+          `"${new Date(response.submitted_at).toLocaleString('es-ES')}"`,
+          question?.order_number || '',
+          `"${question?.question_text?.replace(/"/g, '""') || ''}"`,
+          `"${responseText}"`,
+          `"${question?.variable_name || ''}"`
+        ]
+        csvData.push(row.join(','))
+      })
+
+      // Create and download file
+      const csvContent = csvData.join('\n')
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `encuesta_respuestas_${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+
+      toast({
+        title: "Descarga completada",
+        description: `Se han descargado ${responses.length} respuestas en formato CSV`
+      })
+    } catch (error) {
+      console.error('Error downloading data:', error)
+      toast({
+        title: "Error",
+        description: "No se pudieron descargar los datos",
+        variant: "destructive"
+      })
+    } finally {
+      setDownloadingData(false)
+    }
+  }
+
   const getUniqueParticipants = () => {
     const uniqueTokens = new Set(responses.map(r => r.participant_token))
     return uniqueTokens.size
-  }
-
-  const getCompletionRate = () => {
-    const questionsCount = session.session_data.ai_analysis?.questions?.length || 1
-    const completedParticipants = participants.filter(p => p.completed_at).length
-    return completedParticipants
   }
 
   const canProceedToReport = () => {
@@ -123,9 +243,7 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
     )
   }
 
-  const targetStudents = survey?.settings?.target_students || 'No definido'
   const uniqueParticipants = getUniqueParticipants()
-  const completedParticipants = getCompletionRate()
 
   return (
     <div className="space-y-6">
@@ -156,55 +274,75 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
             </div>
           )}
 
-          {/* Stats Cards */}
-          <div className="grid md:grid-cols-4 gap-4 mb-6">
+          {/* Simplified Stats - Only Participants */}
+          <div className="grid md:grid-cols-1 gap-4 mb-6 max-w-sm">
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600">{uniqueParticipants}</div>
-                  <p className="text-sm text-muted-foreground">Participantes únicos</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">{completedParticipants}</div>
-                  <p className="text-sm text-muted-foreground">Encuestas completadas</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600">{responses.length}</div>
-                  <p className="text-sm text-muted-foreground">Total respuestas</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-600">{targetStudents}</div>
-                  <p className="text-sm text-muted-foreground">Estudiantes objetivo</p>
+                  <div className="text-4xl font-bold text-blue-600">{uniqueParticipants}</div>
+                  <p className="text-lg text-muted-foreground">Participantes</p>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Progress towards target */}
-          {typeof targetStudents === 'number' && (
-            <div className="mb-6">
-              <div className="flex justify-between text-sm mb-2">
-                <span>Progreso hacia meta</span>
-                <span>{Math.round((uniqueParticipants / targetStudents) * 100)}%</span>
-              </div>
-              <Progress value={(uniqueParticipants / targetStudents) * 100} className="h-2" />
-            </div>
-          )}
+          {/* Data Management Actions */}
+          <div className="flex flex-wrap gap-3 mb-6">
+            <Button 
+              onClick={downloadData}
+              variant="outline"
+              disabled={responses.length === 0 || downloadingData}
+              className="flex items-center gap-2"
+            >
+              {downloadingData ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Descargar datos
+            </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline"
+                  disabled={responses.length === 0 || clearingData}
+                  className="flex items-center gap-2 text-red-600 hover:text-red-700"
+                >
+                  {clearingData ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                  Borrar datos recolectados
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    ¿Eliminar todos los datos?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción eliminará permanentemente todas las respuestas recolectadas 
+                    ({responses.length} respuestas de {uniqueParticipants} participantes). 
+                    La encuesta permanecerá activa, pero se perderán todos los datos actuales.
+                    <br /><br />
+                    <strong>Esta acción no se puede deshacer.</strong>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={clearCollectedData}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Sí, eliminar datos
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
 
           {/* Survey Link */}
           <Card>

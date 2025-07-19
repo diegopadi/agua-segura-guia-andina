@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowRight, Eye, Link2, Share, Copy, CheckCircle } from "lucide-react"
+import { ArrowRight, Eye, Link2, Share, Copy, CheckCircle, RefreshCw, AlertTriangle } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/hooks/use-toast"
@@ -20,6 +19,7 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
   const { user } = useAuth()
   const [survey, setSurvey] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [regeneratingLink, setRegeneratingLink] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState('')
   const [copied, setCopied] = useState(false)
 
@@ -47,7 +47,7 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
           settings: {
             anonymous: instrumentData.anonimato === 'Sí, completamente anónimas',
             time_limit: instrumentData.tiempo_maximo,
-            target_students: instrumentData.numero_estudiantes
+            target_students: instrumentData.num_estudiantes_disponibles
           },
           status: 'draft'
         })
@@ -91,6 +91,42 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const regenerateLink = async () => {
+    if (!survey) return
+
+    setRegeneratingLink(true)
+    try {
+      // Generate new participant token
+      const newToken = crypto.randomUUID()
+
+      const { error } = await supabase
+        .from('surveys')
+        .update({ participant_token: newToken })
+        .eq('id', survey.id)
+
+      if (error) throw error
+
+      const updatedSurvey = { ...survey, participant_token: newToken }
+      setSurvey(updatedSurvey)
+      setPublishedUrl(`${window.location.origin}/encuesta/${newToken}`)
+      onUpdate({ survey_token: newToken })
+
+      toast({
+        title: "Nuevo enlace generado",
+        description: "Se ha creado un nuevo enlace manteniendo todos los datos existentes"
+      })
+    } catch (error) {
+      console.error('Error regenerating link:', error)
+      toast({
+        title: "Error",
+        description: "No se pudo generar un nuevo enlace",
+        variant: "destructive"
+      })
+    } finally {
+      setRegeneratingLink(false)
     }
   }
 
@@ -299,6 +335,35 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
                       <Button onClick={copyToClipboard} variant="outline" size="icon">
                         {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       </Button>
+                    </div>
+
+                    {/* Link Management Actions */}
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={regenerateLink} 
+                        variant="outline" 
+                        size="sm"
+                        disabled={regeneratingLink}
+                        className="flex items-center gap-2"
+                      >
+                        {regeneratingLink ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
+                        )}
+                        Crear nuevo enlace
+                      </Button>
+                    </div>
+
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-orange-800 text-sm">
+                          <p className="font-medium mb-1">¿Problemas con el enlace?</p>
+                          <p>Si el enlace no funciona o necesitas uno nuevo, usa "Crear nuevo enlace". 
+                          Esto mantendrá todos los datos ya recolectados.</p>
+                        </div>
+                      </div>
                     </div>
                     
                     {survey.status !== 'active' && (
