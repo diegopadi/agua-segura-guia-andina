@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowRight, Brain, RefreshCw, CheckCircle } from "lucide-react"
+import { ArrowRight, Brain, RefreshCw, CheckCircle, AlertCircle, Settings } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/hooks/use-toast"
@@ -18,13 +19,14 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
   const [loading, setLoading] = useState(false)
   const [generatedData, setGeneratedData] = useState(session.session_data.ai_analysis || null)
   const [error, setError] = useState<string | null>(null)
+  const [accelerator1Data, setAccelerator1Data] = useState<any>(null)
 
-  const generateSurveyQuestions = async () => {
-    setLoading(true)
-    setError(null)
+  useEffect(() => {
+    loadAccelerator1Data()
+  }, [])
 
+  const loadAccelerator1Data = async () => {
     try {
-      // Get Accelerator 1 data
       const { data: acc1Session } = await supabase
         .from('acelerador_sessions')
         .select('session_data')
@@ -33,20 +35,53 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
         .eq('status', 'completed')
         .single()
 
-      if (!acc1Session) {
-        throw new Error('No se encontró el diagnóstico del Acelerador 1')
+      if (acc1Session) {
+        setAccelerator1Data(acc1Session.session_data)
       }
+    } catch (error) {
+      console.error('Error loading Accelerator 1 data:', error)
+    }
+  }
+
+  const generateSurveyQuestions = async () => {
+    if (!session.session_data.instrument_design) {
+      toast({
+        title: "Configuración incompleta",
+        description: "Debes completar el diseño del instrumento primero",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (!accelerator1Data) {
+      toast({
+        title: "Diagnóstico no encontrado",
+        description: "No se encontró el diagnóstico del Acelerador 1. Asegúrate de haberlo completado.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      console.log('Sending data to AI:', {
+        instrumentData: session.session_data.instrument_design,
+        accelerator1Data: accelerator1Data
+      })
 
       // Call Edge Function
       const { data, error } = await supabase.functions.invoke('generate-survey-questions', {
         body: {
           instrumentData: session.session_data.instrument_design,
-          accelerator1Data: acc1Session.session_data
+          accelerator1Data: accelerator1Data
         }
       })
 
       if (error) throw error
 
+      console.log('AI Response:', data)
       setGeneratedData(data)
       onUpdate({ ai_analysis: data })
 
@@ -74,11 +109,12 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
     generateSurveyQuestions()
   }
 
+  // Auto-generate if configuration is ready and no previous analysis
   useEffect(() => {
-    if (!generatedData && session.session_data.instrument_design) {
+    if (!generatedData && session.session_data.instrument_design && accelerator1Data && !loading) {
       generateSurveyQuestions()
     }
-  }, [])
+  }, [accelerator1Data, session.session_data.instrument_design])
 
   return (
     <div className="space-y-6">
@@ -94,7 +130,55 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          {/* Configuration Summary */}
+          {session.session_data.instrument_design && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Settings className="w-5 h-5 text-green-600" />
+                <h3 className="font-semibold text-green-800">Configuración del instrumento lista</h3>
+              </div>
+              <div className="grid md:grid-cols-2 gap-3 text-sm">
+                {Object.entries(session.session_data.instrument_design).slice(0, 4).map(([key, value]) => (
+                  <div key={key} className="text-green-700">
+                    <span className="font-medium capitalize">{key.replace('_', ' ')}:</span> {
+                      Array.isArray(value) ? value.join(', ') : String(value)
+                    }
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Accelerator 1 Status */}
+          <div className={`border rounded-lg p-4 ${
+            accelerator1Data 
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-yellow-50 border-yellow-200'
+          }`}>
+            <div className="flex items-center gap-2 mb-2">
+              {accelerator1Data ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-yellow-600" />
+              )}
+              <h3 className={`font-semibold ${
+                accelerator1Data ? 'text-green-800' : 'text-yellow-800'
+              }`}>
+                {accelerator1Data ? 'Diagnóstico del Acelerador 1 encontrado' : 'Buscando diagnóstico del Acelerador 1...'}
+              </h3>
+            </div>
+            <p className={`text-sm ${
+              accelerator1Data ? 'text-green-700' : 'text-yellow-700'
+            }`}>
+              {accelerator1Data 
+                ? 'Se utilizará el análisis FODA y las prioridades identificadas para personalizar las preguntas'
+                : 'Se necesita el diagnóstico del Acelerador 1 para generar preguntas personalizadas'
+              }
+            </p>
+          </div>
+
+          {/* Loading State */}
           {loading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
@@ -106,6 +190,7 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
             </div>
           )}
 
+          {/* Error State */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <h3 className="font-semibold text-red-800 mb-2">Error en el análisis</h3>
@@ -117,6 +202,17 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
             </div>
           )}
 
+          {/* Manual Generate Button */}
+          {!loading && !generatedData && !error && session.session_data.instrument_design && accelerator1Data && (
+            <div className="text-center">
+              <Button onClick={generateSurveyQuestions} size="lg">
+                <Brain className="w-5 h-5 mr-2" />
+                Generar preguntas con IA
+              </Button>
+            </div>
+          )}
+
+          {/* Generated Results */}
           {generatedData && (
             <div className="space-y-6">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
