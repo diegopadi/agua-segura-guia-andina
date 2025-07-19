@@ -122,9 +122,9 @@ export function InstrumentDesign({ session, onUpdate, onNext }: InstrumentDesign
                 <div key={index} className="flex items-center space-x-2">
                   <Checkbox
                     id={`${key}-${index}`}
-                    checked={formData[key]?.includes(option) || false}
+                    checked={Array.isArray(formData[key]) ? formData[key].includes(option) : false}
                     onCheckedChange={(checked) => {
-                      const currentValues = formData[key] || []
+                      const currentValues = Array.isArray(formData[key]) ? formData[key] : []
                       if (checked) {
                         handleInputChange(key, [...currentValues, option])
                       } else {
