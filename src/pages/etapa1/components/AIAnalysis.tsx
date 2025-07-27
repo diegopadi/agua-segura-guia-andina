@@ -70,10 +70,6 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
     setError(null)
 
     try {
-      console.log('Sending data to AI:', {
-        instrumentData: session.session_data.instrument_design,
-        accelerator1Data: accelerator1Data
-      })
 
       const { data, error } = await supabase.functions.invoke('generate-survey-questions', {
         body: {
@@ -84,7 +80,7 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
 
       if (error) throw error
 
-      console.log('AI Response:', data)
+      
       setGeneratedData(data)
       onUpdate({ 
         ai_analysis: data,
