@@ -92,11 +92,15 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
       setResponses(responsesData || [])
       setParticipants(participantsData || [])
 
-      // Update session with current stats
+      // Update session with current stats using the correct count
+      const responseTokens = new Set((responsesData || []).map(r => r.participant_token))
+      const participantTokens = new Set((participantsData || []).map(p => p.participant_token))
+      const uniqueCount = Math.max(responseTokens.size, participantTokens.size)
+      
       onUpdate({
         response_stats: {
           total_responses: responsesData?.length || 0,
-          total_participants: participantsData?.length || 0,
+          total_participants: uniqueCount,
           last_updated: new Date().toISOString()
         }
       })
@@ -221,13 +225,84 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
   }
 
   const getUniqueParticipants = () => {
-    const uniqueTokens = new Set(responses.map(r => r.participant_token))
-    return uniqueTokens.size
+    // Count unique participants from both participants table and responses
+    const responseTokens = new Set(responses.map(r => r.participant_token))
+    const participantTokens = new Set(participants.map(p => p.participant_token))
+    
+    // Use the higher count (in case there are mismatches, we want to be accurate)
+    return Math.max(responseTokens.size, participantTokens.size)
   }
 
   const canProceedToReport = () => {
     const minResponses = 3 // Minimum responses needed for analysis
     return getUniqueParticipants() >= minResponses
+  }
+
+  // Temporary function to create test participants
+  const createTestParticipants = async () => {
+    if (!session.session_data.survey_id) return
+
+    try {
+      // Get survey questions first
+      const { data: questions, error: questionsError } = await supabase
+        .from('survey_questions')
+        .select('*')
+        .eq('survey_id', session.session_data.survey_id)
+        .order('order_number')
+
+      if (questionsError) throw questionsError
+
+      // Create 5 test participants
+      for (let i = 1; i <= 5; i++) {
+        const participantToken = crypto.randomUUID()
+        
+        // Create participant record
+        const { error: participantError } = await supabase
+          .from('survey_participants')
+          .insert({
+            survey_id: session.session_data.survey_id,
+            participant_token: participantToken,
+            status: 'completed',
+            completed_at: new Date().toISOString()
+          })
+
+        if (participantError) {
+          console.error('Error creating test participant:', participantError)
+          continue
+        }
+
+        // Create responses for each question
+        const responseRecords = questions.map(question => ({
+          survey_id: session.session_data.survey_id,
+          question_id: question.id,
+          participant_token: participantToken,
+          response_data: `Test Response ${i} for Question ${question.order_number}`
+        }))
+
+        const { error: responseError } = await supabase
+          .from('survey_responses')
+          .insert(responseRecords)
+
+        if (responseError) {
+          console.error('Error creating test responses:', responseError)
+        }
+      }
+
+      toast({
+        title: "Datos de prueba creados",
+        description: "Se han creado 5 participantes de prueba"
+      })
+
+      // Reload data
+      await loadResponses()
+    } catch (error) {
+      console.error('Error creating test data:', error)
+      toast({
+        title: "Error",
+        description: "No se pudieron crear los datos de prueba",
+        variant: "destructive"
+      })
+    }
   }
 
   if (loading) {
@@ -342,6 +417,16 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
+            {/* Temporary test button - remove in production */}
+            <Button 
+              onClick={createTestParticipants}
+              variant="outline"
+              className="flex items-center gap-2 bg-green-50 hover:bg-green-100 text-green-700 border-green-300"
+            >
+              <Users className="w-4 h-4" />
+              Crear 5 participantes de prueba
+            </Button>
           </div>
 
           {/* Survey Link */}

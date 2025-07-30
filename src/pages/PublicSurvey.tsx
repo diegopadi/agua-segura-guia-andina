@@ -192,27 +192,28 @@ export default function PublicSurvey() {
     try {
       setSubmitting(true)
 
-      // Create participant record
-      const participantToken = crypto.randomUUID()
+      // Create participant record first
+      const individualParticipantToken = crypto.randomUUID()
       
       const { error: participantError } = await supabase
         .from('survey_participants')
         .insert({
           survey_id: survey.id,
-          participant_token: participantToken,
+          participant_token: individualParticipantToken,
           status: 'completed',
           completed_at: new Date().toISOString()
         })
 
       if (participantError) {
         console.error('Error creating participant:', participantError)
+        throw participantError
       }
 
-      // Save all responses
+      // Save all responses with the individual participant token
       const responseRecords = Object.entries(responses).map(([questionId, responseData]) => ({
         survey_id: survey.id,
         question_id: questionId,
-        participant_token: token,
+        participant_token: individualParticipantToken,
         response_data: responseData
       }))
 
