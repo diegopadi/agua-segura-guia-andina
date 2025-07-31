@@ -75,6 +75,13 @@ const PriorityAnalysis = ({
         })
       }, 500)
 
+      console.log('Calling generate-priority-report with data:', {
+        accelerator1Data,
+        accelerator2Data,
+        accelerator3Data,
+        profileData
+      })
+
       const { data, error } = await supabase.functions.invoke(
         'generate-priority-report',
         {
@@ -87,10 +94,15 @@ const PriorityAnalysis = ({
         }
       )
 
+      console.log('Edge function response:', { data, error })
+
       clearInterval(progressInterval)
       setProgress(100)
 
-      if (error) throw error
+      if (error) {
+        console.error('Edge function error details:', error)
+        throw new Error(`Error en la función: ${error.message || JSON.stringify(error)}`)
+      }
 
       if (!data.report) {
         throw new Error('No se recibió un informe válido')
