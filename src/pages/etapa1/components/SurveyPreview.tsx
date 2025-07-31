@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowRight, Eye, Link2, Share, Copy, CheckCircle, RefreshCw, AlertTriangle } from "lucide-react"
+import { ArrowRight, Eye, Link2, Share, Copy, CheckCircle, RefreshCw, AlertTriangle, Users, Plus } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/hooks/use-toast"
@@ -19,8 +19,9 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
   const { user } = useAuth()
   const [survey, setSurvey] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-  const [regeneratingLink, setRegeneratingLink] = useState(false)
-  const [publishedUrl, setPublishedUrl] = useState('')
+  const [generatingLinks, setGeneratingLinks] = useState(false)
+  const [participantLinks, setParticipantLinks] = useState<string[]>([])
+  const [numParticipants, setNumParticipants] = useState(10)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -74,8 +75,7 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
       if (questionsError) throw questionsError
 
       setSurvey(surveyData)
-      setPublishedUrl(`${window.location.origin}/encuesta/${surveyData.participant_token}`)
-      onUpdate({ survey_id: surveyData.id, survey_token: surveyData.participant_token })
+      onUpdate({ survey_id: surveyData.id })
 
       toast({
         title: "Encuesta creada",
@@ -94,39 +94,42 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
     }
   }
 
-  const regenerateLink = async () => {
+  const generateParticipantLinks = async () => {
     if (!survey) return
 
-    setRegeneratingLink(true)
+    setGeneratingLinks(true)
     try {
-      // Generate new participant token
-      const newToken = crypto.randomUUID()
+      const links = []
+      
+      // Generate specified number of unique participant links
+      for (let i = 0; i < numParticipants; i++) {
+        const { data, error } = await supabase.rpc('create_unique_participant', {
+          survey_id_param: survey.id
+        })
 
-      const { error } = await supabase
-        .from('surveys')
-        .update({ participant_token: newToken })
-        .eq('id', survey.id)
+        if (error) throw error
+        
+        if (data && data.length > 0) {
+          const participantToken = data[0].participant_token
+          links.push(`${window.location.origin}/encuesta/${participantToken}`)
+        }
+      }
 
-      if (error) throw error
-
-      const updatedSurvey = { ...survey, participant_token: newToken }
-      setSurvey(updatedSurvey)
-      setPublishedUrl(`${window.location.origin}/encuesta/${newToken}`)
-      onUpdate({ survey_token: newToken })
-
+      setParticipantLinks(links)
+      
       toast({
-        title: "Nuevo enlace generado",
-        description: "Se ha creado un nuevo enlace manteniendo todos los datos existentes"
+        title: "Enlaces generados",
+        description: `Se han creado ${links.length} enlaces únicos para participantes`
       })
     } catch (error) {
-      console.error('Error regenerating link:', error)
+      console.error('Error generating participant links:', error)
       toast({
         title: "Error",
-        description: "No se pudo generar un nuevo enlace",
+        description: "No se pudieron generar los enlaces de participantes",
         variant: "destructive"
       })
     } finally {
-      setRegeneratingLink(false)
+      setGeneratingLinks(false)
     }
   }
 
@@ -184,7 +187,6 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
       if (error) throw error
 
       setSurvey(data)
-      setPublishedUrl(`${window.location.origin}/encuesta/${data.participant_token}`)
 
       // Update questions if corrections were made
       if (session.session_data.corrections_made) {
@@ -228,9 +230,9 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
     }
   }
 
-  const copyToClipboard = async () => {
+  const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(publishedUrl)
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
       toast({
@@ -317,51 +319,101 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
                 </div>
               </div>
 
-              {/* URL Section */}
+              {/* Participant Links Section */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Link2 className="w-5 h-5" />
-                    Enlace de la Encuesta
+                    <Users className="w-5 h-5" />
+                    Enlaces Únicos por Participante
                   </CardTitle>
                   <CardDescription>
-                    Comparte este enlace con tus estudiantes para que respondan la encuesta
+                    Genera enlaces únicos para cada estudiante para garantizar datos individuales
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex gap-2">
-                      <Input value={publishedUrl} readOnly className="font-mono text-sm" />
-                      <Button onClick={copyToClipboard} variant="outline" size="icon">
-                        {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                    </div>
-
-                    {/* Link Management Actions */}
-                    <div className="flex gap-2">
+                    {/* Link Generation Controls */}
+                    <div className="flex gap-3 items-end">
+                      <div className="flex-1">
+                        <Label htmlFor="numParticipants">Número de participantes</Label>
+                        <Input
+                          id="numParticipants"
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={numParticipants}
+                          onChange={(e) => setNumParticipants(parseInt(e.target.value) || 10)}
+                          className="w-full"
+                        />
+                      </div>
                       <Button 
-                        onClick={regenerateLink} 
-                        variant="outline" 
-                        size="sm"
-                        disabled={regeneratingLink}
+                        onClick={generateParticipantLinks} 
+                        disabled={generatingLinks}
                         className="flex items-center gap-2"
                       >
-                        {regeneratingLink ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        {generatingLinks ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         ) : (
-                          <RefreshCw className="w-4 h-4" />
+                          <Plus className="w-4 h-4" />
                         )}
-                        Crear nuevo enlace
+                        Generar enlaces
                       </Button>
                     </div>
 
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    {/* Generated Links */}
+                    {participantLinks.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">Enlaces generados ({participantLinks.length})</h4>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              const allLinks = participantLinks.join('\n')
+                              copyToClipboard(allLinks)
+                            }}
+                          >
+                            <Copy className="w-4 h-4 mr-2" />
+                            Copiar todos
+                          </Button>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                          <div className="space-y-2">
+                            {participantLinks.map((link, index) => (
+                              <div key={index} className="flex items-center gap-2 text-sm">
+                                <span className="font-mono text-xs bg-white px-2 py-1 rounded">
+                                  {index + 1}
+                                </span>
+                                <code className="flex-1 bg-white px-2 py-1 rounded text-xs break-all">
+                                  {link}
+                                </code>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyToClipboard(link)}
+                                  className="shrink-0"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                        <div className="text-orange-800 text-sm">
-                          <p className="font-medium mb-1">¿Problemas con el enlace?</p>
-                          <p>Si el enlace no funciona o necesitas uno nuevo, usa "Crear nuevo enlace". 
-                          Esto mantendrá todos los datos ya recolectados.</p>
+                        <CheckCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-blue-800 text-sm">
+                          <p className="font-medium mb-1">Ventajas de los enlaces únicos:</p>
+                          <ul className="list-disc list-inside space-y-1 text-blue-700">
+                            <li>Cada estudiante tiene su propio enlace personalizado</li>
+                            <li>Datos completamente separados por participante</li>
+                            <li>Conteo preciso de participantes únicos</li>
+                            <li>Mejor control y seguimiento individual</li>
+                          </ul>
                         </div>
                       </div>
                     </div>

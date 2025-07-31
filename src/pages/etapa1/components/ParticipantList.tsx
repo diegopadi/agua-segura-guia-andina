@@ -122,23 +122,14 @@ export function ParticipantList({ surveyId, onUpdate }: ParticipantListProps) {
 
     setDeleting(true)
     try {
-      const tokenList = Array.from(selectedParticipants).map(id => {
-        const participant = participants.find(p => p.id === id)
-        return participant?.participant_token
-      }).filter(Boolean)
+      const participantIds = Array.from(selectedParticipants)
 
-      // Delete from both tables
-      await supabase
-        .from('survey_responses')
-        .delete()
-        .eq('survey_id', surveyId)
-        .in('participant_token', tokenList)
-
+      // Use cascading DELETE - only delete from survey_participants
+      // survey_responses will be deleted automatically due to FK CASCADE
       await supabase
         .from('survey_participants')
         .delete()
-        .eq('survey_id', surveyId)
-        .in('participant_token', tokenList)
+        .in('id', participantIds)
 
       setSelectedParticipants(new Set())
       await loadParticipants()
@@ -146,7 +137,7 @@ export function ParticipantList({ surveyId, onUpdate }: ParticipantListProps) {
 
       toast({
         title: "Participantes eliminados",
-        description: `Se eliminaron ${selectedParticipants.size} participantes y sus respuestas`
+        description: `Se eliminaron ${selectedParticipants.size} participantes y sus respuestas automáticamente`
       })
     } catch (error) {
       console.error('Error deleting participants:', error)

@@ -30,7 +30,7 @@ interface Survey {
 }
 
 export default function PublicSurvey() {
-  const { token } = useParams<{ token: string }>()
+  const { token: participantToken } = useParams<{ token: string }>()
   const navigate = useNavigate()
   
   const [survey, setSurvey] = useState<Survey | null>(null)
@@ -42,6 +42,7 @@ export default function PublicSurvey() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
+  const [participantId, setParticipantId] = useState<string | null>(null)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -55,21 +56,44 @@ export default function PublicSurvey() {
   }, [])
 
   useEffect(() => {
-    if (token) {
+    if (participantToken) {
       loadSurvey()
     }
-  }, [token])
+  }, [participantToken])
 
   const loadSurvey = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      // Load survey basic info
+      // Validate participant exists and get survey info
+      const { data: participantData, error: participantError } = await supabase
+        .from('survey_participants')
+        .select('id, survey_id')
+        .eq('participant_token', participantToken)
+        .single()
+
+      if (participantError) {
+        if (participantError.code === 'PGRST116') {
+          setError('Enlace de participante no válido o no encontrado')
+        } else {
+          setError('Error al validar el participante')
+        }
+        return
+      }
+
+      // Store participant ID in sessionStorage for persistence
+      const storedParticipantId = sessionStorage.getItem(`participant_${participantToken}`)
+      if (!storedParticipantId) {
+        sessionStorage.setItem(`participant_${participantToken}`, participantData.id)
+      }
+      setParticipantId(participantData.id)
+
+      // Load survey info
       const { data: surveyData, error: surveyError } = await supabase
         .from('surveys')
         .select('id, title, description, status')
-        .eq('participant_token', token)
+        .eq('id', participantData.survey_id)
         .eq('status', 'active')
         .single()
 
@@ -192,26 +216,27 @@ export default function PublicSurvey() {
     try {
       setSubmitting(true)
 
-      // Create participant record using the survey token (not a new one)
-      const { error: participantError } = await supabase
-        .from('survey_participants')
-        .insert({
-          survey_id: survey.id,
-          participant_token: token, // Use the survey token from URL
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
+      // Update participant status to completed
+      if (participantId) {
+        const { error: participantError } = await supabase
+          .from('survey_participants')
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', participantId)
 
-      if (participantError) {
-        console.error('Error creating participant:', participantError)
-        throw participantError
+        if (participantError) {
+          console.error('Error updating participant:', participantError)
+        }
       }
 
-      // Save all responses with the survey token
+      // Save all responses with both participant_id and participant_token
       const responseRecords = Object.entries(responses).map(([questionId, responseData]) => ({
         survey_id: survey.id,
         question_id: questionId,
-        participant_token: token, // Use the survey token from URL
+        participant_id: participantId, // Use participant_id from FK
+        participant_token: participantToken, // Still required by schema
         response_data: responseData
       }))
 

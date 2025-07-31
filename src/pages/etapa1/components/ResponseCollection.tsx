@@ -82,7 +82,13 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
 
       if (responsesError) throw responsesError
 
-      // Load participants
+      // Load participants using the new direct count
+      const { data: participantCount, error: participantCountError } = await supabase
+        .rpc('get_survey_participants_count', { survey_id_param: session.session_data.survey_id })
+
+      if (participantCountError) throw participantCountError
+
+      // Load participant list for display
       const { data: participantsData, error: participantsError } = await supabase
         .from('survey_participants')
         .select('*')
@@ -92,19 +98,11 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
 
       setResponses(responsesData || [])
       setParticipants(participantsData || [])
-
-      // Calculate unique participants correctly
-      const responseTokens = new Set((responsesData || []).map(r => r.participant_token))
-      const participantTokens = new Set((participantsData || []).map(p => p.participant_token))
-      
-      // Combine both sets to get all unique tokens
-      const allTokens = new Set([...responseTokens, ...participantTokens])
-      const uniqueCount = allTokens.size
       
       onUpdate({
         response_stats: {
           total_responses: responsesData?.length || 0,
-          total_participants: uniqueCount,
+          total_participants: participantCount || 0,
           last_updated: new Date().toISOString()
         }
       })
@@ -229,13 +227,8 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
   }
 
   const getUniqueParticipants = () => {
-    // Count unique participants from both participants table and responses
-    const responseTokens = new Set(responses.map(r => r.participant_token))
-    const participantTokens = new Set(participants.map(p => p.participant_token))
-    
-    // Combine both sets to get accurate count
-    const allTokens = new Set([...responseTokens, ...participantTokens])
-    return allTokens.size
+    // Use participants.length directly since each participant is unique by ID
+    return participants.length
   }
 
   const canProceedToReport = () => {
@@ -243,9 +236,9 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
     return getUniqueParticipants() >= minResponses
   }
 
-  // Testing function to create 5 test participants
+  // Testing function to create 5 test participants using new approach
   const createTestParticipants = async () => {
-    if (!session.session_data.survey_id || !survey?.participant_token) return
+    if (!session.session_data.survey_id) return
 
     try {
       // Get survey questions first
@@ -257,28 +250,37 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
 
       if (questionsError) throw questionsError
 
-      // Create 5 test participants using the survey token (not individual tokens)
+      // Create 5 test participants using unique tokens
       for (let i = 1; i <= 5; i++) {
-        // Create participant record using the survey's participant_token
-        const { error: participantError } = await supabase
-          .from('survey_participants')
-          .insert({
-            survey_id: session.session_data.survey_id,
-            participant_token: survey.participant_token, // Use survey token
-            status: 'completed',
-            completed_at: new Date().toISOString()
-          })
+        // Create unique participant using the RPC function
+        const { data: participantData, error: participantError } = await supabase
+          .rpc('create_unique_participant', { survey_id_param: session.session_data.survey_id })
 
         if (participantError) {
           console.error('Error creating test participant:', participantError)
           continue
         }
 
+        if (!participantData || participantData.length === 0) continue
+
+        const participantId = participantData[0].participant_id
+        const participantToken = participantData[0].participant_token
+
+        // Update participant to completed status
+        await supabase
+          .from('survey_participants')
+          .update({ 
+            status: 'completed', 
+            completed_at: new Date().toISOString() 
+          })
+          .eq('id', participantId)
+
         // Create responses for each question
         const responseRecords = questions.map(question => ({
           survey_id: session.session_data.survey_id,
           question_id: question.id,
-          participant_token: survey.participant_token, // Use survey token
+          participant_id: participantId,
+          participant_token: participantToken,
           response_data: `Test Response ${i} for Question ${question.order_number}`
         }))
 
@@ -293,7 +295,7 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
 
       toast({
         title: "Datos de prueba creados",
-        description: "Se han creado 5 participantes de prueba"
+        description: "Se han creado 5 participantes únicos de prueba"
       })
 
       // Reload data
@@ -432,14 +434,18 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
             </Button>
           </div>
 
-          {/* Survey Link */}
+          {/* Survey Link Note */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Enlace de la Encuesta</CardTitle>
+              <CardTitle className="text-lg">Enlaces de Participantes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-gray-50 p-3 rounded font-mono text-sm break-all">
-                {`${window.location.origin}/encuesta/${session.session_data.survey_token}`}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 text-sm">
+                  <strong>Nueva implementación:</strong> Los enlaces únicos por participante se generan 
+                  desde la Vista Previa de la Encuesta. Cada estudiante recibe su propio enlace personalizado 
+                  para garantizar datos individuales precisos.
+                </p>
               </div>
             </CardContent>
           </Card>
