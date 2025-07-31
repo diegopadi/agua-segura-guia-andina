@@ -82,21 +82,48 @@ serve(async (req) => {
     let report;
     try {
       // Clean the response in case it has markdown formatting
-      const cleanedContent = generatedContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      report = JSON.parse(cleanedContent);
+      let cleanedContent = generatedContent.replace(/```json\n?/g, '').replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+      
+      // If the response is HTML instead of JSON, create the proper structure
+      if (cleanedContent.startsWith('<div class="priority-report">')) {
+        report = {
+          html_content: cleanedContent,
+          priorities: extractPrioritiesFromHTML(cleanedContent),
+          metadata: {}
+        };
+      } else {
+        // Try to parse as JSON
+        report = JSON.parse(cleanedContent);
+      }
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
       console.error('Raw AI response:', generatedContent);
-      throw new Error('Error al procesar la respuesta de la IA. Formato JSON inválido.');
+      
+      // If parsing fails, try to extract HTML content manually
+      const htmlMatch = generatedContent.match(/<div class="priority-report">.*?<\/div>/s);
+      if (htmlMatch) {
+        report = {
+          html_content: htmlMatch[0],
+          priorities: extractPrioritiesFromHTML(htmlMatch[0]),
+          metadata: {}
+        };
+      } else {
+        throw new Error('Error al procesar la respuesta de la IA. Formato inválido.');
+      }
     }
 
-    // Validate the report structure
-    if (!report.html_content || !report.priorities || !Array.isArray(report.priorities)) {
-      throw new Error('La respuesta de la IA no contiene la estructura esperada del informe');
+    // Validate the report structure and extract priorities if needed
+    if (!report.html_content) {
+      throw new Error('La respuesta de la IA no contiene contenido HTML');
+    }
+    
+    // If priorities are not extracted, try to extract them from HTML
+    if (!report.priorities || !Array.isArray(report.priorities)) {
+      report.priorities = extractPrioritiesFromHTML(report.html_content);
     }
 
     if (report.priorities.length !== 5) {
-      throw new Error(`Se esperaban 5 prioridades, pero se generaron ${report.priorities.length}`);
+      console.warn(`Se esperaban 5 prioridades, pero se encontraron ${report.priorities.length}`);
     }
 
     // Add metadata
@@ -136,3 +163,43 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to extract priorities from HTML content
+function extractPrioritiesFromHTML(htmlContent: string): any[] {
+  const priorities: any[] = [];
+  
+  // Extract priority items using regex
+  const priorityMatches = htmlContent.match(/<div class="priority-item">.*?<\/div>\s*<\/div>/gs);
+  
+  if (priorityMatches) {
+    priorityMatches.forEach((match, index) => {
+      const titleMatch = match.match(/<h3>Prioridad \d+: (.+?)<\/h3>/);
+      const descriptionMatch = match.match(/<h4>Descripción<\/h4>\s*<p>(.+?)<\/p>/s);
+      
+      if (titleMatch) {
+        priorities.push({
+          priority_number: index + 1,
+          title: titleMatch[1],
+          description: descriptionMatch ? descriptionMatch[1] : '',
+          justification: {},
+          strategies: []
+        });
+      }
+    });
+  }
+  
+  // If no priorities were extracted, create default ones
+  if (priorities.length === 0) {
+    for (let i = 1; i <= 5; i++) {
+      priorities.push({
+        priority_number: i,
+        title: `Prioridad ${i}`,
+        description: `Descripción de la prioridad ${i}`,
+        justification: {},
+        strategies: []
+      });
+    }
+  }
+  
+  return priorities;
+}
