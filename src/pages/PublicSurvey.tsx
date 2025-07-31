@@ -30,7 +30,7 @@ interface Survey {
 }
 
 export default function PublicSurvey() {
-  const { token: participantToken } = useParams<{ token: string }>()
+  const { token: surveyToken } = useParams<{ token: string }>()
   const navigate = useNavigate()
   
   const [survey, setSurvey] = useState<Survey | null>(null)
@@ -43,6 +43,7 @@ export default function PublicSurvey() {
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [participantId, setParticipantId] = useState<string | null>(null)
+  const [participantToken, setParticipantToken] = useState<string | null>(null)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -56,50 +57,54 @@ export default function PublicSurvey() {
   }, [])
 
   useEffect(() => {
-    if (participantToken) {
+    if (surveyToken) {
       loadSurvey()
     }
-  }, [participantToken])
+  }, [surveyToken])
 
   const loadSurvey = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      // Validate participant exists and get survey info
-      const { data: participantData, error: participantError } = await supabase
-        .from('survey_participants')
-        .select('id, survey_id')
-        .eq('participant_token', participantToken)
-        .single()
+      // Check if we already have participant data in session
+      const sessionKey = `participant_${surveyToken}`
+      const storedParticipantData = sessionStorage.getItem(sessionKey)
+      
+      if (storedParticipantData) {
+        // Use existing participant data
+        const { participantId: storedId, participantToken: storedToken } = JSON.parse(storedParticipantData)
+        setParticipantId(storedId)
+        setParticipantToken(storedToken)
+        
+        // Still need to load survey and questions
+        const { data: surveyData, error: surveyError } = await supabase
+          .from('surveys')
+          .select('id, title, description, status')
+          .eq('participant_token', surveyToken)
+          .eq('status', 'active')
+          .single()
 
-      if (participantError) {
-        if (participantError.code === 'PGRST116') {
-          setError('Enlace de participante no válido o no encontrado')
-        } else {
-          setError('Error al validar el participante')
+        if (surveyError) {
+          throw new Error('Encuesta no encontrada o no está disponible')
         }
+
+        setSurvey(surveyData)
+        await loadQuestions(surveyData.id)
         return
       }
 
-      // Store participant ID in sessionStorage for persistence
-      const storedParticipantId = sessionStorage.getItem(`participant_${participantToken}`)
-      if (!storedParticipantId) {
-        sessionStorage.setItem(`participant_${participantToken}`, participantData.id)
-      }
-      setParticipantId(participantData.id)
-
-      // Load survey info
+      // First time access - find survey by global token
       const { data: surveyData, error: surveyError } = await supabase
         .from('surveys')
         .select('id, title, description, status')
-        .eq('id', participantData.survey_id)
+        .eq('participant_token', surveyToken)
         .eq('status', 'active')
         .single()
 
       if (surveyError) {
         if (surveyError.code === 'PGRST116') {
-          setError('Encuesta no encontrada o no está disponible')
+          setError('Enlace de encuesta no válido o encuesta no disponible')
         } else {
           setError('Error al cargar la encuesta')
         }
@@ -108,26 +113,29 @@ export default function PublicSurvey() {
 
       setSurvey(surveyData)
 
-      // Load questions
-      const { data: questionsData, error: questionsError } = await supabase
-        .from('survey_questions')
-        .select('*')
-        .eq('survey_id', surveyData.id)
-        .order('order_number')
+      // Create new participant automatically
+      const { data: participantData, error: participantError } = await supabase
+        .rpc('create_unique_participant', { survey_id_param: surveyData.id })
 
-      if (questionsError) {
-        setError('Error al cargar las preguntas')
+      if (participantError || !participantData || participantData.length === 0) {
+        setError('Error al crear participante')
         return
       }
 
-      setQuestions(questionsData.map(q => ({
-        id: q.id,
-        question_text: q.question_text,
-        question_type: q.question_type,
-        options: Array.isArray(q.options) ? q.options.map(String) : [],
-        required: q.required ?? false,
-        order_number: q.order_number
-      })))
+      const newParticipantId = participantData[0].participant_id
+      const newParticipantToken = participantData[0].participant_token
+
+      // Store participant data in session for persistence
+      sessionStorage.setItem(sessionKey, JSON.stringify({
+        participantId: newParticipantId,
+        participantToken: newParticipantToken
+      }))
+
+      setParticipantId(newParticipantId)
+      setParticipantToken(newParticipantToken)
+
+      // Load questions
+      await loadQuestions(surveyData.id)
       
     } catch (error) {
       console.error('Error loading survey:', error)
@@ -135,6 +143,27 @@ export default function PublicSurvey() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadQuestions = async (surveyId: string) => {
+    const { data: questionsData, error: questionsError } = await supabase
+      .from('survey_questions')
+      .select('*')
+      .eq('survey_id', surveyId)
+      .order('order_number')
+
+    if (questionsError) {
+      throw new Error('Error al cargar las preguntas')
+    }
+
+    setQuestions(questionsData.map(q => ({
+      id: q.id,
+      question_text: q.question_text,
+      question_type: q.question_type,
+      options: Array.isArray(q.options) ? q.options.map(String) : [],
+      required: q.required ?? false,
+      order_number: q.order_number
+    })))
   }
 
   const handleResponseChange = (questionId: string, value: any) => {
