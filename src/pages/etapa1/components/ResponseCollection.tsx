@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { ParticipantList } from "./ParticipantList"
 
 interface ResponseCollectionProps {
   session: any
@@ -92,10 +93,13 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
       setResponses(responsesData || [])
       setParticipants(participantsData || [])
 
-      // Update session with current stats using the correct count
+      // Calculate unique participants correctly
       const responseTokens = new Set((responsesData || []).map(r => r.participant_token))
       const participantTokens = new Set((participantsData || []).map(p => p.participant_token))
-      const uniqueCount = Math.max(responseTokens.size, participantTokens.size)
+      
+      // Combine both sets to get all unique tokens
+      const allTokens = new Set([...responseTokens, ...participantTokens])
+      const uniqueCount = allTokens.size
       
       onUpdate({
         response_stats: {
@@ -229,8 +233,9 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
     const responseTokens = new Set(responses.map(r => r.participant_token))
     const participantTokens = new Set(participants.map(p => p.participant_token))
     
-    // Use the higher count (in case there are mismatches, we want to be accurate)
-    return Math.max(responseTokens.size, participantTokens.size)
+    // Combine both sets to get accurate count
+    const allTokens = new Set([...responseTokens, ...participantTokens])
+    return allTokens.size
   }
 
   const canProceedToReport = () => {
@@ -238,9 +243,9 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
     return getUniqueParticipants() >= minResponses
   }
 
-  // Temporary function to create test participants
+  // Testing function to create 5 test participants
   const createTestParticipants = async () => {
-    if (!session.session_data.survey_id) return
+    if (!session.session_data.survey_id || !survey?.participant_token) return
 
     try {
       // Get survey questions first
@@ -252,16 +257,14 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
 
       if (questionsError) throw questionsError
 
-      // Create 5 test participants
+      // Create 5 test participants using the survey token (not individual tokens)
       for (let i = 1; i <= 5; i++) {
-        const participantToken = crypto.randomUUID()
-        
-        // Create participant record
+        // Create participant record using the survey's participant_token
         const { error: participantError } = await supabase
           .from('survey_participants')
           .insert({
             survey_id: session.session_data.survey_id,
-            participant_token: participantToken,
+            participant_token: survey.participant_token, // Use survey token
             status: 'completed',
             completed_at: new Date().toISOString()
           })
@@ -275,7 +278,7 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
         const responseRecords = questions.map(question => ({
           survey_id: session.session_data.survey_id,
           question_id: question.id,
-          participant_token: participantToken,
+          participant_token: survey.participant_token, // Use survey token
           response_data: `Test Response ${i} for Question ${question.order_number}`
         }))
 
@@ -441,34 +444,11 @@ export function ResponseCollection({ session, onUpdate, onNext }: ResponseCollec
             </CardContent>
           </Card>
 
-          {/* Recent Activity */}
-          {responses.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Actividad Reciente</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-40 overflow-y-auto">
-                  {responses
-                    .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-                    .slice(0, 10)
-                    .map((response, index) => (
-                      <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                        <div className="flex items-center gap-3">
-                          <Users className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm">
-                            Participante #{response.participant_token.slice(-6)}
-                          </span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(response.submitted_at).toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Participant List */}
+          <ParticipantList 
+            surveyId={session.session_data.survey_id} 
+            onUpdate={loadResponses}
+          />
 
           {/* No responses yet */}
           {responses.length === 0 && survey?.status === 'active' && (
