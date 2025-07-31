@@ -11,11 +11,9 @@ import { toast } from "@/hooks/use-toast"
 
 
 // Import step components
-import { InstrumentDesign } from "./components/InstrumentDesign"
+import { StudentCharacteristics } from "./components/StudentCharacteristics"
 import { AIAnalysis } from "./components/AIAnalysis"
-import { SurveyPreview } from "./components/SurveyPreview"
-import { ResponseCollection } from "./components/ResponseCollection"
-import { SurveyResultsReport } from "./components/SurveyResultsReport"
+import { ReportViewer } from "./components/ReportViewer"
 
 type AcceleratorSession = {
   id: string
@@ -30,11 +28,9 @@ type AcceleratorSession = {
 
 const STEPS = [
   { number: 1, title: "Bienvenida", description: "Verificación de requisitos e instrucciones" },
-  { number: 2, title: "Diseño del instrumento", description: "Configuración de la encuesta" },
-  { number: 3, title: "Análisis con IA", description: "Generación de preguntas específicas" },
-  { number: 4, title: "Visualización", description: "Vista previa y publicación" },
-  { number: 5, title: "Recolección", description: "Monitoreo de respuestas" },
-  { number: 6, title: "Informe", description: "Análisis de resultados" }
+  { number: 2, title: "Características", description: "Información sobre tus estudiantes" },
+  { number: 3, title: "Análisis con IA", description: "Generación del informe diagnóstico" },
+  { number: 4, title: "Informe", description: "Informe diagnóstico completo" }
 ]
 
 const Acelerador2 = () => {
@@ -148,7 +144,7 @@ const Acelerador2 = () => {
   }
 
   const goToStep = (step: number) => {
-    if (step <= currentStep + 1 && step >= 1 && step <= 6) {
+    if (step <= currentStep + 1 && step >= 1 && step <= 4) {
       setCurrentStep(step)
       updateSession({}, step)
     }
@@ -238,8 +234,8 @@ const Acelerador2 = () => {
                 <ul className="space-y-2 text-sm">
                   <li>• Conocer el nivel de desarrollo de competencias previas de tus estudiantes</li>
                   <li>• Identificar las condiciones iniciales del grupo en relación con la seguridad hídrica</li>
-                  <li>• Crear una encuesta personalizada para tu contexto educativo</li>
-                  <li>• Generar un informe diagnóstico con recomendaciones pedagógicas</li>
+                  <li>• Proporcionar información específica sobre las características de tus estudiantes</li>
+                  <li>• Generar un informe diagnóstico personalizado con recomendaciones pedagógicas</li>
                 </ul>
               </div>
 
@@ -247,21 +243,21 @@ const Acelerador2 = () => {
                 <h3 className="font-semibold text-lg mb-4">¿Qué haremos en este acelerador?</h3>
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
                   <ul className="space-y-2">
-                    <li>• Diseñar el instrumento de evaluación</li>
-                    <li>• Generar preguntas específicas con IA</li>
-                    <li>• Crear un link público para estudiantes</li>
+                    <li>• Responder preguntas sobre tus estudiantes</li>
+                    <li>• Proporcionar contexto específico de tu aula</li>
+                    <li>• Generar análisis personalizado con IA</li>
                   </ul>
                   <ul className="space-y-2">
-                    <li>• Monitorear respuestas en tiempo real</li>
-                    <li>• Analizar resultados con inteligencia artificial</li>
-                    <li>• Descargar informe diagnóstico completo</li>
+                    <li>• Revisar y corregir el informe diagnóstico</li>
+                    <li>• Descargar informe completo con recomendaciones</li>
+                    <li>• Obtener estrategias pedagógicas específicas</li>
                   </ul>
                 </div>
               </div>
 
               <div className="flex justify-end">
                 <Button onClick={() => goToStep(2)}>
-                  Comenzar diseño del instrumento
+                  Comenzar evaluación
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
@@ -270,7 +266,7 @@ const Acelerador2 = () => {
         )
 
       case 2:
-        return <InstrumentDesign 
+        return <StudentCharacteristics 
           session={session} 
           onUpdate={updateSession} 
           onNext={() => goToStep(3)} 
@@ -284,23 +280,11 @@ const Acelerador2 = () => {
         />
 
       case 4:
-        return <SurveyPreview 
-          session={session} 
-          onUpdate={updateSession} 
-          onNext={() => goToStep(5)} 
-        />
-
-      case 5:
-        return <ResponseCollection 
-          session={session} 
-          onUpdate={updateSession} 
-          onNext={() => goToStep(6)} 
-        />
-
-      case 6:
-        return <SurveyResultsReport 
-          session={session} 
-          onUpdate={updateSession} 
+        return <ReportViewer 
+          htmlContent={session.session_data.final_report?.html_content || ''}
+          markdownContent={session.session_data.final_report?.markdown_content || ''}
+          reportData={session.session_data.final_report || {}}
+          onRedoAnalysis={() => goToStep(3)}
         />
 
       default:
@@ -322,7 +306,7 @@ const Acelerador2 = () => {
           <div>
             <h1 className="text-2xl font-bold text-primary">Acelerador 2: Evaluación Diagnóstica</h1>
             <p className="text-muted-foreground">
-              Paso {currentStep} de 6: {STEPS[currentStep - 1].description}
+              Paso {currentStep} de 4: {STEPS[currentStep - 1].description}
             </p>
           </div>
         </div>
@@ -338,11 +322,11 @@ const Acelerador2 = () => {
           <div className="space-y-4">
             <div className="flex justify-between text-sm">
               <span>Progreso del acelerador</span>
-              <span>{Math.round((currentStep / 6) * 100)}%</span>
+              <span>{Math.round((currentStep / 4) * 100)}%</span>
             </div>
-            <Progress value={(currentStep / 6) * 100} className="h-2" />
+            <Progress value={(currentStep / 4) * 100} className="h-2" />
             
-            <div className="grid grid-cols-6 gap-2 mt-4">
+            <div className="grid grid-cols-4 gap-2 mt-4">
               {STEPS.map((step) => (
                 <button
                   key={step.number}

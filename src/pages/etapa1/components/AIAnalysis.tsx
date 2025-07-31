@@ -7,7 +7,8 @@ import { ArrowRight, Brain, RefreshCw, CheckCircle, AlertCircle, Settings } from
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/hooks/use-toast"
-import { QuestionCorrection } from "./QuestionCorrection"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 
 interface AIAnalysisProps {
   session: any
@@ -18,7 +19,7 @@ interface AIAnalysisProps {
 export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
-  const [generatedData, setGeneratedData] = useState(session.session_data.ai_analysis || null)
+  const [generatedData, setGeneratedData] = useState(session.session_data.final_report || null)
   const [error, setError] = useState<string | null>(null)
   const [accelerator1Data, setAccelerator1Data] = useState<any>(null)
   const [correctionAttempts, setCorrectionAttempts] = useState(
@@ -47,11 +48,11 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
     }
   }
 
-  const generateSurveyQuestions = async () => {
-    if (!session.session_data.instrument_design) {
+  const generateReport = async () => {
+    if (!session.session_data.teacher_responses) {
       toast({
-        title: "Configuración incompleta",
-        description: "Debes completar el diseño del instrumento primero",
+        title: "Respuestas incompletas",
+        description: "Debes completar las respuestas del paso anterior",
         variant: "destructive"
       })
       return
@@ -70,34 +71,33 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
     setError(null)
 
     try {
-
-      const { data, error } = await supabase.functions.invoke('generate-survey-questions', {
+      const { data, error } = await supabase.functions.invoke('generate-acelerador2-report', {
         body: {
-          instrumentData: session.session_data.instrument_design,
-          accelerator1Data: accelerator1Data
+          accelerator1Data: accelerator1Data,
+          teacherResponses: session.session_data.teacher_responses
         }
       })
 
       if (error) throw error
 
-      
       setGeneratedData(data)
       onUpdate({ 
-        ai_analysis: data,
+        ai_analysis: { report_generated: true },
+        final_report: data,
         correction_attempts: correctionAttempts
       })
 
       toast({
-        title: "Análisis completado",
-        description: "Las preguntas han sido generadas exitosamente"
+        title: "Informe generado",
+        description: "El informe diagnóstico ha sido creado exitosamente"
       })
 
     } catch (error) {
-      console.error('Error generating questions:', error)
+      console.error('Error generating report:', error)
       setError(error instanceof Error ? error.message : 'Error desconocido')
       toast({
         title: "Error en el análisis",
-        description: "No se pudieron generar las preguntas. Intenta nuevamente.",
+        description: "No se pudo generar el informe. Intenta nuevamente.",
         variant: "destructive"
       })
     } finally {
@@ -105,36 +105,64 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
     }
   }
 
-  const regenerateQuestions = () => {
+  const regenerateReport = () => {
     setGeneratedData(null)
     onUpdate({ 
       ai_analysis: null,
+      final_report: null,
       correction_attempts: 0
     })
     setCorrectionAttempts(0)
-    generateSurveyQuestions()
+    generateReport()
   }
 
-  const handleCorrection = (correctedQuestions: any[], newAttempts: number) => {
-    const updatedData = {
-      ...generatedData,
-      questions: correctedQuestions
+  const handleCorrection = async (correctionInstructions: string, newAttempts: number) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-acelerador2-report', {
+        body: {
+          accelerator1Data: accelerator1Data,
+          teacherResponses: session.session_data.teacher_responses,
+          correctionInstructions: correctionInstructions
+        }
+      })
+
+      if (error) throw error
+
+      setGeneratedData(data)
+      setCorrectionAttempts(newAttempts)
+      onUpdate({ 
+        ai_analysis: { report_generated: true },
+        final_report: data,
+        correction_attempts: newAttempts,
+        corrections_made: true
+      })
+
+      toast({
+        title: "Informe corregido",
+        description: "El informe ha sido actualizado según tus instrucciones"
+      })
+
+    } catch (error) {
+      console.error('Error correcting report:', error)
+      toast({
+        title: "Error en la corrección",
+        description: "No se pudo corregir el informe. Intenta nuevamente.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
     }
-    setGeneratedData(updatedData)
-    setCorrectionAttempts(newAttempts)
-    onUpdate({ 
-      ai_analysis: updatedData,
-      correction_attempts: newAttempts,
-      corrections_made: true
-    })
   }
 
-  // Auto-generate if configuration is ready and no previous analysis
+  // Auto-generate if teacher responses are ready and no previous report
   useEffect(() => {
-    if (!generatedData && session.session_data.instrument_design && accelerator1Data && !loading) {
-      generateSurveyQuestions()
+    if (!generatedData && session.session_data.teacher_responses && accelerator1Data && !loading) {
+      generateReport()
     }
-  }, [accelerator1Data, session.session_data.instrument_design])
+  }, [accelerator1Data, session.session_data.teacher_responses])
 
   return (
     <div className="space-y-6">
@@ -145,41 +173,33 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
             <div>
               <CardTitle>Análisis con Inteligencia Artificial</CardTitle>
               <CardDescription>
-                Generación automática de preguntas específicas para tu evaluación diagnóstica
+                Generación automática del informe diagnóstico personalizado
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Configuration Summary */}
-          {session.session_data.instrument_design && (
+          {/* Teacher Responses Summary */}
+          {session.session_data.teacher_responses && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Settings className="w-5 h-5 text-green-600" />
-                <h3 className="font-semibold text-green-800">Configuración del instrumento lista</h3>
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <h3 className="font-semibold text-green-800">Respuestas del docente completadas</h3>
               </div>
               <div className="space-y-2">
-                <div className="grid md:grid-cols-2 gap-3 text-sm">
-                  <div className="text-green-700">
-                    <span className="font-medium">Grados escolares:</span> {
-                      session.session_data.instrument_design.grados_escolares?.join(', ') || 'No especificado'
-                    }
-                  </div>
-                  <div className="text-green-700">
-                    <span className="font-medium">Estudiantes disponibles:</span> {
-                      session.session_data.instrument_design.num_estudiantes_disponibles || 'No especificado'
-                    }
-                  </div>
-                  <div className="text-green-700">
-                    <span className="font-medium">Variables de interés:</span> {
-                      session.session_data.instrument_design.variables_interes?.join(', ') || 'No especificado'
-                    }
-                  </div>
-                  <div className="text-green-700">
-                    <span className="font-medium">Enfoque temático:</span> {
-                      session.session_data.instrument_design.enfoque_tematico || 'No especificado'
-                    }
-                  </div>
+                <p className="text-green-700 text-sm">
+                  Se han registrado {Object.keys(session.session_data.teacher_responses).length} respuestas sobre las características de los estudiantes.
+                </p>
+                <div className="grid grid-cols-5 gap-2 mt-2">
+                  {Object.entries(session.session_data.teacher_responses).map(([key, value], index) => (
+                    <div
+                      key={key}
+                      className={`h-2 rounded-full ${
+                        (value as string).length >= 10 ? 'bg-green-500' : 'bg-yellow-400'
+                      }`}
+                      title={`Respuesta ${index + 1}: ${(value as string).length} caracteres`}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
@@ -207,8 +227,8 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
               accelerator1Data ? 'text-green-700' : 'text-yellow-700'
             }`}>
               {accelerator1Data 
-                ? 'Se utilizará el análisis FODA y las prioridades identificadas para personalizar las preguntas'
-                : 'Se necesita el diagnóstico del Acelerador 1 para generar preguntas personalizadas'
+                ? 'Se utilizará el análisis FODA y las prioridades identificadas para generar el informe'
+                : 'Se necesita el diagnóstico del Acelerador 1 para generar el informe personalizado'
               }
             </p>
           </div>
@@ -217,9 +237,9 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
           {loading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <h3 className="font-semibold text-lg mb-2">Analizando con IA...</h3>
+              <h3 className="font-semibold text-lg mb-2">Generando informe con IA...</h3>
               <p className="text-muted-foreground">
-                Estamos procesando tu configuración y el diagnóstico del Acelerador 1 para generar preguntas específicas.
+                Estamos procesando las respuestas del docente y el diagnóstico del Acelerador 1 para generar el informe diagnóstico.
                 Este proceso puede tomar unos segundos.
               </p>
             </div>
@@ -230,7 +250,7 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <h3 className="font-semibold text-red-800 mb-2">Error en el análisis</h3>
               <p className="text-red-700 mb-4">{error}</p>
-              <Button onClick={generateSurveyQuestions} variant="outline" size="sm">
+              <Button onClick={generateReport} variant="outline" size="sm">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Reintentar análisis
               </Button>
@@ -238,11 +258,11 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
           )}
 
           {/* Manual Generate Button */}
-          {!loading && !generatedData && !error && session.session_data.instrument_design && accelerator1Data && (
+          {!loading && !generatedData && !error && session.session_data.teacher_responses && accelerator1Data && (
             <div className="text-center">
-              <Button onClick={generateSurveyQuestions} size="lg">
+              <Button onClick={generateReport} size="lg">
                 <Brain className="w-5 h-5 mr-2" />
-                Generar preguntas con IA
+                Generar informe con IA
               </Button>
             </div>
           )}
@@ -253,113 +273,91 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <CheckCircle className="w-5 h-5 text-green-600" />
-                  <h3 className="font-semibold text-green-800">Análisis completado exitosamente</h3>
+                  <h3 className="font-semibold text-green-800">Informe generado exitosamente</h3>
                 </div>
                 <p className="text-green-700 text-sm">
-                  Se han generado {generatedData.questions?.length || 0} preguntas específicas para tu evaluación diagnóstica.
+                  Se ha creado el informe diagnóstico personalizado basado en tus respuestas y el análisis del Acelerador 1.
                 </p>
               </div>
 
-              {/* Sample Size Recommendation */}
-              {generatedData.sample_size && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Recomendación de Muestreo</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-2 gap-4 mb-4">
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <h4 className="font-semibold text-blue-800 mb-2">Muestra Recomendada</h4>
-                        <div className="text-2xl font-bold text-blue-600 mb-1">
-                          {generatedData.sample_size.recommended} estudiantes
-                        </div>
-                        <p className="text-blue-700 text-sm">
-                          {generatedData.sample_size.sampling_type === 'convenience' 
-                            ? 'Muestreo por conveniencia (población completa)'
-                            : 'Para resultados confiables'
-                          }
-                        </p>
-                      </div>
-                      {generatedData.sample_size.statistical && generatedData.sample_size.sampling_type !== 'convenience' && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <h4 className="font-semibold text-gray-800 mb-2">Muestra Estadística</h4>
-                          <div className="text-2xl font-bold text-gray-600 mb-1">
-                            {generatedData.sample_size.statistical} estudiantes
-                          </div>
-                          <p className="text-gray-700 text-sm">Para análisis estadístico robusto</p>
-                        </div>
-                      )}
-                    </div>
-                    {generatedData.sample_size.explanation && (
-                      <div className="p-3 bg-amber-50 rounded-lg">
-                        <p className="text-amber-800 text-sm">
-                          <strong>Explicación:</strong> {generatedData.sample_size.explanation}
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Generated Questions Preview */}
-              {generatedData.questions && (
+              {/* Report Preview */}
+              {generatedData.html_content && (
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle className="text-lg">Preguntas Generadas</CardTitle>
+                      <CardTitle className="text-lg">Vista previa del informe</CardTitle>
                       <CardDescription>
-                        Vista previa de las {generatedData.questions.length} preguntas para estudiantes
+                        Informe diagnóstico generado basado en las respuestas del docente
                       </CardDescription>
                     </div>
-                    <Button onClick={regenerateQuestions} variant="outline" size="sm">
+                    <Button onClick={regenerateReport} variant="outline" size="sm">
                       <RefreshCw className="w-4 h-4 mr-2" />
                       Regenerar
                     </Button>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4 max-h-96 overflow-y-auto">
-                      {generatedData.questions.map((question: any, index: number) => (
-                        <div key={index} className="border rounded-lg p-4">
-                          <div className="flex items-start gap-3">
-                            <Badge variant="outline">{question.nro}</Badge>
-                            <div className="flex-1">
-                              <p className="font-medium mb-2">{question.pregunta}</p>
-                              <div className="flex gap-2 mb-2">
-                                <Badge variant="secondary" className="text-xs">
-                                  {question.tipo}
-                                </Badge>
-                                {question.variable && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {question.variable}
-                                  </Badge>
-                                )}
-                              </div>
-                              {question.opciones && question.opciones.length > 0 && (
-                                <div className="text-sm text-muted-foreground">
-                                  <strong>Opciones:</strong> {question.opciones.slice(0, 3).join(', ')}
-                                  {question.opciones.length > 3 && ` +${question.opciones.length - 3} más`}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="border rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto">
+                      <div 
+                        className="prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ __html: generatedData.html_content.substring(0, 1000) + '...' }}
+                      />
+                      <div className="mt-4 pt-4 border-t">
+                        <p className="text-sm text-muted-foreground">
+                          Vista previa recortada. El informe completo estará disponible en el siguiente paso.
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Question Correction Component */}
-              <QuestionCorrection
-                questions={generatedData.questions || []}
-                instrumentData={session.session_data.instrument_design}
-                correctionAttempts={correctionAttempts}
-                onCorrection={handleCorrection}
-              />
+              {/* Report Correction */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Correcciones al informe</CardTitle>
+                  <CardDescription>
+                    Si necesitas ajustes al informe, describe los cambios que requieres
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Badge variant={correctionAttempts === 0 ? "default" : "secondary"}>
+                        {correctionAttempts === 0 ? "1 corrección gratuita disponible" : `${correctionAttempts} correcciones realizadas`}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label htmlFor="correction-instructions">
+                        Instrucciones de corrección
+                      </Label>
+                      <Textarea
+                        id="correction-instructions"
+                        placeholder="Describe específicamente qué cambios necesitas en el informe..."
+                        className="min-h-[100px]"
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={() => {
+                        const textarea = document.getElementById('correction-instructions') as HTMLTextAreaElement
+                        if (textarea?.value.trim()) {
+                          handleCorrection(textarea.value, correctionAttempts + 1)
+                          textarea.value = ''
+                        }
+                      }}
+                      variant="outline"
+                      disabled={loading}
+                    >
+                      {loading ? "Aplicando corrección..." : "Aplicar corrección"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
               <div className="flex justify-end">
                 <Button onClick={onNext}>
-                  Continuar a visualización
+                  Ver informe completo
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
