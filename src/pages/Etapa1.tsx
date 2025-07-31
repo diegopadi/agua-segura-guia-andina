@@ -39,8 +39,8 @@ const accelerators = [
   },
   {
     number: 3,
-    title: "Propuesta Metodológica",
-    description: "Desarrolla estrategias pedagógicas adaptadas a tu contexto",
+    title: "Priorización de Necesidades",
+    description: "Identifica las 5 principales necesidades hídricas de tu institución",
     icon: Lightbulb,
     color: "bg-purple-500",
     steps: 4,
