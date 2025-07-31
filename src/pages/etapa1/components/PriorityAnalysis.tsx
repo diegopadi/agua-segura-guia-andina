@@ -28,6 +28,7 @@ const PriorityAnalysis = ({
 }: PriorityAnalysisProps) => {
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorDetails, setErrorDetails] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const { toast } = useToast()
 
@@ -64,6 +65,7 @@ const PriorityAnalysis = ({
   const startAnalysis = async () => {
     setAnalyzing(true)
     setError(null)
+    setErrorDetails(null)
     setProgress(0)
 
     try {
@@ -101,7 +103,8 @@ const PriorityAnalysis = ({
 
       if (error) {
         console.error('Edge function error details:', error)
-        throw new Error(`Error en la función: ${error.message || JSON.stringify(error)}`)
+        setErrorDetails(JSON.stringify(error, null, 2))
+        throw error
       }
 
       if (!data.report) {
@@ -174,6 +177,7 @@ const PriorityAnalysis = ({
 
   const handleRetry = () => {
     setError(null)
+    setErrorDetails(null)
     startAnalysis()
   }
 
@@ -186,6 +190,15 @@ const PriorityAnalysis = ({
             {error}
           </AlertDescription>
         </Alert>
+        
+        {errorDetails && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h4 className="font-semibold text-red-800 mb-2">Detalles del error:</h4>
+            <pre className="text-red-700 text-xs overflow-auto max-h-96 whitespace-pre-wrap">
+              {errorDetails}
+            </pre>
+          </div>
+        )}
         
         <div className="flex gap-4 justify-center">
           <Button variant="outline" onClick={onPrevious}>
