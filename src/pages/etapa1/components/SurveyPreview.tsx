@@ -2,9 +2,8 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowRight, Eye, Link2, Share, Copy, CheckCircle, RefreshCw, AlertTriangle, Users, Plus } from "lucide-react"
+import { ArrowRight, Eye, Link2, Share, Copy, CheckCircle, RefreshCw } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/hooks/use-toast"
@@ -19,9 +18,7 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
   const { user } = useAuth()
   const [survey, setSurvey] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-  const [generatingLinks, setGeneratingLinks] = useState(false)
-  const [participantLinks, setParticipantLinks] = useState<string[]>([])
-  const [numParticipants, setNumParticipants] = useState(10)
+  const [regeneratingLink, setRegeneratingLink] = useState(false)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -94,42 +91,38 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
     }
   }
 
-  const generateParticipantLinks = async () => {
+  const regenerateGlobalLink = async () => {
     if (!survey) return
 
-    setGeneratingLinks(true)
+    setRegeneratingLink(true)
     try {
-      const links = []
-      
-      // Generate specified number of unique participant links
-      for (let i = 0; i < numParticipants; i++) {
-        const { data, error } = await supabase.rpc('create_unique_participant', {
-          survey_id_param: survey.id
+      // Generate new participant token for the survey
+      const { data, error } = await supabase
+        .from('surveys')
+        .update({ 
+          participant_token: `${crypto.randomUUID()}` 
         })
+        .eq('id', survey.id)
+        .select()
+        .single()
 
-        if (error) throw error
-        
-        if (data && data.length > 0) {
-          const participantToken = data[0].participant_token
-          links.push(`${window.location.origin}/encuesta/${participantToken}`)
-        }
-      }
+      if (error) throw error
 
-      setParticipantLinks(links)
+      setSurvey(data)
       
       toast({
-        title: "Enlaces generados",
-        description: `Se han creado ${links.length} enlaces únicos para participantes`
+        title: "Nuevo enlace generado",
+        description: "Se ha creado un nuevo enlace global para la encuesta"
       })
     } catch (error) {
-      console.error('Error generating participant links:', error)
+      console.error('Error regenerating global link:', error)
       toast({
         title: "Error",
-        description: "No se pudieron generar los enlaces de participantes",
+        description: "No se pudo regenerar el enlace global",
         variant: "destructive"
       })
     } finally {
-      setGeneratingLinks(false)
+      setRegeneratingLink(false)
     }
   }
 
@@ -319,100 +312,73 @@ export function SurveyPreview({ session, onUpdate, onNext }: SurveyPreviewProps)
                 </div>
               </div>
 
-              {/* Participant Links Section */}
+              {/* Survey Link Section */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    Enlaces Únicos por Participante
+                    <Link2 className="w-5 h-5" />
+                    Enlace de la encuesta
                   </CardTitle>
                   <CardDescription>
-                    Genera enlaces únicos para cada estudiante para garantizar datos individuales
+                    Comparte este enlace con todos los estudiantes para que accedan a la encuesta
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {/* Link Generation Controls */}
-                    <div className="flex gap-3 items-end">
-                      <div className="flex-1">
-                        <Label htmlFor="numParticipants">Número de participantes</Label>
-                        <Input
-                          id="numParticipants"
-                          type="number"
-                          min="1"
-                          max="100"
-                          value={numParticipants}
-                          onChange={(e) => setNumParticipants(parseInt(e.target.value) || 10)}
-                          className="w-full"
-                        />
+                    {/* Survey Link */}
+                    <div className="bg-gray-50 border rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <Label>Enlace de la encuesta</Label>
+                          <code className="block w-full bg-white px-3 py-2 border rounded-md text-sm mt-1 break-all">
+                            {survey.participant_token 
+                              ? `${window.location.origin}/encuesta/${survey.participant_token}`
+                              : `${window.location.origin}/encuesta/${survey.id}`
+                            }
+                          </code>
+                        </div>
                       </div>
-                      <Button 
-                        onClick={generateParticipantLinks} 
-                        disabled={generatingLinks}
-                        className="flex items-center gap-2"
-                      >
-                        {generatingLinks ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        ) : (
-                          <Plus className="w-4 h-4" />
-                        )}
-                        Generar enlaces
-                      </Button>
+                      
+                      <div className="flex gap-2 mt-3">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => copyToClipboard(
+                            survey.participant_token 
+                              ? `${window.location.origin}/encuesta/${survey.participant_token}`
+                              : `${window.location.origin}/encuesta/${survey.id}`
+                          )}
+                          className="flex items-center gap-2"
+                        >
+                          <Copy className="w-4 h-4" />
+                          {copied ? "¡Copiado!" : "Copiar enlace"}
+                        </Button>
+                        
+                        <Button 
+                          variant="outline"
+                          onClick={regenerateGlobalLink}
+                          disabled={regeneratingLink}
+                          className="flex items-center gap-2"
+                        >
+                          {regeneratingLink ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                          ) : (
+                            <RefreshCw className="w-4 h-4" />
+                          )}
+                          Crear nuevo enlace
+                        </Button>
+                      </div>
                     </div>
 
-                    {/* Generated Links */}
-                    {participantLinks.length > 0 && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium">Enlaces generados ({participantLinks.length})</h4>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              const allLinks = participantLinks.join('\n')
-                              copyToClipboard(allLinks)
-                            }}
-                          >
-                            <Copy className="w-4 h-4 mr-2" />
-                            Copiar todos
-                          </Button>
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
-                          <div className="space-y-2">
-                            {participantLinks.map((link, index) => (
-                              <div key={index} className="flex items-center gap-2 text-sm">
-                                <span className="font-mono text-xs bg-white px-2 py-1 rounded">
-                                  {index + 1}
-                                </span>
-                                <code className="flex-1 bg-white px-2 py-1 rounded text-xs break-all">
-                                  {link}
-                                </code>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => copyToClipboard(link)}
-                                  className="shrink-0"
-                                >
-                                  <Copy className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                        <div className="text-blue-800 text-sm">
-                          <p className="font-medium mb-1">Ventajas de los enlaces únicos:</p>
-                          <ul className="list-disc list-inside space-y-1 text-blue-700">
-                            <li>Cada estudiante tiene su propio enlace personalizado</li>
-                            <li>Datos completamente separados por participante</li>
-                            <li>Conteo preciso de participantes únicos</li>
-                            <li>Mejor control y seguimiento individual</li>
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-green-800 text-sm">
+                          <p className="font-medium mb-1">Facilidad de uso:</p>
+                          <ul className="list-disc list-inside space-y-1 text-green-700">
+                            <li>Un solo enlace para compartir con todos los estudiantes</li>
+                            <li>Fácil distribución por WhatsApp, email o plataformas educativas</li>
+                            <li>Sin necesidad de gestionar enlaces individuales</li>
+                            <li>Posibilidad de regenerar el enlace si es necesario</li>
                           </ul>
                         </div>
                       </div>
