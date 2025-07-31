@@ -396,7 +396,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      delete_participant_completely: {
+        Args: { survey_id_param: string; participant_token_param: string }
+        Returns: boolean
+      }
+      generate_unique_participant_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_unique_participants_count: {
+        Args: { survey_id_param: string }
+        Returns: number
+      }
+      sync_survey_participants: {
+        Args: { survey_id_param: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
