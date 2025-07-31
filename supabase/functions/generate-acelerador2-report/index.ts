@@ -33,7 +33,7 @@ serve(async (req) => {
       hasCorrectionInstructions: !!correctionInstructions
     });
 
-    // Get the report template from Supabase
+    // Get the new plantilla3 template from Supabase
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -42,16 +42,42 @@ serve(async (req) => {
     const { data: templateData } = await supabase
       .from('templates')
       .select('content')
-      .eq('name', 'acelerador_2_report_template')
+      .eq('name', 'plantilla3')
       .single();
 
     const template = templateData?.content || {
-      title: "Plantilla básica de informe diagnóstico",
-      sections: [
-        { title: "Resumen Ejecutivo", content: "Análisis general de competencias" },
-        { title: "Metodología", content: "Proceso de evaluación aplicado" },
-        { title: "Resultados", content: "Hallazgos principales del diagnóstico" },
-        { title: "Recomendaciones", content: "Estrategias pedagógicas sugeridas" }
+      name: "plantilla3",
+      content: [
+        {
+          bloque: "Portada y metadatos",
+          subSecciones: ["Título del informe", "Docente", "Institución Educativa", "Fecha", "N.º de informe"],
+          indicaciones: "Campos auto-rellenados"
+        },
+        {
+          bloque: "Resumen del diagnóstico",
+          subSecciones: ["Contexto y objetivo del informe", "Síntesis de la información del Acelerador 1", "Alcance de esta etapa"],
+          indicaciones: "Texto continuo, máximo 200 palabras"
+        },
+        {
+          bloque: "Resultados: Competencias previas",
+          subSecciones: ["Pregunta 1 – Desarrollo de competencias previas", "Pregunta 2 – Desarrollo de competencias previas", "Pregunta 3 – Desarrollo de competencias previas"],
+          indicaciones: "Cada sección debe incluir la pregunta, respuestas cualitativas agregadas y breves ejemplos o citas"
+        },
+        {
+          bloque: "Resultados: Condiciones de seguridad hídrica",
+          subSecciones: ["Pregunta 1 – Condiciones iniciales de seguridad hídrica", "Pregunta 2 – Condiciones iniciales de seguridad hídrica"],
+          indicaciones: "Cada sección debe incluir la pregunta, respuestas cualitativas agregadas y 1–2 insights destacados"
+        },
+        {
+          bloque: "Análisis de brechas",
+          subSecciones: ["Principales fortalezas detectadas", "Áreas de mejora"],
+          indicaciones: "Viñetas interpretativas que contrasten competencias vs. necesidades"
+        },
+        {
+          bloque: "Recomendaciones pedagógicas",
+          subSecciones: ["Acciones inmediatas", "Estrategias de mediano y largo plazo"],
+          indicaciones: "Listas con justificación breve (1–2 líneas por recomendación)"
+        }
       ]
     };
 
