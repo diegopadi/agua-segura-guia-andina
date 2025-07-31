@@ -1,9 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Download, Copy, Printer, ArrowRight, CheckCircle } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Download, Copy, Printer, ArrowRight, CheckCircle, PenTool, Save, FileDown } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
+import { useState } from "react"
 
 interface PriorityReportViewerProps {
   htmlContent: string
@@ -21,9 +25,15 @@ const PriorityReportViewer = ({
   onPrevious
 }: PriorityReportViewerProps) => {
   const { toast } = useToast()
+  const [signatureData, setSignatureData] = useState({
+    director_name: '',
+    director_signature: '',
+    date: new Date().toLocaleDateString('es-ES'),
+    institution_seal: ''
+  })
 
-  const handleCopyReport = () => {
-    // Create a text version of the report
+  const handleCopyReport = async () => {
+    // Create a comprehensive text version of the report
     const textContent = `
 INFORME DE PRIORIZACIÓN DE NECESIDADES HÍDRICAS
 
@@ -39,61 +49,193 @@ Descripción: ${priority.description}
 Estrategias: ${priority.strategies?.join(', ') || 'No especificadas'}
 `).join('\n') || 'No se encontraron prioridades'}
 
+VALIDACIÓN Y FIRMAS:
+Director(a): ${signatureData.director_name || '[Pendiente]'}
+Firma: ${signatureData.director_signature || '[Pendiente]'}
+Fecha de validación: ${signatureData.date}
+Institución: ${metadata?.institution_name || 'No especificada'}
+
 ---
 Este informe ha sido generado mediante análisis de inteligencia artificial.
     `.trim()
 
-    navigator.clipboard.writeText(textContent).then(() => {
+    try {
+      await navigator.clipboard.writeText(textContent)
       toast({
-        title: "Informe copiado",
-        description: "El contenido del informe se ha copiado al portapapeles.",
+        title: "Contenido copiado",
+        description: "El informe completo ha sido copiado al portapapeles en formato texto.",
       })
-    }).catch(() => {
+    } catch (error) {
+      console.error('Error copying to clipboard:', error)
       toast({
-        title: "Error",
-        description: "No se pudo copiar el informe al portapapeles.",
+        title: "Error al copiar",
+        description: "No se pudo copiar el contenido. Intenta seleccionar y copiar manualmente.",
         variant: "destructive",
       })
-    })
+    }
   }
 
-  const handleDownloadPDF = () => {
-    // Create a printable version
-    const printWindow = window.open('', '_blank')
-    if (printWindow) {
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Informe de Priorización - ${metadata?.institution_name || 'Institución Educativa'}</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; margin: 40px; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #0066cc; padding-bottom: 20px; }
-            .priority-item { margin-bottom: 30px; border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
-            .priority-title { color: #0066cc; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
-            .section-title { color: #333; font-weight: bold; margin: 15px 0 8px 0; }
-            ul { margin: 0; padding-left: 20px; }
-            li { margin-bottom: 5px; }
-            .footer { text-align: center; margin-top: 40px; font-style: italic; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
-          </style>
-        </head>
-        <body>
-          ${htmlContent}
-        </body>
-        </html>
-      `)
-      printWindow.document.close()
+  const downloadTxtFile = () => {
+    try {
+      const textContent = `
+INFORME DE PRIORIZACIÓN DE NECESIDADES HÍDRICAS
+
+Institución: ${metadata?.institution_name || 'No especificada'}
+Docente: ${metadata?.teacher_name || 'No especificado'}
+Fecha: ${new Date(metadata?.generated_date || new Date()).toLocaleDateString()}
+
+PRIORIDADES IDENTIFICADAS:
+
+${priorities?.map((priority, index) => `
+${index + 1}. ${priority.title}
+Descripción: ${priority.description}
+Estrategias: ${priority.strategies?.join(', ') || 'No especificadas'}
+`).join('\n') || 'No se encontraron prioridades'}
+
+VALIDACIÓN Y FIRMAS:
+Director(a): ${signatureData.director_name || '[Pendiente]'}
+Firma: ${signatureData.director_signature || '[Pendiente]'}
+Fecha de validación: ${signatureData.date}
+Institución: ${metadata?.institution_name || 'No especificada'}
+
+---
+Este informe ha sido generado mediante análisis de inteligencia artificial.
+      `.trim()
+
+      const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
       
-      // Focus and print
-      printWindow.focus()
-      setTimeout(() => {
-        printWindow.print()
-      }, 500)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `informe_priorizacion_${new Date().toISOString().split('T')[0]}.txt`)
+      link.style.visibility = 'hidden'
+      
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      URL.revokeObjectURL(url)
+      
+      toast({
+        title: "Descarga iniciada",
+        description: "El informe se está descargando en formato texto.",
+      })
+    } catch (error) {
+      console.error('Error downloading file:', error)
+      toast({
+        title: "Error en la descarga",
+        description: "No se pudo descargar el archivo. Intenta de nuevo.",
+        variant: "destructive",
+      })
     }
   }
 
   const handlePrint = () => {
-    handleDownloadPDF()
+    // Create comprehensive HTML for printing with signature
+    const fullHtmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Informe de Priorización - ${metadata?.institution_name || 'Institución Educativa'}</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 900px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .signature-section {
+              margin-top: 40px;
+              padding: 20px;
+              border: 1px solid #ddd;
+              border-radius: 8px;
+              background-color: #f9f9f9;
+              page-break-inside: avoid;
+            }
+            .signature-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 30px;
+              margin-top: 20px;
+            }
+            .signature-field {
+              text-align: center;
+              padding: 20px 0;
+            }
+            .signature-line {
+              border-bottom: 1px solid #333;
+              margin-bottom: 8px;
+              height: 40px;
+            }
+            @media print {
+              body { margin: 0; padding: 15px; }
+              h1 { page-break-before: avoid; }
+              table { page-break-inside: avoid; }
+              .signature-section { page-break-before: auto; }
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+              margin: 20px 0;
+            }
+            th, td {
+              border: 1px solid #ddd;
+              padding: 12px;
+              text-align: left;
+            }
+            th {
+              background-color: #f5f5f5;
+              font-weight: bold;
+            }
+          </style>
+        </head>
+        <body>
+          ${htmlContent}
+          
+          <div class="signature-section">
+            <h3 style="text-align: center; margin-bottom: 30px;">VALIDACIÓN Y FIRMAS</h3>
+            
+            <div class="signature-grid">
+              <div class="signature-field">
+                <div class="signature-line">${signatureData.director_signature || ''}</div>
+                <p><strong>${signatureData.director_name || 'Nombre del Director(a)'}</strong></p>
+                <p>Director(a) de la Institución Educativa</p>
+              </div>
+              
+              <div class="signature-field">
+                <div class="signature-line"></div>
+                <p><strong>Sello de la Institución</strong></p>
+                <p style="font-size: 0.9em; color: #666;">${metadata?.institution_name || 'Institución Educativa'}</p>
+              </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+              <p><strong>Fecha de validación:</strong> ${signatureData.date}</p>
+              <p style="font-size: 0.9em; color: #666;">
+                Documento generado por el Sistema de Aceleradores Pedagógicos<br>
+                Informe de Priorización de Necesidades Hídricas
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(fullHtmlContent)
+      printWindow.document.close()
+      printWindow.print()
+    }
+  }
+
+  const saveSignature = () => {
+    toast({
+      title: "Datos de firma guardados",
+      description: "La información de firma se incluirá en las descargas e impresiones.",
+    })
   }
 
   return (
@@ -159,9 +301,9 @@ Este informe ha sido generado mediante análisis de inteligencia artificial.
                 <Copy className="w-4 h-4 mr-2" />
                 Copiar
               </Button>
-              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-                <Download className="w-4 h-4 mr-2" />
-                Descargar
+              <Button variant="outline" size="sm" onClick={downloadTxtFile}>
+                <FileDown className="w-4 h-4 mr-2" />
+                Descargar como texto
               </Button>
               <Button variant="outline" size="sm" onClick={handlePrint}>
                 <Printer className="w-4 h-4 mr-2" />
@@ -171,10 +313,79 @@ Este informe ha sido generado mediante análisis de inteligencia artificial.
           </div>
         </CardHeader>
         <CardContent>
-          <div 
-            className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: htmlContent }}
-          />
+          <ScrollArea className="h-[60vh] w-full">
+            <div 
+              className="prose prose-sm max-w-none p-4"
+              dangerouslySetInnerHTML={{ __html: htmlContent }}
+            />
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Signature Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PenTool className="h-5 w-5" />
+            Área de Firma Digital
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="director_name">Nombre del Director(a)</Label>
+              <Input
+                id="director_name"
+                value={signatureData.director_name}
+                onChange={(e) => setSignatureData(prev => ({...prev, director_name: e.target.value}))}
+                placeholder="Ingresa el nombre completo"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="director_signature">Firma Digital</Label>
+              <Input
+                id="director_signature"
+                value={signatureData.director_signature}
+                onChange={(e) => setSignatureData(prev => ({...prev, director_signature: e.target.value}))}
+                placeholder="Escribe tu firma o iniciales"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="date">Fecha de Validación</Label>
+              <Input
+                id="date"
+                type="date"
+                value={signatureData.date}
+                onChange={(e) => setSignatureData(prev => ({...prev, date: e.target.value}))}
+              />
+            </div>
+            
+            <div className="flex items-end">
+              <Button onClick={saveSignature} className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                Guardar información de firma
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Instructions */}
+      <Card className="bg-muted/50">
+        <CardContent className="p-4">
+          <div className="text-sm text-muted-foreground">
+            <p className="font-medium mb-2">💡 Opciones disponibles:</p>
+            <ul className="space-y-1 list-disc list-inside">
+              <li><strong>Copiar contenido:</strong> Copia todo el informe en formato texto para pegar en Word u otro editor</li>
+              <li><strong>Descargar texto:</strong> Descarga el informe completo en formato .txt para editar</li>
+              <li><strong>Imprimir/PDF:</strong> Abre una ventana optimizada para imprimir o guardar como PDF (incluye firma)</li>
+              <li><strong>Firma digital:</strong> Completa los datos de firma que se incluirán en la versión final</li>
+              <li><strong>Selección manual:</strong> Puedes seleccionar y copiar secciones específicas del informe</li>
+              <li><strong>Continuar a Etapa 2:</strong> Avanza al siguiente módulo del programa de aceleradores</li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
 
