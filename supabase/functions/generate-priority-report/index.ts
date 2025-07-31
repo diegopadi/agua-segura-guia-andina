@@ -112,15 +112,27 @@ serve(async (req) => {
       }
     }
 
-    // Validate the report structure and extract priorities if needed
-    if (!report.html_content) {
-      throw new Error('La respuesta de la IA no contiene contenido HTML');
+    // Handle both JSON and HTML responses
+    let htmlContent: string;
+    let priorities: any[];
+
+    if (report.html_content) {
+      // viene HTML, lo usamos
+      htmlContent = report.html_content;
+      priorities = extractPrioritiesFromHTML(htmlContent);
+
+    } else if (report.informe?.prioridades) {
+      // viene JSON, lo convertimos a HTML
+      priorities = report.informe.prioridades;
+      htmlContent = generateHTMLFromJSON(report.informe);
+
+    } else {
+      throw new Error('La respuesta de la IA no contiene contenido reconocible');
     }
-    
-    // If priorities are not extracted, try to extract them from HTML
-    if (!report.priorities || !Array.isArray(report.priorities)) {
-      report.priorities = extractPrioritiesFromHTML(report.html_content);
-    }
+
+    // asigna report.html_content = htmlContent y report.priorities = priorities
+    report.html_content = htmlContent;
+    report.priorities = priorities;
 
     if (report.priorities.length !== 5) {
       console.warn(`Se esperaban 5 prioridades, pero se encontraron ${report.priorities.length}`);
@@ -166,40 +178,17 @@ serve(async (req) => {
 
 // Helper function to extract priorities from HTML content
 function extractPrioritiesFromHTML(htmlContent: string): any[] {
-  const priorities: any[] = [];
-  
-  // Extract priority items using regex
-  const priorityMatches = htmlContent.match(/<div class="priority-item">.*?<\/div>\s*<\/div>/gs);
-  
-  if (priorityMatches) {
-    priorityMatches.forEach((match, index) => {
-      const titleMatch = match.match(/<h3>Prioridad \d+: (.+?)<\/h3>/);
-      const descriptionMatch = match.match(/<h4>Descripción<\/h4>\s*<p>(.+?)<\/p>/s);
-      
-      if (titleMatch) {
-        priorities.push({
-          priority_number: index + 1,
-          title: titleMatch[1],
-          description: descriptionMatch ? descriptionMatch[1] : '',
-          justification: {},
-          strategies: []
-        });
-      }
-    });
-  }
-  
-  // If no priorities were extracted, create default ones
-  if (priorities.length === 0) {
-    for (let i = 1; i <= 5; i++) {
-      priorities.push({
-        priority_number: i,
-        title: `Prioridad ${i}`,
-        description: `Descripción de la prioridad ${i}`,
-        justification: {},
-        strategies: []
-      });
-    }
-  }
-  
-  return priorities;
+  const matches = [...htmlContent.matchAll(/<li data-priority="(.+?)">(.+?)<\/li>/g)];
+  return matches.map(([, id, text]) => ({ id, text }));
+}
+
+// Helper function to generate HTML from JSON
+function generateHTMLFromJSON(informe: any): string {
+  const title = `<h2>${informe.titulo}</h2>`;
+  const list = informe.prioridades
+    .map((p: any, i: number) => 
+      `<li data-priority="${i+1}">${p.descripcion || p.titulo || p}</li>`
+    )
+    .join('');
+  return `${title}<ul>${list}</ul>`;
 }
