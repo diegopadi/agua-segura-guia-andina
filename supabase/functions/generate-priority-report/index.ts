@@ -10,6 +10,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🚀 Starting generate-priority-report function');
+    
     // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -18,11 +20,18 @@ serve(async (req) => {
 
     // Parse request body
     const { accelerator1Data, accelerator2Data, accelerator3Data, profileData } = await req.json();
+    console.log('📋 Request data received:', {
+      hasAccelerator1: !!accelerator1Data,
+      hasAccelerator2: !!accelerator2Data,
+      hasAccelerator3: !!accelerator3Data,
+      hasProfile: !!profileData
+    });
 
     if (!accelerator1Data || !accelerator2Data || !accelerator3Data) {
       throw new Error('Se requieren los datos de los 3 aceleradores');
     }
 
+    console.log('📄 Getting template from database...');
     // Get the template
     const { data: template, error: templateError } = await supabaseClient
       .from('templates')
@@ -31,9 +40,11 @@ serve(async (req) => {
       .single();
 
     if (templateError || !template) {
+      console.error('❌ Template error:', templateError);
       throw new Error('Error al obtener la plantilla del informe');
     }
 
+    console.log('✅ Template retrieved successfully');
     const templateContent = template.content;
 
     // Prepare the AI prompt
@@ -42,91 +53,135 @@ serve(async (req) => {
       .replace('{accelerator2_data}', JSON.stringify(accelerator2Data))
       .replace('{accelerator3_data}', JSON.stringify(accelerator3Data));
 
-    console.log('Generating priority report with AI...');
+    console.log('🤖 Calling OpenAI API...');
+    console.log('📝 Prompt length:', aiPrompt.length);
 
-    // Call OpenAI API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'Eres un experto en educación ambiental hídrica y planificación estratégica educativa. Responde siempre con JSON válido siguiendo exactamente la estructura solicitada.'
-          },
-          {
-            role: 'user',
-            content: aiPrompt
-          }
-        ],
-        temperature: 0.7,
-      }),
-    });
+    let openaiResponse;
+    try {
+      // Call OpenAI API
+      openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'Eres un experto en educación ambiental hídrica y planificación estratégica educativa. Responde siempre con JSON válido siguiendo exactamente la estructura solicitada.'
+            },
+            {
+              role: 'user',
+              content: aiPrompt
+            }
+          ],
+          temperature: 0.7,
+        }),
+      });
+
+      console.log('📡 OpenAI Response Status:', openaiResponse.status);
+      console.log('📡 OpenAI Response Headers:', Object.fromEntries(openaiResponse.headers.entries()));
+
+    } catch (fetchError) {
+      console.error('🚨 OpenAI Fetch Error:', fetchError);
+      throw new Error(`Error de conexión con OpenAI: ${fetchError.message}`);
+    }
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error(`Error en la API de OpenAI: ${openaiResponse.status}`);
+      console.error('🚨 OpenAI API Error Status:', openaiResponse.status);
+      console.error('🚨 OpenAI API Error Body:', errorText);
+      throw new Error(`Error en la API de OpenAI: ${openaiResponse.status} - ${errorText}`);
     }
 
-    const openaiData = await openaiResponse.json();
-    const generatedContent = openaiData.choices[0].message.content;
+    let openaiData;
+    try {
+      openaiData = await openaiResponse.json();
+      console.log('✅ OpenAI JSON parsed successfully');
+    } catch (jsonError) {
+      console.error('🚨 Error parsing OpenAI JSON response:', jsonError);
+      const responseText = await openaiResponse.text();
+      console.error('🚨 Raw OpenAI response:', responseText);
+      throw new Error(`Error al procesar respuesta JSON de OpenAI: ${jsonError.message}`);
+    }
 
-    console.log('Generated priority report content:', generatedContent);
+    const generatedContent = openaiData.choices?.[0]?.message?.content;
+    if (!generatedContent) {
+      console.error('🚨 No content in OpenAI response:', openaiData);
+      throw new Error('OpenAI no devolvió contenido válido');
+    }
+
+    console.log('📄 Generated content length:', generatedContent.length);
+    console.log('📄 Generated content preview:', generatedContent.substring(0, 200) + '...');
 
     // Parse the generated JSON
     let report;
     try {
+      console.log('🔍 Parsing AI response...');
+      
       // Clean the response in case it has markdown formatting
       let cleanedContent = generatedContent.replace(/```json\n?/g, '').replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+      console.log('🧹 Cleaned content preview:', cleanedContent.substring(0, 200) + '...');
       
       // If the response is HTML instead of JSON, create the proper structure
       if (cleanedContent.startsWith('<div class="priority-report">')) {
+        console.log('📝 Detected HTML format response');
         report = {
           html_content: cleanedContent,
           priorities: extractPrioritiesFromHTML(cleanedContent),
           metadata: {}
         };
       } else {
+        console.log('📝 Attempting JSON parse...');
         // Try to parse as JSON
         report = JSON.parse(cleanedContent);
+        console.log('✅ JSON parsed successfully');
       }
     } catch (parseError) {
-      console.error('Error parsing AI response:', parseError);
-      console.error('Raw AI response:', generatedContent);
+      console.error('🚨 Error parsing AI response:', parseError);
+      console.error('🚨 Parse error details:', parseError.message);
+      console.error('🚨 Raw AI response (first 1000 chars):', generatedContent.substring(0, 1000));
       
       // If parsing fails, try to extract HTML content manually
       const htmlMatch = generatedContent.match(/<div class="priority-report">.*?<\/div>/s);
       if (htmlMatch) {
+        console.log('🔧 Fallback: extracted HTML manually');
         report = {
           html_content: htmlMatch[0],
           priorities: extractPrioritiesFromHTML(htmlMatch[0]),
           metadata: {}
         };
       } else {
-        throw new Error('Error al procesar la respuesta de la IA. Formato inválido.');
+        throw new Error(`Error al procesar la respuesta de la IA. Formato inválido: ${parseError.message}`);
       }
     }
+
+    console.log('🔄 Processing report structure...');
+    console.log('📊 Report keys:', Object.keys(report));
 
     // Handle both JSON and HTML responses
     let htmlContent: string;
     let priorities: any[];
 
     if (report.html_content) {
-      // viene HTML, lo usamos
+      console.log('✅ Using HTML content from report');
       htmlContent = report.html_content;
       priorities = extractPrioritiesFromHTML(htmlContent);
 
     } else if (report.informe?.prioridades) {
-      // viene JSON, lo convertimos a HTML
+      console.log('✅ Converting JSON to HTML');
       priorities = report.informe.prioridades;
       htmlContent = generateHTMLFromJSON(report.informe);
 
     } else {
+      console.error('🚨 Report structure analysis:', {
+        hasHtmlContent: !!report.html_content,
+        hasInforme: !!report.informe,
+        informeKeys: report.informe ? Object.keys(report.informe) : null,
+        hasPrioridades: !!report.informe?.prioridades
+      });
       throw new Error('La respuesta de la IA no contiene contenido reconocible');
     }
 
@@ -134,8 +189,9 @@ serve(async (req) => {
     report.html_content = htmlContent;
     report.priorities = priorities;
 
+    console.log('📈 Priorities count:', priorities.length);
     if (report.priorities.length !== 5) {
-      console.warn(`Se esperaban 5 prioridades, pero se encontraron ${report.priorities.length}`);
+      console.warn(`⚠️ Se esperaban 5 prioridades, pero se encontraron ${report.priorities.length}`);
     }
 
     // Add metadata
@@ -151,7 +207,12 @@ serve(async (req) => {
       total_priorities: 5
     };
 
-    console.log('Priority report generated successfully');
+    console.log('✅ Priority report generated successfully');
+    console.log('📊 Final report structure:', {
+      hasHtmlContent: !!report.html_content,
+      prioritiesCount: report.priorities?.length,
+      hasMetadata: !!report.metadata
+    });
 
     return new Response(
       JSON.stringify({ report }),
@@ -162,11 +223,29 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Error in generate-priority-report function:', error);
+    console.error('🚨 generate-priority-report error:', error);
+    console.error('🚨 Error name:', error.name);
+    console.error('🚨 Error message:', error.message);
+    console.error('🚨 Error stack:', error.stack);
+
+    // Loguear también el status y body de la respuesta de OpenAI si existe
+    if (error.response) {
+      console.error('🚨 Error response status:', error.response.status);
+      try {
+        const errorBody = await error.response.text();
+        console.error('🚨 Error response body:', errorBody);
+      } catch (bodyError) {
+        console.error('🚨 Could not read error response body:', bodyError);
+      }
+    }
+
+    // Devolver el mensaje completo al front para verlo en la UI
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Error interno del servidor',
-        details: 'Error al generar el informe de priorización'
+        details: 'Error al generar el informe de priorización',
+        stack: error.stack,
+        timestamp: new Date().toISOString()
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
