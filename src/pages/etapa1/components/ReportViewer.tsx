@@ -61,7 +61,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
       const url = URL.createObjectURL(blob);
       
       link.setAttribute('href', url);
-      link.setAttribute('download', `reporte_diagnostico_${reportData.document_number}_${new Date().toISOString().split('T')[0]}.txt`);
+      link.setAttribute('download', `reporte_diagnostico_${reportData?.document_number || 'doc'}_${new Date().toISOString().split('T')[0]}.txt`);
       link.style.visibility = 'hidden';
       
       document.body.appendChild(link);
@@ -161,7 +161,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
               <div class="signature-field">
                 <div class="signature-line"></div>
                 <p><strong>Sello de la Institución</strong></p>
-                <p style="font-size: 0.9em; color: #666;">${reportData.metadata.institution_name || 'Institución Educativa'}</p>
+                <p style="font-size: 0.9em; color: #666;">${reportData?.metadata?.institution_name || 'Institución Educativa'}</p>
               </div>
             </div>
             
@@ -169,7 +169,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
               <p><strong>Fecha de validación:</strong> ${signatureData.date}</p>
               <p style="font-size: 0.9em; color: #666;">
                 Documento generado por el Sistema de Aceleradores Pedagógicos<br>
-                Reporte #${reportData.document_number}
+                Reporte #${reportData?.document_number || 'N/A'}
               </p>
             </div>
           </div>
@@ -203,8 +203,8 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                 Reporte de Evaluación Diagnóstica
               </h2>
               <p className="text-sm text-muted-foreground">
-                Documento #{reportData.document_number} • {reportData.metadata.institution_name || 'Institución'} • 
-                Generado el {new Date(reportData.created_at).toLocaleDateString('es-ES')}
+                Documento #{reportData?.document_number || 'N/A'} • {reportData?.metadata?.institution_name || 'Institución Educativa'} • 
+                Generado el {reportData?.created_at ? new Date(reportData.created_at).toLocaleDateString('es-ES') : 'Fecha no disponible'}
               </p>
             </div>
           </CardTitle>

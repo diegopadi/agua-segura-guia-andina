@@ -280,10 +280,22 @@ const Acelerador2 = () => {
         />
 
       case 4:
+        // Construct complete reportData object with all required fields
+        const reportData = {
+          id: session.id,
+          document_number: parseInt(session.id.slice(-6), 16) || Math.floor(Math.random() * 999999),
+          created_at: session.created_at,
+          metadata: {
+            institution_name: session.session_data.final_report?.metadata?.institution_name,
+            completeness_score: session.session_data.final_report?.metadata?.completeness_score,
+            ...session.session_data.final_report?.metadata
+          }
+        };
+        
         return <ReportViewer 
           htmlContent={session.session_data.final_report?.html_content || ''}
           markdownContent={session.session_data.final_report?.markdown_content || ''}
-          reportData={session.session_data.final_report || {}}
+          reportData={reportData}
           onRedoAnalysis={() => goToStep(3)}
         />
 
