@@ -28,7 +28,6 @@ const PriorityAnalysis = ({
 }: PriorityAnalysisProps) => {
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [errorDetails, setErrorDetails] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const { toast } = useToast()
 
@@ -65,7 +64,6 @@ const PriorityAnalysis = ({
   const startAnalysis = async () => {
     setAnalyzing(true)
     setError(null)
-    setErrorDetails(null)
     setProgress(0)
 
     try {
@@ -84,28 +82,36 @@ const PriorityAnalysis = ({
         profileData
       })
 
-      const { data, error } = await supabase.functions.invoke(
-        'generate-priority-report',
-        {
-          body: {
-            accelerator1Data,
-            accelerator2Data,
-            accelerator3Data,
-            profileData
-          }
-        }
-      )
+      // Make direct fetch call to get better error handling
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-priority-report`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey
+        },
+        body: JSON.stringify({
+          accelerator1Data,
+          accelerator2Data,
+          accelerator3Data,
+          profileData
+        })
+      })
 
-      console.log('Edge function response:', { data, error })
+      const responseText = await response.text()
+      console.log('Edge function raw response:', responseText)
 
       clearInterval(progressInterval)
       setProgress(100)
 
-      if (error) {
-        console.error('Edge function error details:', error)
-        setErrorDetails(JSON.stringify(error, null, 2))
-        throw error
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${responseText}`)
       }
+
+      const data = JSON.parse(responseText)
 
       if (!data.report) {
         throw new Error('No se recibió un informe válido')
@@ -177,7 +183,6 @@ const PriorityAnalysis = ({
 
   const handleRetry = () => {
     setError(null)
-    setErrorDetails(null)
     startAnalysis()
   }
 
@@ -187,18 +192,9 @@ const PriorityAnalysis = ({
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error}
+            Error completo: {error}
           </AlertDescription>
         </Alert>
-        
-        {errorDetails && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <h4 className="font-semibold text-red-800 mb-2">Detalles del error:</h4>
-            <pre className="text-red-700 text-xs overflow-auto max-h-96 whitespace-pre-wrap">
-              {errorDetails}
-            </pre>
-          </div>
-        )}
         
         <div className="flex gap-4 justify-center">
           <Button variant="outline" onClick={onPrevious}>
