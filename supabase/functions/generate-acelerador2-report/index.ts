@@ -82,45 +82,53 @@ serve(async (req) => {
     };
 
     const basePrompt = `
-Eres un experto en educación para la seguridad hídrica. Genera un informe diagnóstico completo basado en los siguientes datos:
+Usa la "Plantilla 3" para generar un Informe Diagnóstico técnico y detallado que cumpla con:
 
-DIAGNÓSTICO DEL ACELERADOR 1:
+– **Portada y metadatos** (auto-rellenados).  
+– **Resumen del diagnóstico** (contexto, objetivo, síntesis de Acelerador 1 y alcance de esta etapa).  
+– **Resultados: Competencias previas** (3 preguntas): para cada pregunta, integra las respuestas cualitativas del docente con los hallazgos del Acelerador 1, destacando patrones, citas textuales y métricas cualitativas.  
+– **Resultados: Seguridad hídrica** (2 preguntas): para cada una, fusiona las respuestas del docente con el análisis de Acelerador 1, generando 2–3 insights profundos.  
+– **Análisis de brechas**: duplica la extensión normal, ofreciendo un desglose técnico de fortalezas vs. carencias, enlazando respuestas y datos de Acelerador 1 para justificar cada punto.  
+– **Recomendaciones pedagógicas**: elabora al menos 5 recomendaciones basadas en el cruce de ambos insumos, señalando acciones inmediatas y de largo plazo con respaldo técnico.
+
+**Indicaciones extra**:  
+- Máximo 1 200–1 500 palabras en cuerpo principal (sin contar portada y anexos).  
+- Usa lenguaje técnico-pedagógico, cita ejemplos concretos de las respuestas del docente.  
+- Asegura coherencia entre secciones mediante referencias cruzadas ("ver Competencias previas – P1").  
+- Entrega Markdown con encabezados claros (\`## Resumen\`, \`### Resultados Competencias\`, etc.).
+
+DATOS DEL DIAGNÓSTICO DEL ACELERADOR 1:
 ${JSON.stringify(accelerator1Data, null, 2)}
 
 RESPUESTAS DEL DOCENTE SOBRE SUS ESTUDIANTES:
 ${JSON.stringify(teacherResponses, null, 2)}
 
-ESTRUCTURA DEL INFORME (usar como guía):
+ESTRUCTURA DE LA PLANTILLA 3 (usar como guía):
 ${JSON.stringify(template, null, 2)}
-
-INSTRUCCIONES:
-1. Crea un informe diagnóstico completo y profesional
-2. Conecta el diagnóstico del Acelerador 1 con las respuestas del docente
-3. Incluye análisis específicos de competencias previas
-4. Proporciona recomendaciones pedagógicas concretas
-5. Usa un lenguaje profesional pero accesible para docentes
-6. Estructura el contenido de manera clara y organizada
 
 FORMATO DE RESPUESTA:
 Debes responder ÚNICAMENTE con un objeto JSON válido que tenga EXACTAMENTE esta estructura:
 
 {
   "title": "Informe Diagnóstico - Acelerador 2",
-  "html_content": "HTML completo del informe con estructura, estilos básicos y contenido",
-  "markdown_content": "Versión en markdown del mismo contenido",
+  "html_content": "HTML completo del informe con estructura, estilos básicos y contenido técnico detallado",
+  "markdown_content": "Versión en markdown del mismo contenido con encabezados claros",
   "metadata": {
     "generated_at": "${new Date().toISOString()}",
-    "sections_count": "número de secciones",
-    "word_count": "estimación de palabras",
-    "summary": "Resumen ejecutivo de 2-3 líneas"
+    "sections_count": "número de secciones principales",
+    "word_count": "estimación de palabras del contenido",
+    "summary": "Resumen ejecutivo de 2-3 líneas del diagnóstico técnico"
   }
 }
 
 IMPORTANTE:
 - NO uses formato markdown en tu respuesta (sin \`\`\`json ni \`\`\`)
 - NO agregues texto antes o después del JSON
-- El HTML debe incluir estilos CSS embebidos y estructura profesional
+- El HTML debe incluir estilos CSS embebidos y estructura profesional con la portada completa
+- El Markdown debe seguir la estructura indicada con encabezados claros
+- Integra explícitamente las respuestas del docente con los datos del Acelerador 1
 - Asegúrate de que el JSON sea válido y bien formateado
+- Genera un análisis técnico profundo que duplique la extensión habitual
 `;
 
     const correctionPrompt = correctionInstructions ? `
