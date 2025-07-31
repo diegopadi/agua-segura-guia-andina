@@ -115,15 +115,19 @@ export default function PublicSurvey() {
 
       // Create new participant automatically
       const { data: participantData, error: participantError } = await supabase
-        .rpc('create_unique_participant', { survey_id_param: surveyData.id })
+        .from('survey_participants')
+        .insert({ survey_id: surveyData.id })
+        .select('id, participant_token')
+        .single()
 
-      if (participantError || !participantData || participantData.length === 0) {
-        setError('Error al crear participante')
+      if (participantError) {
+        console.error('Error creating participant:', participantError)
+        setError(`Error al crear participante: ${participantError.message}`)
         return
       }
 
-      const newParticipantId = participantData[0].participant_id
-      const newParticipantToken = participantData[0].participant_token
+      const newParticipantId = participantData.id
+      const newParticipantToken = participantData.participant_token
 
       // Store participant data in session for persistence
       sessionStorage.setItem(sessionKey, JSON.stringify({
