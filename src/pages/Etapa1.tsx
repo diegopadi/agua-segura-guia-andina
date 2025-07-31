@@ -214,26 +214,6 @@ const Etapa1 = () => {
         })}
       </div>
 
-      {/* Help Section */}
-      <Card className="bg-muted/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Users className="w-5 h-5 text-secondary" />
-            ¿Necesitas ayuda?
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Los aceleradores están diseñados para guiarte paso a paso. Cada uno incluye 
-            asistencia de IA para ayudarte a completar el diagnóstico de manera efectiva.
-          </p>
-          <Button variant="outline" asChild>
-            <Link to="/ayuda">
-              Ver guía completa
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   )
 }

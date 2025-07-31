@@ -316,22 +316,6 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
         </CardContent>
       </Card>
 
-      {/* Instructions */}
-      <Card className="bg-muted/50">
-        <CardContent className="p-4">
-          <div className="text-sm text-muted-foreground">
-            <p className="font-medium mb-2">💡 Opciones disponibles:</p>
-            <ul className="space-y-1 list-disc list-inside">
-              <li><strong>Copiar contenido:</strong> Copia todo el reporte en formato texto para pegar en Word u otro editor</li>
-              <li><strong>Descargar texto:</strong> Descarga el reporte completo en formato .txt para editar</li>
-              <li><strong>Imprimir/PDF:</strong> Abre una ventana optimizada para imprimir o guardar como PDF (incluye firma)</li>
-              <li><strong>Firma digital:</strong> Completa los datos de firma que se incluirán en la versión final</li>
-              <li><strong>Selección manual:</strong> Puedes seleccionar y copiar secciones específicas del reporte</li>
-              <li><strong>Nuevo reporte:</strong> Genera un análisis completamente nuevo con datos actualizados</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
