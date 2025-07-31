@@ -222,7 +222,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           id?: string
-          participant_token: string
+          participant_token?: string
           started_at?: string | null
           status?: string | null
           survey_id: string
@@ -292,6 +292,7 @@ export type Database = {
       survey_responses: {
         Row: {
           id: string
+          participant_id: string | null
           participant_token: string
           question_id: string
           response_data: Json
@@ -300,6 +301,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          participant_id?: string | null
           participant_token: string
           question_id: string
           response_data: Json
@@ -308,6 +310,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          participant_id?: string | null
           participant_token?: string
           question_id?: string
           response_data?: Json
@@ -315,6 +318,13 @@ export type Database = {
           survey_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "survey_responses_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "survey_participants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "survey_responses_question_id_fkey"
             columns: ["question_id"]
@@ -396,6 +406,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_unique_participant: {
+        Args: { survey_id_param: string }
+        Returns: {
+          participant_id: string
+          participant_token: string
+        }[]
+      }
       delete_participant_completely: {
         Args: { survey_id_param: string; participant_token_param: string }
         Returns: boolean
@@ -403,6 +420,10 @@ export type Database = {
       generate_unique_participant_token: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_survey_participants_count: {
+        Args: { survey_id_param: string }
+        Returns: number
       }
       get_unique_participants_count: {
         Args: { survey_id_param: string }
