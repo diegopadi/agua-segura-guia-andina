@@ -91,7 +91,7 @@ Debes responder ÚNICAMENTE con un objeto JSON válido que tenga EXACTAMENTE est
 }
 
 IMPORTANTE:
-- NO uses formato markdown en tu respuesta (sin ```json ni ```)
+- NO uses formato markdown en tu respuesta (sin \`\`\`json ni \`\`\`)
 - NO agregues texto antes o después del JSON
 - El HTML debe incluir estilos CSS embebidos y estructura profesional
 - Asegúrate de que el JSON sea válido y bien formateado
