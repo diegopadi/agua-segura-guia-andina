@@ -50,21 +50,20 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
 
   const generateReport = async () => {
     if (!session.session_data.teacher_responses) {
-      toast({
-        title: "Respuestas incompletas",
-        description: "Debes completar las respuestas del paso anterior",
-        variant: "destructive"
-      })
-      return
+      setError('No hay respuestas del docente disponibles para generar el informe');
+      return;
     }
 
     if (!accelerator1Data) {
-      toast({
-        title: "Diagnóstico no encontrado",
-        description: "No se encontró el diagnóstico del Acelerador 1. Asegúrate de haberlo completado.",
-        variant: "destructive"
-      })
-      return
+      setError('No se encontraron datos del Acelerador 1. Es necesario completar el Acelerador 1 primero.');
+      return;
+    }
+
+    // Check Accelerator 1 data completeness
+    const completeness = accelerator1Data.completeness_analysis?.overall_completeness || 0;
+    if (completeness < 50) {
+      setError(`Los datos del Acelerador 1 están incompletos (${completeness}%). Es necesario completar al menos el 50% del Acelerador 1 antes de generar el informe.`);
+      return;
     }
 
     setLoading(true)
@@ -94,12 +93,29 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
 
     } catch (error) {
       console.error('Error generating report:', error)
-      setError(error instanceof Error ? error.message : 'Error desconocido')
-      toast({
-        title: "Error en el análisis",
-        description: "No se pudo generar el informe. Intenta nuevamente.",
-        variant: "destructive"
-      })
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      setError(errorMessage)
+      
+      // Show specific error guidance based on the error type
+      if (errorMessage.includes('incompletos')) {
+        toast({
+          title: "Datos insuficientes",
+          description: "Por favor, regrese al Acelerador 1 para completar más información.",
+          variant: "destructive"
+        })
+      } else if (errorMessage.includes('formato JSON')) {
+        toast({
+          title: "Error de procesamiento",
+          description: "Error en el procesamiento del informe. Intente regenerar el informe.",
+          variant: "destructive"
+        })
+      } else {
+        toast({
+          title: "Error en el análisis",
+          description: "No se pudo generar el informe. Intenta nuevamente.",
+          variant: "destructive"
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -235,25 +251,45 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
 
           {/* Loading State */}
           {loading && (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <h3 className="font-semibold text-lg mb-2">Generando informe con IA...</h3>
-              <p className="text-muted-foreground">
-                Estamos procesando las respuestas del docente y el diagnóstico del Acelerador 1 para generar el informe diagnóstico.
-                Este proceso puede tomar unos segundos.
-              </p>
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="text-center">
+                <p className="text-muted-foreground">Generando informe diagnóstico...</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Analizando datos del Acelerador 1 y respuestas del docente
+                </p>
+              </div>
             </div>
           )}
 
           {/* Error State */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <h3 className="font-semibold text-red-800 mb-2">Error en el análisis</h3>
+              <h3 className="font-semibold text-red-800 mb-2">Error al generar el informe</h3>
               <p className="text-red-700 mb-4">{error}</p>
-              <Button onClick={generateReport} variant="outline" size="sm">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Reintentar análisis
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => {
+                    setError(null);
+                    generateReport();
+                  }}
+                  variant="outline" 
+                  size="sm"
+                  disabled={loading}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Intentar de nuevo
+                </Button>
+                {error.includes('incompletos') && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => window.location.href = '/etapa1/acelerador1'}
+                  >
+                    Ir al Acelerador 1
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 

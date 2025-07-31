@@ -21,6 +21,12 @@ serve(async (req) => {
       throw new Error('Se requieren los datos del Acelerador 1 y las respuestas del docente');
     }
 
+    // Validate Accelerator 1 data completeness
+    const completeness = accelerator1Data.completeness_analysis?.overall_completeness || 0;
+    if (completeness < 50) {
+      throw new Error(`Los datos del Acelerador 1 están incompletos (${completeness}%). Es necesario completar al menos el 50% del Acelerador 1 antes de generar el informe.`);
+    }
+
     console.log('Generating Acelerador 2 report with:', {
       hasAccelerator1Data: !!accelerator1Data,
       teacherResponsesKeys: Object.keys(teacherResponses),
@@ -69,7 +75,9 @@ INSTRUCCIONES:
 5. Usa un lenguaje profesional pero accesible para docentes
 6. Estructura el contenido de manera clara y organizada
 
-FORMATO DE RESPUESTA (JSON válido):
+FORMATO DE RESPUESTA:
+Debes responder ÚNICAMENTE con un objeto JSON válido que tenga EXACTAMENTE esta estructura:
+
 {
   "title": "Informe Diagnóstico - Acelerador 2",
   "html_content": "HTML completo del informe con estructura, estilos básicos y contenido",
@@ -82,13 +90,11 @@ FORMATO DE RESPUESTA (JSON válido):
   }
 }
 
-El HTML debe incluir:
-- Estilos CSS básicos embebidos
-- Estructura clara con títulos y secciones
-- Contenido completo y detallado
-- Formato profesional para impresión
-
-Responde ÚNICAMENTE con el JSON válido, sin texto adicional.
+IMPORTANTE:
+- NO uses formato markdown en tu respuesta (sin ```json ni ```)
+- NO agregues texto antes o después del JSON
+- El HTML debe incluir estilos CSS embebidos y estructura profesional
+- Asegúrate de que el JSON sea válido y bien formateado
 `;
 
     const correctionPrompt = correctionInstructions ? `
@@ -101,6 +107,15 @@ IMPORTANTE: Aplica las correcciones solicitadas manteniendo la estructura y cali
 
     const finalPrompt = basePrompt + correctionPrompt;
 
+    // Helper function to clean JSON content from markdown
+    const cleanJsonContent = (content: string): string => {
+      // Remove markdown code blocks
+      let cleaned = content.replace(/```json\s*/, '').replace(/```\s*$/, '');
+      // Remove any remaining backticks at start/end
+      cleaned = cleaned.replace(/^`+|`+$/g, '');
+      return cleaned.trim();
+    };
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -112,7 +127,7 @@ IMPORTANTE: Aplica las correcciones solicitadas manteniendo la estructura y cali
         messages: [
           { 
             role: 'system', 
-            content: 'Eres un experto en educación para la seguridad hídrica. Generas informes diagnósticos detallados y profesionales. Siempre respondes en formato JSON válido.'
+            content: 'Eres un experto en educación para la seguridad hídrica. Generas informes diagnósticos detallados y profesionales. IMPORTANTE: Responde ÚNICAMENTE con JSON válido, sin formato markdown, sin backticks, sin texto adicional.'
           },
           { role: 'user', content: finalPrompt }
         ],
@@ -126,9 +141,14 @@ IMPORTANTE: Aplica las correcciones solicitadas manteniendo la estructura y cali
     }
 
     const data = await response.json();
-    const generatedContent = data.choices[0].message.content;
+    let generatedContent = data.choices[0].message.content;
 
     console.log('Generated content preview:', generatedContent.substring(0, 500) + '...');
+
+    // Clean the content to remove markdown formatting
+    generatedContent = cleanJsonContent(generatedContent);
+    
+    console.log('Cleaned content preview:', generatedContent.substring(0, 500) + '...');
 
     let parsedReport;
     try {
@@ -136,7 +156,21 @@ IMPORTANTE: Aplica las correcciones solicitadas manteniendo la estructura y cali
     } catch (parseError) {
       console.error('Error parsing JSON:', parseError);
       console.error('Generated content:', generatedContent);
-      throw new Error('Error al procesar la respuesta de IA');
+      console.error('Cleaned content:', generatedContent);
+      
+      // Try to extract JSON from the content if it's wrapped in text
+      const jsonMatch = generatedContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          parsedReport = JSON.parse(jsonMatch[0]);
+          console.log('Successfully extracted JSON from content');
+        } catch (secondParseError) {
+          console.error('Second parse attempt failed:', secondParseError);
+          throw new Error('Error al procesar la respuesta de IA: formato JSON inválido');
+        }
+      } else {
+        throw new Error('Error al procesar la respuesta de IA: no se encontró JSON válido');
+      }
     }
 
     // Validate the response structure
