@@ -284,13 +284,20 @@ const Acelerador2 = () => {
         const reportData = {
           id: session.id,
           document_number: parseInt(session.id.slice(-6), 16) || Math.floor(Math.random() * 999999),
-          created_at: session.created_at,
+          created_at: new Date().toISOString(), // Use current date instead of session creation date
           metadata: {
             institution_name: session.session_data.final_report?.metadata?.institution_name,
             completeness_score: session.session_data.final_report?.metadata?.completeness_score,
             ...session.session_data.final_report?.metadata
           }
         };
+        
+        // Debug logging to trace date issues
+        console.log('Report date debugging:', {
+          sessionCreatedAt: session.created_at,
+          currentDate: new Date().toISOString(),
+          reportDataCreatedAt: reportData.created_at
+        });
         
         return <ReportViewer 
           htmlContent={session.session_data.final_report?.html_content || ''}
