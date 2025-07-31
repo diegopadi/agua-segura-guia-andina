@@ -2,13 +2,10 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ArrowRight, Brain, RefreshCw, CheckCircle, AlertCircle, Settings } from "lucide-react"
+import { ArrowRight, Brain, RefreshCw, CheckCircle, AlertCircle } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/hooks/use-toast"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
 
 interface AIAnalysisProps {
   session: any
@@ -22,9 +19,6 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
   const [generatedData, setGeneratedData] = useState(session.session_data.final_report || null)
   const [error, setError] = useState<string | null>(null)
   const [accelerator1Data, setAccelerator1Data] = useState<any>(null)
-  const [correctionAttempts, setCorrectionAttempts] = useState(
-    session.session_data.correction_attempts || 0
-  )
 
   useEffect(() => {
     loadAccelerator1Data()
@@ -82,8 +76,7 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
       setGeneratedData(data)
       onUpdate({ 
         ai_analysis: { report_generated: true },
-        final_report: data,
-        correction_attempts: correctionAttempts
+        final_report: data
       })
 
       toast({
@@ -125,52 +118,9 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
     setGeneratedData(null)
     onUpdate({ 
       ai_analysis: null,
-      final_report: null,
-      correction_attempts: 0
+      final_report: null
     })
-    setCorrectionAttempts(0)
     generateReport()
-  }
-
-  const handleCorrection = async (correctionInstructions: string, newAttempts: number) => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-acelerador2-report', {
-        body: {
-          accelerator1Data: accelerator1Data,
-          teacherResponses: session.session_data.teacher_responses,
-          correctionInstructions: correctionInstructions
-        }
-      })
-
-      if (error) throw error
-
-      setGeneratedData(data)
-      setCorrectionAttempts(newAttempts)
-      onUpdate({ 
-        ai_analysis: { report_generated: true },
-        final_report: data,
-        correction_attempts: newAttempts,
-        corrections_made: true
-      })
-
-      toast({
-        title: "Informe corregido",
-        description: "El informe ha sido actualizado según tus instrucciones"
-      })
-
-    } catch (error) {
-      console.error('Error correcting report:', error)
-      toast({
-        title: "Error en la corrección",
-        description: "No se pudo corregir el informe. Intenta nuevamente.",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
-    }
   }
 
   // Auto-generate if teacher responses are ready and no previous report
@@ -346,50 +296,6 @@ export function AIAnalysis({ session, onUpdate, onNext }: AIAnalysisProps) {
                   </CardContent>
                 </Card>
               )}
-
-              {/* Report Correction */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Correcciones al informe</CardTitle>
-                  <CardDescription>
-                    Si necesitas ajustes al informe, describe los cambios que requieres
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Badge variant={correctionAttempts === 0 ? "default" : "secondary"}>
-                        {correctionAttempts === 0 ? "1 corrección gratuita disponible" : `${correctionAttempts} correcciones realizadas`}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label htmlFor="correction-instructions">
-                        Instrucciones de corrección
-                      </Label>
-                      <Textarea
-                        id="correction-instructions"
-                        placeholder="Describe específicamente qué cambios necesitas en el informe..."
-                        className="min-h-[100px]"
-                      />
-                    </div>
-                    
-                    <Button 
-                      onClick={() => {
-                        const textarea = document.getElementById('correction-instructions') as HTMLTextAreaElement
-                        if (textarea?.value.trim()) {
-                          handleCorrection(textarea.value, correctionAttempts + 1)
-                          textarea.value = ''
-                        }
-                      }}
-                      variant="outline"
-                      disabled={loading}
-                    >
-                      {loading ? "Aplicando corrección..." : "Aplicar corrección"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
 
               <div className="flex justify-end">
                 <Button onClick={onNext}>
