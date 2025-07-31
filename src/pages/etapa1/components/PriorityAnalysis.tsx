@@ -82,36 +82,27 @@ const PriorityAnalysis = ({
         profileData
       })
 
-      // Make direct fetch call to get better error handling
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-      
-      const response = await fetch(`${supabaseUrl}/functions/v1/generate-priority-report`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          'Content-Type': 'application/json',
-          'apikey': supabaseAnonKey
-        },
-        body: JSON.stringify({
-          accelerator1Data,
-          accelerator2Data,
-          accelerator3Data,
-          profileData
-        })
-      })
+      const { data, error } = await supabase.functions.invoke(
+        'generate-priority-report',
+        {
+          body: {
+            accelerator1Data,
+            accelerator2Data,
+            accelerator3Data,
+            profileData
+          }
+        }
+      )
 
-      const responseText = await response.text()
-      console.log('Edge function raw response:', responseText)
+      console.log('Edge function response:', { data, error })
 
       clearInterval(progressInterval)
       setProgress(100)
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${responseText}`)
+      if (error) {
+        console.error('Edge function error details:', error)
+        throw new Error(`Error de la función: ${error.message || JSON.stringify(error)}`)
       }
-
-      const data = JSON.parse(responseText)
 
       if (!data.report) {
         throw new Error('No se recibió un informe válido')
