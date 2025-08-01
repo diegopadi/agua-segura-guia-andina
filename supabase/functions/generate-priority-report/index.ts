@@ -56,9 +56,45 @@ serve(async (req) => {
     console.log('🤖 Calling OpenAI API...');
     console.log('📝 Prompt length:', aiPrompt.length);
 
+    // Define the JSON Schema for OpenAI response
+    const prioritySchema = {
+      "type": "object",
+      "properties": {
+        "html_content": { "type": "string" },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "generated_date": { "type": "string" },
+            "institution_name": { "type": "string" },
+            "teacher_name": { "type": "string" },
+            "total_priorities": { "type": "number" }
+          },
+          "required": ["generated_date","institution_name","teacher_name","total_priorities"]
+        },
+        "priorities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "priority_number": { "type": "number" },
+              "title": { "type": "string" },
+              "description": { "type": "string" },
+              "justification": { "type": "object" },
+              "strategies": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "required": ["priority_number","title","description","justification","strategies"]
+          }
+        }
+      },
+      "required": ["html_content","metadata","priorities"]
+    };
+
     let openaiResponse;
     try {
-      // Call OpenAI API
+      // Call OpenAI API with JSON Schema
       openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -78,6 +114,14 @@ serve(async (req) => {
             }
           ],
           temperature: 0.7,
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'priority_report',
+              schema: prioritySchema,
+              strict: true
+            }
+          }
         }),
       });
 
@@ -116,7 +160,7 @@ serve(async (req) => {
     console.log('📄 Generated content length:', generatedContent.length);
     console.log('📄 Generated content preview:', generatedContent.substring(0, 200) + '...');
 
-    // Parse the generated JSON
+    // Parse the generated JSON with fallback support for "informe" wrapper
     let report;
     try {
       console.log('🔍 Parsing AI response...');
@@ -136,8 +180,36 @@ serve(async (req) => {
       } else {
         console.log('📝 Attempting JSON parse...');
         // Try to parse as JSON
-        report = JSON.parse(cleanedContent);
+        const rawResponse = JSON.parse(cleanedContent);
         console.log('✅ JSON parsed successfully');
+        console.log('🔍 Raw response structure:', Object.keys(rawResponse));
+        
+        // Fallback handling for "informe" wrapper and other formats
+        if (rawResponse.html_content) {
+          // Direct format: { html_content, metadata, priorities }
+          console.log('✅ Using direct format response');
+          report = rawResponse;
+        } else if (rawResponse.informe && rawResponse.informe.html) {
+          // Old wrapper format: { informe: { html, metadata, priorities } }
+          console.log('✅ Converting from "informe" wrapper format');
+          report = {
+            html_content: rawResponse.informe.html,
+            metadata: rawResponse.informe.metadata || {},
+            priorities: rawResponse.informe.priorities || []
+          };
+        } else if (rawResponse.informe && rawResponse.informe.prioridades) {
+          // Another wrapper format: { informe: { prioridades, ... } }
+          console.log('✅ Converting from "informe.prioridades" format');
+          report = {
+            html_content: generateHTMLFromJSON(rawResponse.informe),
+            metadata: rawResponse.informe.metadata || {},
+            priorities: rawResponse.informe.prioridades || []
+          };
+        } else {
+          // Try to use rawResponse directly
+          console.log('✅ Using raw response as-is');
+          report = rawResponse;
+        }
       }
     } catch (parseError) {
       console.error('🚨 Error parsing AI response:', parseError);
@@ -160,36 +232,29 @@ serve(async (req) => {
 
     console.log('🔄 Processing report structure...');
     console.log('📊 Report keys:', Object.keys(report));
+    console.log('📊 Report structure validation:', {
+      hasHtmlContent: !!report.html_content,
+      hasPriorities: !!report.priorities,
+      hasMetadata: !!report.metadata,
+      prioritiesCount: Array.isArray(report.priorities) ? report.priorities.length : 0
+    });
 
-    // Handle both JSON and HTML responses
-    let htmlContent: string;
-    let priorities: any[];
-
-    if (report.html_content) {
-      console.log('✅ Using HTML content from report');
-      htmlContent = report.html_content;
-      priorities = extractPrioritiesFromHTML(htmlContent);
-
-    } else if (report.informe?.prioridades) {
-      console.log('✅ Converting JSON to HTML');
-      priorities = report.informe.prioridades;
-      htmlContent = generateHTMLFromJSON(report.informe);
-
-    } else {
-      console.error('🚨 Report structure analysis:', {
-        hasHtmlContent: !!report.html_content,
-        hasInforme: !!report.informe,
-        informeKeys: report.informe ? Object.keys(report.informe) : null,
-        hasPrioridades: !!report.informe?.prioridades
-      });
-      throw new Error('La respuesta de la IA no contiene contenido reconocible');
+    // Ensure all required fields exist
+    if (!report.html_content) {
+      throw new Error('No se encontró contenido HTML en la respuesta');
+    }
+    
+    if (!report.priorities) {
+      console.log('⚠️ No priorities found, extracting from HTML');
+      report.priorities = extractPrioritiesFromHTML(report.html_content);
+    }
+    
+    if (!report.metadata) {
+      console.log('⚠️ No metadata found, initializing empty object');
+      report.metadata = {};
     }
 
-    // asigna report.html_content = htmlContent y report.priorities = priorities
-    report.html_content = htmlContent;
-    report.priorities = priorities;
-
-    console.log('📈 Priorities count:', priorities.length);
+    console.log('📈 Priorities count:', report.priorities.length);
     if (report.priorities.length !== 5) {
       console.warn(`⚠️ Se esperaban 5 prioridades, pero se encontraron ${report.priorities.length}`);
     }
