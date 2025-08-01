@@ -340,12 +340,12 @@ const Acelerador2 = () => {
         <CardContent className="pt-6">
           <div className="space-y-4">
             <div className="flex justify-between text-sm">
-              <span>Progreso del acelerador</span>
+              <span>Progreso</span>
               <span>{Math.round((currentStep / 4) * 100)}%</span>
             </div>
             <Progress value={(currentStep / 4) * 100} className="h-2" />
             
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2 mt-4">
               {STEPS.map((step) => {
                 const isCompleted = step.number < currentStep
                 const isCurrent = step.number === currentStep
@@ -354,7 +354,7 @@ const Acelerador2 = () => {
                 return (
                   <div
                     key={step.number}
-                    className={`relative p-4 rounded-lg border transition-all cursor-pointer ${
+                    className={`relative p-3 rounded-lg border transition-all cursor-pointer ${
                       isCompleted
                         ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
                         : isCurrent
@@ -363,17 +363,12 @@ const Acelerador2 = () => {
                     }`}
                     onClick={() => isAccessible && goToStep(step.number)}
                   >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="text-2xl">{step.icon}</div>
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <step.component className="w-5 h-5" />
                       {isCompleted && (
-                        <CheckCircle className="w-4 h-4 text-green-600 absolute top-2 right-2" />
+                        <CheckCircle className="w-4 h-4 text-green-600 absolute top-1 right-1" />
                       )}
-                    </div>
-                    <div className="space-y-1">
-                      <div className="font-medium text-sm">{step.title}</div>
-                      <div className="text-xs opacity-80 line-clamp-2">
-                        {step.description}
-                      </div>
+                      <div className="text-xs font-medium">{step.title}</div>
                     </div>
                   </div>
                 )
