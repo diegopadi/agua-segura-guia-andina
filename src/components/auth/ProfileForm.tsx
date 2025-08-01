@@ -63,28 +63,57 @@ export function ProfileForm({ onSuccess, initialData }: ProfileFormProps) {
   });
 
   const onSubmit = async (data: ProfileData) => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Error de autenticación",
+        description: "Usuario no autenticado. Por favor, inicie sesión nuevamente.",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    console.log("User ID:", user.id);
+    console.log("User object:", user);
+    
     setLoading(true);
     try {
-      // Update profile
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          full_name: data.full_name,
-          area_docencia: data.area_docencia,
-          ie_name: data.ie_name,
-          ie_district: data.ie_district,
-          ie_province: data.ie_province,
-          ie_region: data.ie_region,
-          ie_country: data.ie_country,
-          phone: data.phone,
-          language: data.language,
-          terms_accepted_at: new Date().toISOString(),
-        });
+      // Verify user authentication status
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error("Sesión expirada. Por favor, inicie sesión nuevamente.");
+      }
 
-      if (error) throw error;
+      console.log("Session user ID:", session.user.id);
+
+      // Prepare profile data with explicit user_id
+      const profileData = {
+        user_id: session.user.id,
+        full_name: data.full_name,
+        area_docencia: data.area_docencia,
+        ie_name: data.ie_name,
+        ie_district: data.ie_district,
+        ie_province: data.ie_province,
+        ie_region: data.ie_region,
+        ie_country: data.ie_country,
+        phone: data.phone,
+        language: data.language,
+        terms_accepted_at: new Date().toISOString(),
+      };
+
+      console.log("Profile data to upsert:", profileData);
+
+      // Update profile
+      const { error, data: result } = await supabase
+        .from('profiles')
+        .upsert(profileData, { onConflict: 'user_id' });
+
+      console.log("Upsert result:", result);
+      console.log("Upsert error:", error);
+
+      if (error) {
+        console.error("RLS Error details:", error);
+        throw error;
+      }
 
       toast({
         title: "Perfil actualizado",
@@ -93,9 +122,20 @@ export function ProfileForm({ onSuccess, initialData }: ProfileFormProps) {
 
       onSuccess?.();
     } catch (error: any) {
+      console.error("Profile save error:", error);
+      
+      let errorMessage = error.message;
+      
+      // Handle specific RLS errors
+      if (error.message?.includes("row-level security policy")) {
+        errorMessage = "Error de permisos. Verifique que su sesión esté activa e intente nuevamente.";
+      } else if (error.message?.includes("JWT")) {
+        errorMessage = "Sesión expirada. Por favor, inicie sesión nuevamente.";
+      }
+
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error al guardar perfil",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
