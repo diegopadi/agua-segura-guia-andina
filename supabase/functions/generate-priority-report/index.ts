@@ -94,7 +94,7 @@ serve(async (req) => {
 
     let openaiResponse;
     try {
-      // Call OpenAI API with JSON Schema
+      // Call OpenAI API with Function Calling
       openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -106,22 +106,22 @@ serve(async (req) => {
           messages: [
             {
               role: 'system',
-              content: 'Eres un experto en educación ambiental hídrica y planificación estratégica educativa. Responde siempre con JSON válido siguiendo exactamente la estructura solicitada.'
+              content: 'Eres un experto en educación ambiental hídrica y planificación estratégica educativa. Usa la función generate_priority_report para responder.'
             },
             {
               role: 'user',
               content: aiPrompt
             }
           ],
-          temperature: 0.7,
-          response_format: {
-            type: 'json_schema',
-            json_schema: {
-              name: 'priority_report',
-              schema: prioritySchema,
-              strict: true
+          functions: [
+            {
+              name: 'generate_priority_report',
+              description: 'Genera un informe con html_content, metadata y priorities según el schema',
+              parameters: prioritySchema
             }
-          }
+          ],
+          function_call: { name: 'generate_priority_report' },
+          temperature: 0.7
         }),
       });
 
@@ -151,83 +151,28 @@ serve(async (req) => {
       throw new Error(`Error al procesar respuesta JSON de OpenAI: ${jsonError.message}`);
     }
 
-    const generatedContent = openaiData.choices?.[0]?.message?.content;
-    if (!generatedContent) {
-      console.error('🚨 No content in OpenAI response:', openaiData);
-      throw new Error('OpenAI no devolvió contenido válido');
+    // Extract function call arguments from OpenAI response
+    const funcCall = openaiData.choices?.[0]?.message?.function_call;
+    if (!funcCall || funcCall.name !== 'generate_priority_report') {
+      console.error('🚨 No function_call in OpenAI response:', openaiData);
+      throw new Error('OpenAI no devolvió una llamada a función válida');
     }
 
-    console.log('📄 Generated content length:', generatedContent.length);
-    console.log('📄 Generated content preview:', generatedContent.substring(0, 200) + '...');
+    console.log('✅ Function call received:', funcCall.name);
+    console.log('📄 Function arguments length:', funcCall.arguments.length);
+    console.log('📄 Function arguments preview:', funcCall.arguments.substring(0, 200) + '...');
 
-    // Parse the generated JSON with fallback support for "informe" wrapper
+    // Parse the function arguments as JSON
     let report;
     try {
-      console.log('🔍 Parsing AI response...');
-      
-      // Clean the response in case it has markdown formatting
-      let cleanedContent = generatedContent.replace(/```json\n?/g, '').replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
-      console.log('🧹 Cleaned content preview:', cleanedContent.substring(0, 200) + '...');
-      
-      // If the response is HTML instead of JSON, create the proper structure
-      if (cleanedContent.trim().startsWith('<')) {
-        console.log('📝 Detected HTML format response');
-        report = {
-          html_content: cleanedContent,
-          priorities: extractPrioritiesFromHTML(cleanedContent),
-          metadata: {}
-        };
-      } else {
-        console.log('📝 Attempting JSON parse...');
-        // Try to parse as JSON
-        const rawResponse = JSON.parse(cleanedContent);
-        console.log('✅ JSON parsed successfully');
-        console.log('🔍 Raw response structure:', Object.keys(rawResponse));
-        
-        // Fallback handling for "informe" wrapper and other formats
-        if (rawResponse.html_content) {
-          // Direct format: { html_content, metadata, priorities }
-          console.log('✅ Using direct format response');
-          report = rawResponse;
-        } else if (rawResponse.informe && rawResponse.informe.html) {
-          // Old wrapper format: { informe: { html, metadata, priorities } }
-          console.log('✅ Converting from "informe" wrapper format');
-          report = {
-            html_content: rawResponse.informe.html,
-            metadata: rawResponse.informe.metadata || {},
-            priorities: rawResponse.informe.priorities || []
-          };
-        } else if (rawResponse.informe && rawResponse.informe.prioridades) {
-          // Another wrapper format: { informe: { prioridades, ... } }
-          console.log('✅ Converting from "informe.prioridades" format');
-          report = {
-            html_content: generateHTMLFromJSON(rawResponse.informe),
-            metadata: rawResponse.informe.metadata || {},
-            priorities: rawResponse.informe.prioridades || []
-          };
-        } else {
-          // Try to use rawResponse directly
-          console.log('✅ Using raw response as-is');
-          report = rawResponse;
-        }
-      }
+      console.log('🔍 Parsing function call arguments...');
+      report = JSON.parse(funcCall.arguments);
+      console.log('✅ Function arguments parsed successfully');
+      console.log('🔍 Report structure:', Object.keys(report));
     } catch (parseError) {
-      console.error('🚨 Error parsing AI response:', parseError);
-      console.error('🚨 Parse error details:', parseError.message);
-      console.error('🚨 Raw AI response (first 1000 chars):', generatedContent.substring(0, 1000));
-      
-      // If parsing fails, try to extract HTML content manually
-      const htmlMatch = generatedContent.match(/<div class="priority-report">.*?<\/div>/s);
-      if (htmlMatch) {
-        console.log('🔧 Fallback: extracted HTML manually');
-        report = {
-          html_content: htmlMatch[0],
-          priorities: extractPrioritiesFromHTML(htmlMatch[0]),
-          metadata: {}
-        };
-      } else {
-        throw new Error(`Error al procesar la respuesta de la IA. Formato inválido: ${parseError.message}`);
-      }
+      console.error('🚨 Error parsing function call arguments:', parseError);
+      console.error('🚨 Raw arguments:', funcCall.arguments);
+      throw new Error(`Error al procesar los argumentos de la función: ${parseError.message}`);
     }
 
     console.log('🔄 Processing report structure...');
