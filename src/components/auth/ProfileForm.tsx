@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,11 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, User } from "lucide-react";
 
 const profileSchema = z.object({
   full_name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -45,8 +43,6 @@ interface ProfileFormProps {
 
 export function ProfileForm({ onSuccess, initialData }: ProfileFormProps) {
   const [loading, setLoading] = useState(false);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string>("");
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -66,46 +62,11 @@ export function ProfileForm({ onSuccess, initialData }: ProfileFormProps) {
     },
   });
 
-  useEffect(() => {
-    if (initialData?.photo_url) {
-      setPhotoUrl(initialData.photo_url);
-    }
-  }, [initialData]);
-
-  const handlePhotoUpload = async (file: File) => {
-    if (!user) return null;
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/profile.${fileExt}`;
-    const filePath = `user_uploads/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('user_uploads')
-      .upload(filePath, file, { upsert: true });
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    const { data } = supabase.storage
-      .from('user_uploads')
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  };
-
   const onSubmit = async (data: ProfileData) => {
     if (!user) return;
 
     setLoading(true);
     try {
-      let photo_url = photoUrl;
-
-      // Upload photo if selected
-      if (photoFile) {
-        photo_url = await handlePhotoUpload(photoFile) || "";
-      }
-
       // Update profile
       const { error } = await supabase
         .from('profiles')
@@ -120,7 +81,6 @@ export function ProfileForm({ onSuccess, initialData }: ProfileFormProps) {
           ie_country: data.ie_country,
           phone: data.phone,
           language: data.language,
-          photo_url,
           terms_accepted_at: new Date().toISOString(),
         });
 
@@ -143,97 +103,62 @@ export function ProfileForm({ onSuccess, initialData }: ProfileFormProps) {
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      // Preview the image
-      const reader = new FileReader();
-      reader.onload = (e) => setPhotoUrl(e.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center">
-          Mi Perfil de Docente
+          Complete su Perfil de Docente
         </CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Photo Upload */}
-            <div className="flex flex-col items-center space-y-4">
-              <Avatar className="w-24 h-24">
-                <AvatarImage src={photoUrl} />
-                <AvatarFallback>
-                  <User className="w-12 h-12" />
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="photo-upload"
-                />
-                <label htmlFor="photo-upload">
-                  <Button type="button" variant="outline" className="cursor-pointer" asChild>
-                    <span>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Subir Foto
-                    </span>
-                  </Button>
-                </label>
-              </div>
-            </div>
-
             {/* Personal Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Nombre Completo</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Información Personal</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="full_name"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Nombre Completo</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="area_docencia"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Área de Docencia</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: Matemáticas, Ciencias, etc." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="area_docencia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Área de Docencia</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ej: Matemáticas, Ciencias, etc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Teléfono/Celular</FormLabel>
-                    <FormControl>
-                      <Input placeholder="999-999-999" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teléfono/Celular</FormLabel>
+                      <FormControl>
+                        <Input placeholder="999-999-999" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             {/* Institution Information */}

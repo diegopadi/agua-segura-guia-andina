@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import { LoginForm } from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
 import { ChangePasswordForm } from "./ChangePasswordForm";
@@ -12,14 +13,23 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user, loading, checkFirstLogin } = useAuth();
-  const [authStep, setAuthStep] = useState<'login' | 'register' | 'change-password' | 'profile' | 'authenticated'>('login');
+  const [authStep, setAuthStep] = useState<'login' | 'register' | 'change-password' | 'profile' | 'email-confirmation' | 'authenticated'>('login');
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
 
   useEffect(() => {
     const checkAuthState = async () => {
       if (!user) {
         setAuthStep('login');
+        return;
+      }
+
+      setUserEmail(user.email || "");
+
+      // Check if email is confirmed
+      if (!user.email_confirmed_at) {
+        setAuthStep('email-confirmation');
         return;
       }
 
@@ -83,6 +93,36 @@ export function AuthGuard({ children }: AuthGuardProps) {
         />
       );
     
+    case 'email-confirmation':
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4">
+          <div className="w-full max-w-md">
+            <div className="bg-card text-card-foreground rounded-lg border shadow-sm p-6">
+              <div className="text-center space-y-4">
+                <h2 className="text-2xl font-bold">Confirme su correo electrónico</h2>
+                <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+                  <p className="text-sm text-blue-700 mb-2">
+                    Hemos enviado un correo de confirmación a:
+                  </p>
+                  <p className="font-semibold text-blue-800">{userEmail}</p>
+                  <p className="text-xs text-blue-600 mt-3">
+                    Busque un correo de <strong>Supabase Auth &lt;noreply@mail.app.supabase.io&gt;</strong>
+                    <br />
+                    Revise también su carpeta de spam o promociones.
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => window.location.reload()}
+                  className="w-full"
+                >
+                  Ya confirmé mi correo
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
     case 'change-password':
       return (
         <ChangePasswordForm 
