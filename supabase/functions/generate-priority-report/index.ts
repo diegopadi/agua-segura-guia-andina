@@ -170,7 +170,7 @@ serve(async (req) => {
       console.log('🧹 Cleaned content preview:', cleanedContent.substring(0, 200) + '...');
       
       // If the response is HTML instead of JSON, create the proper structure
-      if (cleanedContent.startsWith('<div class="priority-report">')) {
+      if (cleanedContent.trim().startsWith('<')) {
         console.log('📝 Detected HTML format response');
         report = {
           html_content: cleanedContent,
