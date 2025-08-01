@@ -6,7 +6,13 @@ export function WaterLogo({
   className = "",
   size = 24
 }: WaterLogoProps) {
-  const fontSize = size / 24; // Escala basada en el tamaño por defecto
-
-  return;
+  return (
+    <img
+      src="/src/assets/water-logo.png"
+      alt="Mi Cole con Agua Segura"
+      width={size}
+      height={size}
+      className={className}
+    />
+  );
 }
