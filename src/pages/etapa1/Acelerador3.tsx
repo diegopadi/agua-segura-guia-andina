@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, Target, Users, Brain, FileText, AlertCircle } from "lucide-react"
+import { ArrowLeft, Target, Users, Brain, FileText, AlertCircle, CheckCircle, Check, ClipboardList, BarChart3 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { supabase } from "@/integrations/supabase/client"
@@ -13,6 +13,13 @@ import { useToast } from "@/hooks/use-toast"
 import TeacherCapacityQuestionnaire from "./components/TeacherCapacityQuestionnaire"
 import PriorityAnalysis from "./components/PriorityAnalysis"
 import PriorityReportViewer from "./components/PriorityReportViewer"
+
+const STEPS = [
+  { number: 1, title: "Verificación", description: "Verificación de prerequisitos", icon: "✅", component: Check },
+  { number: 2, title: "Cuestionario", description: "Cuestionario de capacidades", icon: "📋", component: ClipboardList },
+  { number: 3, title: "Análisis", description: "Análisis con IA", icon: "🧠", component: Brain },
+  { number: 4, title: "Informe", description: "Informe de prioridades", icon: "📊", component: BarChart3 }
+]
 
 const Acelerador3 = () => {
   const { user } = useAuth()
@@ -242,23 +249,50 @@ const Acelerador3 = () => {
         </div>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Progreso del Acelerador 3</CardTitle>
-            <span className="text-sm text-muted-foreground">
-              Paso {currentStep} de 4
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Progress value={(currentStep / 4) * 100} className="w-full" />
-          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>Verificación</span>
-            <span>Cuestionario</span>
-            <span>Análisis</span>
-            <span>Informe</span>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="flex justify-between text-sm">
+              <span>Progreso del acelerador</span>
+              <span>{Math.round((currentStep / 4) * 100)}%</span>
+            </div>
+            <Progress value={(currentStep / 4) * 100} className="h-2" />
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-4">
+              {STEPS.map((step) => {
+                const isCompleted = step.number < currentStep
+                const isCurrent = step.number === currentStep
+                const isAccessible = step.number <= currentStep
+                
+                return (
+                  <div
+                    key={step.number}
+                    className={`relative p-4 rounded-lg border transition-all cursor-pointer ${
+                      isCompleted
+                        ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                        : isCurrent
+                        ? 'bg-blue-50 border-blue-200 text-blue-700 ring-2 ring-blue-100'
+                        : 'bg-muted border-muted-foreground/20 text-muted-foreground'
+                    }`}
+                    onClick={() => isAccessible && updateSessionStep(step.number)}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="text-2xl">{step.icon}</div>
+                      {isCompleted && (
+                        <CheckCircle className="w-4 h-4 text-green-600 absolute top-2 right-2" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="font-medium text-sm">{step.title}</div>
+                      <div className="text-xs opacity-80 line-clamp-2">
+                        {step.description}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </CardContent>
       </Card>

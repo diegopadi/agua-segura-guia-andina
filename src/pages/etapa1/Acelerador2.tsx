@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, ArrowRight, CheckCircle, Users, AlertCircle } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle, Users, AlertCircle, Sparkles, Bot, FileCheck } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { supabase } from "@/integrations/supabase/client"
@@ -27,10 +27,10 @@ type AcceleratorSession = {
 }
 
 const STEPS = [
-  { number: 1, title: "Bienvenida", description: "Verificación de requisitos e instrucciones" },
-  { number: 2, title: "Características", description: "Información sobre tus estudiantes" },
-  { number: 3, title: "Análisis con IA", description: "Generación del informe diagnóstico" },
-  { number: 4, title: "Informe", description: "Informe diagnóstico completo" }
+  { number: 1, title: "Bienvenida", description: "Verificación de requisitos e instrucciones", icon: "👋", component: Sparkles },
+  { number: 2, title: "Características", description: "Información sobre tus estudiantes", icon: "👥", component: Users },
+  { number: 3, title: "Análisis con IA", description: "Generación del informe diagnóstico", icon: "🧠", component: Bot },
+  { number: 4, title: "Informe", description: "Informe diagnóstico completo", icon: "📄", component: FileCheck }
 ]
 
 const Acelerador2 = () => {
@@ -345,26 +345,39 @@ const Acelerador2 = () => {
             </div>
             <Progress value={(currentStep / 4) * 100} className="h-2" />
             
-            <div className="grid grid-cols-4 gap-2 mt-4">
-              {STEPS.map((step) => (
-                <button
-                  key={step.number}
-                  onClick={() => goToStep(step.number)}
-                  disabled={step.number > currentStep + 1}
-                  className={`p-2 rounded text-xs text-center transition-colors ${
-                    step.number === currentStep
-                      ? 'bg-primary text-primary-foreground'
-                      : step.number < currentStep
-                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                      : step.number === currentStep + 1
-                      ? 'bg-muted hover:bg-muted-foreground/10'
-                      : 'bg-muted/50 text-muted-foreground/50 cursor-not-allowed'
-                  }`}
-                >
-                  <div className="font-medium">{step.number}</div>
-                  <div className="truncate">{step.title}</div>
-                </button>
-              ))}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-4">
+              {STEPS.map((step) => {
+                const isCompleted = step.number < currentStep
+                const isCurrent = step.number === currentStep
+                const isAccessible = step.number <= currentStep
+                
+                return (
+                  <div
+                    key={step.number}
+                    className={`relative p-4 rounded-lg border transition-all cursor-pointer ${
+                      isCompleted
+                        ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                        : isCurrent
+                        ? 'bg-blue-50 border-blue-200 text-blue-700 ring-2 ring-blue-100'
+                        : 'bg-muted border-muted-foreground/20 text-muted-foreground'
+                    }`}
+                    onClick={() => isAccessible && goToStep(step.number)}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="text-2xl">{step.icon}</div>
+                      {isCompleted && (
+                        <CheckCircle className="w-4 h-4 text-green-600 absolute top-2 right-2" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="font-medium text-sm">{step.title}</div>
+                      <div className="text-xs opacity-80 line-clamp-2">
+                        {step.description}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </CardContent>
