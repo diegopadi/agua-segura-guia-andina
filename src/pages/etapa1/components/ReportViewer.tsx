@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Copy, Printer, RotateCcw, FileDown, PenTool, Save } from 'lucide-react';
+import { Copy, Printer, RotateCcw, FileDown, PenTool, Save, CheckCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 interface ReportViewerProps {
@@ -21,13 +21,15 @@ interface ReportViewerProps {
     };
   };
   onRedoAnalysis: () => void;
+  onComplete?: () => void;
 }
 
 export const ReportViewer: React.FC<ReportViewerProps> = ({
   htmlContent,
   markdownContent,
   reportData,
-  onRedoAnalysis
+  onRedoAnalysis,
+  onComplete
 }) => {
   const { toast } = useToast();
   const [signatureData, setSignatureData] = useState({
@@ -315,6 +317,29 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* Completion Section */}
+      {onComplete && (
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 p-3 bg-green-100 rounded-full w-fit">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <CardTitle className="text-2xl text-green-800">
+              ¡Diagnóstico Completado!
+            </CardTitle>
+            <p className="text-green-700">
+              Tu evaluación diagnóstica ha sido generada exitosamente
+            </p>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button onClick={onComplete} size="lg" className="bg-green-600 hover:bg-green-700">
+              <CheckCircle className="w-5 h-5 mr-2" />
+              Finalizar Acelerador 2
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
     </div>
   );

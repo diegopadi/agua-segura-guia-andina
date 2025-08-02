@@ -8,6 +8,7 @@ import { Link } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "@/hooks/use-toast"
+import { useNavigate } from "react-router-dom"
 
 
 // Import step components
@@ -35,6 +36,7 @@ const STEPS = [
 
 const Acelerador2 = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [session, setSession] = useState<AcceleratorSession | null>(null)
   const [loading, setLoading] = useState(true)
   const [hasAccelerator1, setHasAccelerator1] = useState(false)
@@ -147,6 +149,42 @@ const Acelerador2 = () => {
     if (step <= currentStep + 1 && step >= 1 && step <= 4) {
       setCurrentStep(step)
       updateSession({}, step)
+    }
+  }
+
+  const handleAcceleratorComplete = async () => {
+    if (!session) return
+
+    try {
+      // Mark session as completed
+      const { error } = await supabase
+        .from('acelerador_sessions')
+        .update({ 
+          status: 'completed',
+          current_step: 4,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.id)
+
+      if (error) throw error
+
+      toast({
+        title: "¡Acelerador 2 completado!",
+        description: "Tu evaluación diagnóstica ha sido finalizada exitosamente.",
+      })
+
+      // Navigate back to Etapa 1 dashboard after a short delay
+      setTimeout(() => {
+        navigate('/etapa1')
+      }, 2000)
+
+    } catch (error) {
+      console.error('Error completing accelerator:', error)
+      toast({
+        title: "Error",
+        description: "No se pudo finalizar el acelerador. Intenta de nuevo.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -304,6 +342,7 @@ const Acelerador2 = () => {
           markdownContent={session.session_data.final_report?.markdown_content || ''}
           reportData={reportData}
           onRedoAnalysis={() => goToStep(3)}
+          onComplete={handleAcceleratorComplete}
         />
 
       default:
