@@ -61,15 +61,42 @@ serve(async (req) => {
       };
     }
 
-    // Get strategies from previous steps (prefer refined over original)
-    const strategies = session_data.refined_result?.strategies || 
-                      session_data.ai_analysis_result?.strategies || 
-                      [];
+    // Get strategies from previous steps - check the correct data structure
+    console.log('Session data structure for debugging:', JSON.stringify(session_data, null, 2));
+    
+    let strategies = [];
+    
+    // Try to get strategies from various possible locations
+    if (session_data.strategies_result?.strategies) {
+      strategies = session_data.strategies_result.strategies;
+    } else if (session_data.refined_result?.strategies) {
+      strategies = session_data.refined_result.strategies;
+    } else if (session_data.ai_analysis_result?.strategies) {
+      strategies = session_data.ai_analysis_result.strategies;
+    }
 
-    // Prepare context variables
-    const estrategiasText = strategies.map((strategy: string, index: number) => 
-      `${index + 1}. ${strategy}`
-    ).join('\n');
+    console.log('Found strategies:', strategies);
+    console.log('Strategies count:', strategies.length);
+    console.log('Strategies structure:', Array.isArray(strategies) ? 'Array' : typeof strategies);
+
+    // Prepare context variables - handle both array of objects and array of strings
+    let estrategiasText = '';
+    if (Array.isArray(strategies)) {
+      estrategiasText = strategies.map((strategy: any, index: number) => {
+        if (typeof strategy === 'string') {
+          return `${index + 1}. ${strategy}`;
+        } else if (strategy && strategy.estrategia) {
+          return `${index + 1}. ${strategy.estrategia} (${strategy.momento})`;
+        } else {
+          return `${index + 1}. ${JSON.stringify(strategy)}`;
+        }
+      }).join('\n');
+    } else if (typeof strategies === 'string') {
+      // Handle the case where strategies might be stored as a single text block
+      estrategiasText = strategies;
+    }
+
+    console.log('Final estrategias text for prompt:', estrategiasText);
 
     const contextoAdicional = `
 Características del aula: ${session_data.context_data || 'No especificado'}
