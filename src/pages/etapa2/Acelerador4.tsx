@@ -209,7 +209,9 @@ const Acelerador4 = () => {
   };
 
   const renderCurrentStep = () => {
-    const step = steps.find(s => s.number === currentStep);
+    // Handle case where current_step exceeds available steps
+    const stepNumber = Math.min(currentStep, steps.length);
+    const step = steps.find(s => s.number === stepNumber);
     if (!step || !session) return null;
 
     const commonProps = {

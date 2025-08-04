@@ -85,12 +85,12 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
         final_report: data
       });
 
-      // Mark accelerator as completed
+      // Mark accelerator as completed but keep current_step at 5 (max step)
       await supabase
         .from('acelerador_sessions')
         .update({ 
           status: 'completed',
-          current_step: 6 
+          current_step: 5 
         })
         .eq('id', sessionId);
 
