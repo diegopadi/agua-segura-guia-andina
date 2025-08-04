@@ -81,22 +81,22 @@ export const QuestionsStep: React.FC<QuestionsStepProps> = ({
   const generateKeyQuestions = async () => {
     setGeneratingQuestions(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-profundization-questions', {
+      console.log('Generating key questions using generate-preguntas-clave-ac5');
+      
+      const { data, error } = await supabase.functions.invoke('generate-preguntas-clave-ac5', {
         body: {
-          session_id: sessionId,
-          template_id: 'plantilla9_preguntas_clave',
-          session_data: sessionData
+          sessionData
         }
       });
 
       if (error) throw error;
 
-      if (data?.preguntas) {
-        const formattedQuestions: Question[] = data.preguntas.map((q: any, index: number) => ({
+      if (data?.questions) {
+        const formattedQuestions: Question[] = data.questions.map((q: any, index: number) => ({
           id: q.id || index + 1,
           categoria: q.categoria || 'general',
           pregunta: q.pregunta,
-          descripcion: q.descripcion,
+          descripcion: q.descripcion || q.contexto,
           respuesta: '',
           isValid: false
         }));

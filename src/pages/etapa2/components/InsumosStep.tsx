@@ -189,12 +189,10 @@ export const InsumosStep: React.FC<InsumosStepProps> = ({
 
   const loadCompetencyOptions = async (strategies: any[]) => {
     try {
-      const { data, error } = await supabase.functions.invoke('generate-profundization-questions', {
-        body: {
-          session_id: sessionId,
-          template_id: 'plantilla11_competencias_cneb',
-          session_data: { selected_strategies: strategies }
-        }
+      console.log('Loading competency options using generate-competencias-cneb');
+      
+      const { data, error } = await supabase.functions.invoke('generate-competencias-cneb', {
+        body: {}
       });
 
       if (error) throw error;
@@ -297,14 +295,17 @@ export const InsumosStep: React.FC<InsumosStepProps> = ({
 
   const generateContextQuestions = async (pciFileName: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('generate-profundization-questions', {
+      console.log('Generating context questions using generate-preguntas-pci');
+
+      // Get A4 results and selected competencies
+      const a4Results = sessionData?.phase_data?.insumos?.a4_file || {};
+      const selectedCompetencia = selectedCompetencies[0] || {};
+      
+      const { data, error } = await supabase.functions.invoke('generate-preguntas-pci', {
         body: {
-          session_id: sessionId,
-          template_id: 'plantilla8_profundizacion_contexto',
-          session_data: {
-            ...sessionData,
-            pci_file: pciFileName
-          }
+          strategiesA4: a4Results,
+          pciContent: pciFileName, // Could be enhanced to include actual PCI content
+          selectedCompetencia: selectedCompetencia
         }
       });
 

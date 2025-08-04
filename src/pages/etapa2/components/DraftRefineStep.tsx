@@ -77,18 +77,22 @@ export const DraftRefineStep: React.FC<DraftRefineStepProps> = ({
   const generateUnitDraft = async () => {
     setGeneratingDraft(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-profundization-questions', {
+      console.log('Generating unit draft using generate-borrador-unidad-ac5');
+
+      // Get responses from previous phase
+      const questionResponses = sessionData?.phase_data?.preguntas?.responses || {};
+      
+      const { data, error } = await supabase.functions.invoke('generate-borrador-unidad-ac5', {
         body: {
-          session_id: sessionId,
-          template_id: 'plantilla10_borrador_unidad',
-          session_data: sessionData
+          questionResponses,
+          sessionData
         }
       });
 
       if (error) throw error;
 
-      if (data?.content) {
-        setUnitDraft(data.content);
+      if (data?.htmlContent) {
+        setUnitDraft(data.htmlContent);
         
         // Crear mensaje inicial del asistente
         const initialMessage: Message = {
@@ -108,7 +112,7 @@ export const DraftRefineStep: React.FC<DraftRefineStepProps> = ({
           phase_data: {
             ...sessionData.phase_data,
             borrador: {
-              draft_content: data.content,
+              draft_content: data.htmlContent,
               chat_history: [initialMessage],
               generated_at: new Date().toISOString(),
               refinement_count: 0
@@ -150,13 +154,10 @@ export const DraftRefineStep: React.FC<DraftRefineStepProps> = ({
     setSendingMessage(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('chat-strategies-refinement', {
+      const { data, error } = await supabase.functions.invoke('chat-feedback-unidad-ac5', {
         body: {
-          session_id: sessionId,
-          user_message: userInput,
-          current_draft: unitDraft,
-          chat_history: newMessages,
-          session_data: sessionData
+          draftHtml: unitDraft,
+          feedback: userInput
         }
       });
 
@@ -165,7 +166,7 @@ export const DraftRefineStep: React.FC<DraftRefineStepProps> = ({
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.response || 'Lo siento, no pude procesar tu solicitud.',
+        content: data.justification || 'Lo siento, no pude procesar tu solicitud.',
         timestamp: Date.now() + 1,
       };
 
@@ -173,8 +174,8 @@ export const DraftRefineStep: React.FC<DraftRefineStepProps> = ({
       setMessages(finalMessages);
 
       // Si hay una nueva versión del borrador
-      if (data.updated_draft) {
-        setUnitDraft(data.updated_draft);
+      if (data.updatedHtml) {
+        setUnitDraft(data.updatedHtml);
         setRefinementCount(prev => prev + 1);
       }
 
@@ -185,10 +186,10 @@ export const DraftRefineStep: React.FC<DraftRefineStepProps> = ({
           ...sessionData.phase_data,
           borrador: {
             ...sessionData.phase_data?.borrador,
-            draft_content: data.updated_draft || unitDraft,
+            draft_content: data.updatedHtml || unitDraft,
             chat_history: finalMessages,
             last_updated: new Date().toISOString(),
-            refinement_count: data.updated_draft ? refinementCount + 1 : refinementCount
+            refinement_count: data.updatedHtml ? refinementCount + 1 : refinementCount
           }
         }
       };
@@ -216,11 +217,12 @@ export const DraftRefineStep: React.FC<DraftRefineStepProps> = ({
   const regenerateDraft = async () => {
     setGeneratingDraft(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-profundization-questions', {
+      const questionResponses = sessionData?.phase_data?.preguntas?.responses || {};
+      
+      const { data, error } = await supabase.functions.invoke('generate-borrador-unidad-ac5', {
         body: {
-          session_id: sessionId,
-          template_id: 'plantilla10_borrador_unidad',
-          session_data: {
+          questionResponses,
+          sessionData: {
             ...sessionData,
             regeneration_request: true,
             previous_draft: unitDraft,
@@ -231,8 +233,8 @@ export const DraftRefineStep: React.FC<DraftRefineStepProps> = ({
 
       if (error) throw error;
 
-      if (data?.content) {
-        setUnitDraft(data.content);
+      if (data?.htmlContent) {
+        setUnitDraft(data.htmlContent);
         setRefinementCount(prev => prev + 1);
         
         const regenerationMessage: Message = {
@@ -252,7 +254,7 @@ export const DraftRefineStep: React.FC<DraftRefineStepProps> = ({
             ...sessionData.phase_data,
             borrador: {
               ...sessionData.phase_data?.borrador,
-              draft_content: data.content,
+              draft_content: data.htmlContent,
               chat_history: updatedMessages,
               last_regenerated: new Date().toISOString(),
               refinement_count: refinementCount + 1

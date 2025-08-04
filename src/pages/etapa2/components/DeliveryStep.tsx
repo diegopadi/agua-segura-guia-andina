@@ -73,18 +73,25 @@ export const DeliveryStep: React.FC<DeliveryStepProps> = ({
   const generateFinalDocument = async () => {
     setGeneratingFinal(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-profundization-questions', {
+      // Get user profile for document metadata
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', sessionData.user_id)
+        .single();
+
+      const { data, error } = await supabase.functions.invoke('generate-documento-final-ac5', {
         body: {
-          session_id: sessionId,
-          template_id: 'plantilla12_documento_final',
-          session_data: sessionData
+          finalHtml: sessionData?.phase_data?.borrador?.draft_content || '',
+          sessionData,
+          userProfile: profile
         }
       });
 
       if (error) throw error;
 
-      if (data?.final_document) {
-        setFinalDocument(data.final_document);
+      if (data?.finalDocument) {
+        setFinalDocument(data.finalDocument);
         setDocumentMetadata(data.metadata);
         
         // Generar URL de descarga (simulada)
@@ -100,7 +107,7 @@ export const DeliveryStep: React.FC<DeliveryStepProps> = ({
           phase_data: {
             ...sessionData.phase_data,
             entrega: {
-              final_document: data.final_document,
+              final_document: data.finalDocument,
               metadata: data.metadata,
               download_url: fileName,
               generated_at: new Date().toISOString(),
