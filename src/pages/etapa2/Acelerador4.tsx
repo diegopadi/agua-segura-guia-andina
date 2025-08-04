@@ -13,6 +13,8 @@ import { StaticFormStep } from './components/StaticFormStep';
 import { AIAnalysisStep } from './components/AIAnalysisStep';
 import { InteractiveChatStep } from './components/InteractiveChatStep';
 import { ReportViewerStep } from './components/ReportViewerStep';
+import { WelcomeWithPrioritiesStep } from './components/WelcomeWithPrioritiesStep';
+import { StrategiesViewerStep } from './components/StrategiesViewerStep';
 
 interface Session {
   id: string;
@@ -27,12 +29,12 @@ interface Session {
 const steps = [
   {
     number: 1,
-    title: "Cargar Informe de Priorización",
-    description: "Sube el producto final del Acelerador 3 (Informe de Priorización)",
-    icon: UploadCloud,
-    type: "upload",
-    uses_ai: false,
-    ui_component: "FileUploaderStep",
+    title: "Bienvenida y Selección de Prioridades",
+    description: "Recupera los resultados del Acelerador 3 y selecciona las 2 prioridades principales",
+    icon: BookOpen,
+    type: "welcome",
+    uses_ai: true,
+    ui_component: "WelcomeWithPrioritiesStep",
     prev_step: null,
     next_step: 2
   },
@@ -56,30 +58,18 @@ const steps = [
   },
   {
     number: 3,
-    title: "Generación Inicial de Estrategias",
-    description: "Extrae 6 estrategias textuales de los documentos embebidos DIGEBR-MINEDU y Orientaciones MINEDU",
+    title: "Generación y Revisión de Estrategias",
+    description: "Genera estrategias metodológicas y permite refinarlas mediante chat",
     icon: Wand2,
-    type: "ai_analysis",
+    type: "strategies_viewer",
     uses_ai: true,
     template_id: "plantilla6_estrategias_ac4",
-    ui_component: "AIAnalysisStep",
+    ui_component: "StrategiesViewerStep",
     prev_step: 2,
     next_step: 4
   },
   {
     number: 4,
-    title: "Revisión y Ajuste de Estrategias",
-    description: "Chat único para solicitar un refinamiento de las estrategias generadas",
-    icon: MessageCircle,
-    type: "chat",
-    uses_ai: true,
-    template_id: "plantilla8_profundizacion_ac4",
-    ui_component: "InteractiveChatStep",
-    prev_step: 3,
-    next_step: 5
-  },
-  {
-    number: 5,
     title: "Preguntas de Profundización",
     description: "IA formula hasta 3 preguntas para afinar pertinencia, viabilidad y nivel de complejidad",
     icon: HelpCircle,
@@ -87,11 +77,11 @@ const steps = [
     uses_ai: true,
     template_id: "plantilla8_profundizacion_ac4",
     ui_component: "AIAnalysisStep",
-    prev_step: 4,
-    next_step: 6
+    prev_step: 3,
+    next_step: 5
   },
   {
-    number: 6,
+    number: 5,
     title: "Generar Informe de Estrategias",
     description: "Crea el informe justificativo con citas normativas y prepara insumos para el siguiente acelerador",
     icon: FileText,
@@ -99,7 +89,7 @@ const steps = [
     uses_ai: true,
     template_id: "plantilla7_informe_ac4",
     ui_component: "ReportViewerStep",
-    prev_step: 5,
+    prev_step: 4,
     next_step: null
   }
 ];
@@ -238,11 +228,22 @@ const Acelerador4 = () => {
 
     // Render component based on ui_component
     switch (step.ui_component) {
+      case 'WelcomeWithPrioritiesStep':
+        return <WelcomeWithPrioritiesStep {...commonProps} />;
+        
       case 'FileUploaderStep':
         return <FileUploaderStep {...commonProps} />;
       
       case 'StaticFormStep':
         return <StaticFormStep {...commonProps} staticData={step.static_data} />;
+      
+      case 'StrategiesViewerStep':
+        return step.template_id ? <StrategiesViewerStep {...commonProps} step={{
+          title: step.title,
+          description: step.description,
+          template_id: step.template_id,
+          icon: step.icon
+        }} /> : null;
       
       case 'AIAnalysisStep':
         return step.template_id ? <AIAnalysisStep {...commonProps} step={{
