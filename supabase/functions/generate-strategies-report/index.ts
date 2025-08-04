@@ -63,10 +63,25 @@ serve(async (req) => {
       prioridades = ac3Data.priorities || [];
     }
 
-    // Compile all session data
-    const strategies = session_data.refined_result?.strategies || 
-                      session_data.ai_analysis_result?.strategies || 
-                      [];
+    // Compile all session data with improved strategy handling
+    let strategies = [];
+    
+    // Try different sources for strategies
+    if (session_data.refined_result?.strategies) {
+      strategies = Array.isArray(session_data.refined_result.strategies) 
+        ? session_data.refined_result.strategies 
+        : [session_data.refined_result.strategies];
+    } else if (session_data.ai_analysis_result?.strategies) {
+      strategies = Array.isArray(session_data.ai_analysis_result.strategies)
+        ? session_data.ai_analysis_result.strategies
+        : [session_data.ai_analysis_result.strategies];
+    } else if (session_data.strategies) {
+      strategies = Array.isArray(session_data.strategies)
+        ? session_data.strategies
+        : [session_data.strategies];
+    }
+
+    console.log('Found strategies:', strategies);
     
     const context = session_data.context_data || {};
     const chatHistory = session_data.chat_history || [];

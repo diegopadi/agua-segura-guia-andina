@@ -31,18 +31,37 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
   const [report, setReport] = useState(sessionData?.final_report || null);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Auto-generate report if it doesn't exist
-    if (!report && !loading) {
+    console.log('ReportViewerStep mounted - sessionData:', sessionData);
+    console.log('Initial report state:', report);
+    console.log('SessionData final_report:', sessionData?.final_report);
+    
+    // Auto-generate report if it doesn't exist and we have valid data
+    if (!report && !generatingReport && sessionId && sessionData) {
+      console.log('No report found, generating...');
       generateReport();
     }
-  }, []);
+  }, [sessionId]);
 
   const generateReport = async () => {
+    console.log('generateReport called');
     setGeneratingReport(true);
+    setError(null);
     
     try {
+      // Validate required data
+      if (!sessionId || !sessionData || !step.template_id) {
+        throw new Error('Faltan datos requeridos para generar el informe');
+      }
+
+      console.log('Invoking generate-strategies-report with:', {
+        session_id: sessionId,
+        session_data: sessionData,
+        template_id: step.template_id
+      });
+
       const { data, error } = await supabase.functions.invoke('generate-strategies-report', {
         body: {
           session_id: sessionId,
@@ -51,8 +70,15 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
         }
       });
 
+      console.log('Edge function response:', { data, error });
+
       if (error) throw error;
 
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'La función no devolvió un resultado válido');
+      }
+
+      console.log('Report generated successfully:', data);
       setReport(data);
       onUpdateSessionData({
         ...sessionData,
@@ -75,6 +101,7 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
 
     } catch (error: any) {
       console.error('Error generating report:', error);
+      setError(error.message || "Hubo un problema al generar el informe.");
       toast({
         title: "Error al generar informe",
         description: error.message || "Hubo un problema al generar el informe.",
@@ -143,6 +170,32 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
                 <p className="text-sm text-muted-foreground">
                   {regenerating ? "Creando un nuevo informe con los insumos actualizados" : "Creando el informe con citas normativas"}
                 </p>
+              </div>
+            </div>
+          )}
+
+          {error && !generatingReport && !report && (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <div className="text-center">
+                <h3 className="font-medium text-destructive mb-2">Error al generar informe</h3>
+                <p className="text-sm text-muted-foreground mb-4">{error}</p>
+                <Button onClick={generateReport} variant="outline">
+                  Reintentar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!generatingReport && !error && !report && (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <div className="text-center">
+                <h3 className="font-medium mb-2">No hay informe disponible</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Haz clic en el botón para generar un nuevo informe
+                </p>
+                <Button onClick={generateReport}>
+                  Generar Informe
+                </Button>
               </div>
             </div>
           )}
