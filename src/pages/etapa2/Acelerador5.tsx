@@ -3,76 +3,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, FileText, UploadCloud, CheckSquare, Book, Edit3, Clipboard, File, MessageCircle, Check, FileCheck, CheckCircle, Clock } from "lucide-react";
+import { ArrowLeft, FileText, CheckCircle, Clock, BookOpen, MessageSquare, FileCheck, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { InsumosStep } from "./components/InsumosStep";
+import { QuestionsStep } from "./components/QuestionsStep";
+import { DraftRefineStep } from "./components/DraftRefineStep";
+import { DeliveryStep } from "./components/DeliveryStep";
 
 interface Session {
   id: string;
   acelerador_number: number;
-  current_step: number;
+  current_phase: number;
   status: 'in_progress' | 'completed' | 'paused';
-  session_data: any;
+  phase_data: any;
+  validations: any;
   created_at: string;
   updated_at: string;
 }
 
-const steps = [
+const phases = [
   {
     number: 1,
-    title: "Cargar Informe de Estrategias",
-    description: "Ingesta del informe generado por Acelerador 4",
-    icon: UploadCloud
+    title: "Recopilación de Insumos",
+    description: "Informe A4, Competencias CNEB y PCI",
+    icon: BookOpen,
+    color: "blue"
   },
   {
     number: 2,
-    title: "Selección de Competencia CNEB",
-    description: "Marca la competencia del CNEB sin consultar el documento original",
-    icon: CheckSquare
+    title: "Preguntas de Diseño",
+    description: "10 preguntas clave para la unidad",
+    icon: MessageSquare,
+    color: "green"
   },
   {
     number: 3,
-    title: "Carga de PCI y Reconfirmación",
-    description: "Sube el PCI y responde hasta 5 preguntas de contexto",
-    icon: Book
+    title: "Borrador y Refinamiento",
+    description: "Chat interactivo para perfeccionar",
+    icon: FileText,
+    color: "orange"
   },
   {
     number: 4,
-    title: "Generar Preguntas Clave",
-    description: "Crea 10 preguntas que guiarán el diseño de la unidad",
-    icon: Edit3
-  },
-  {
-    number: 5,
-    title: "Responder Preguntas Clave",
-    description: "Completa las 10 preguntas para alimentar el diseño",
-    icon: Clipboard
-  },
-  {
-    number: 6,
-    title: "Borrador de Unidad",
-    description: "Genera el primer borrador de la unidad con base en insumos",
-    icon: File
-  },
-  {
-    number: 7,
-    title: "Revisión y Feedback de Unidad",
-    description: "Chat único para ajustes menores del borrador",
-    icon: MessageCircle
-  },
-  {
-    number: 8,
-    title: "Versión Final de la Unidad",
-    description: "Refina y genera la versión definitiva de la unidad",
-    icon: Check
-  },
-  {
-    number: 9,
-    title: "Entrega de Documento de Unidad",
-    description: "Presenta el documento indexado y con evidencias para Acelerador 6",
-    icon: FileCheck
+    title: "Entrega Final",
+    description: "Documento indexado y evidencias",
+    icon: Send,
+    color: "purple"
   }
 ];
 
@@ -81,7 +60,7 @@ const Acelerador5 = () => {
   const { toast } = useToast();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentPhase, setCurrentPhase] = useState(1);
 
   useEffect(() => {
     if (user) {
@@ -110,9 +89,10 @@ const Acelerador5 = () => {
           .insert({
             user_id: user?.id,
             acelerador_number: 5,
-            current_step: 1,
+            current_phase: 1,
             status: 'in_progress',
-            session_data: {}
+            phase_data: {},
+            validations: {}
           })
           .select()
           .single();
@@ -122,7 +102,7 @@ const Acelerador5 = () => {
       }
 
       setSession(existingSession as Session);
-      setCurrentStep(existingSession.current_step);
+      setCurrentPhase(existingSession.current_phase || 1);
     } catch (error) {
       console.error('Error loading session:', error);
       toast({
@@ -135,15 +115,15 @@ const Acelerador5 = () => {
     }
   };
 
-  const updateSession = async (step: number, data: any = {}) => {
+  const updateSession = async (phase: number, data: any = {}) => {
     if (!session) return;
 
     try {
       const { error } = await supabase
         .from('acelerador_sessions')
         .update({
-          current_step: step,
-          session_data: { ...session.session_data, ...data },
+          current_phase: phase,
+          phase_data: { ...session.phase_data, ...data },
           updated_at: new Date().toISOString()
         })
         .eq('id', session.id);
@@ -152,10 +132,10 @@ const Acelerador5 = () => {
 
       setSession(prev => prev ? {
         ...prev,
-        current_step: step,
-        session_data: { ...prev.session_data, ...data }
+        current_phase: phase,
+        phase_data: { ...prev.phase_data, ...data }
       } : null);
-      setCurrentStep(step);
+      setCurrentPhase(phase);
     } catch (error) {
       console.error('Error updating session:', error);
       toast({
@@ -166,62 +146,68 @@ const Acelerador5 = () => {
     }
   };
 
-  const nextStep = (data: any = {}) => {
-    const next = Math.min(currentStep + 1, steps.length);
+  const nextPhase = (data: any = {}) => {
+    const next = Math.min(currentPhase + 1, phases.length);
     updateSession(next, data);
   };
 
-  const prevStep = () => {
-    const prev = Math.max(currentStep - 1, 1);
+  const prevPhase = () => {
+    const prev = Math.max(currentPhase - 1, 1);
     updateSession(prev);
   };
 
-  const getStepStatus = (stepNumber: number) => {
-    if (stepNumber < currentStep) return 'completed';
-    if (stepNumber === currentStep) return 'current';
+  const getPhaseStatus = (phaseNumber: number) => {
+    if (phaseNumber < currentPhase) return 'completed';
+    if (phaseNumber === currentPhase) return 'current';
     return 'pending';
   };
 
-  const renderCurrentStep = () => {
+  const renderCurrentPhase = () => {
     if (!session) return null;
 
-    switch (currentStep) {
+    const sessionId = session.id;
+    const sessionData = session.phase_data || {};
+
+    switch (currentPhase) {
       case 1:
         return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                Bienvenido al Acelerador 5: Planificación y Preparación de Unidades
-              </CardTitle>
-              <CardDescription>
-                Este acelerador te guiará para diseñar una unidad didáctica completa a partir de estrategias priorizadas, CNEB y PCI.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium text-blue-900 mb-2">¿Qué lograrás?</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Unidad didáctica completa alineada con CNEB y PCI</li>
-                  <li>• Competencias específicas bien definidas</li>
-                  <li>• Actividades pedagógicas secuenciadas</li>
-                  <li>• Documento indexado con evidencias de aprendizaje</li>
-                </ul>
-              </div>
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <h4 className="font-medium text-yellow-900 mb-2">Lo que necesitarás:</h4>
-                <ul className="text-sm text-yellow-800 space-y-1">
-                  <li>• Informe de estrategias del Acelerador 4</li>
-                  <li>• Documento PCI de tu institución</li>
-                  <li>• Conocimiento de competencias del CNEB</li>
-                </ul>
-              </div>
-              <Button onClick={() => nextStep()} className="w-full">
-                Comenzar planificación de unidad
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
+          <InsumosStep 
+            sessionId={sessionId}
+            onNext={() => nextPhase()}
+            onPrev={() => prevPhase()}
+            sessionData={sessionData}
+            onUpdateSessionData={(data) => updateSession(currentPhase, data)}
+          />
+        );
+      case 2:
+        return (
+          <QuestionsStep 
+            sessionId={sessionId}
+            onNext={() => nextPhase()}
+            onPrev={() => prevPhase()}
+            sessionData={sessionData}
+            onUpdateSessionData={(data) => updateSession(currentPhase, data)}
+          />
+        );
+      case 3:
+        return (
+          <DraftRefineStep 
+            sessionId={sessionId}
+            onNext={() => nextPhase()}
+            onPrev={() => prevPhase()}
+            sessionData={sessionData}
+            onUpdateSessionData={(data) => updateSession(currentPhase, data)}
+          />
+        );
+      case 4:
+        return (
+          <DeliveryStep 
+            sessionId={sessionId}
+            onNext={() => nextPhase()}
+            onPrev={() => prevPhase()}
+            sessionData={sessionData}
+            onUpdateSessionData={(data) => updateSession(currentPhase, data)}
+          />
         );
       default:
         return (
@@ -229,9 +215,9 @@ const Acelerador5 = () => {
             <CardContent className="text-center py-12">
               <div className="text-muted-foreground">
                 <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Paso en desarrollo</h3>
+                <h3 className="text-lg font-medium mb-2">Fase completada</h3>
                 <p className="text-sm">
-                  Este paso del acelerador se está desarrollando. Pronto estará disponible con todas las funcionalidades.
+                  Has completado todas las fases del Acelerador 5.
                 </p>
               </div>
             </CardContent>
@@ -265,47 +251,48 @@ const Acelerador5 = () => {
           <div>
             <h1 className="text-2xl font-bold text-primary">Acelerador 5: Planificación y Preparación de Unidades</h1>
             <p className="text-muted-foreground">
-              Paso {currentStep} de {steps.length}: {steps[currentStep - 1]?.title}
+              Fase {currentPhase} de {phases.length}: {phases[currentPhase - 1]?.title}
             </p>
           </div>
         </div>
-        <Badge variant="outline" className="gap-2">
-          <Clock className="w-4 h-4" />
-          En desarrollo
+        <Badge variant="secondary" className="gap-2">
+          <FileCheck className="w-4 h-4" />
+          Optimizado
         </Badge>
       </div>
 
-      {/* Progress Steps */}
+      {/* Progress Phases */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Progreso</CardTitle>
+          <CardTitle className="text-lg">Progreso por Fases</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Progress value={(currentStep / steps.length) * 100} className="h-2" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-              {steps.map((step) => {
-                const status = getStepStatus(step.number);
-                const IconComponent = step.icon;
+            <Progress value={(currentPhase / phases.length) * 100} className="h-3" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {phases.map((phase) => {
+                const status = getPhaseStatus(phase.number);
+                const IconComponent = phase.icon;
                 return (
                   <div
-                    key={step.number}
-                    className={`p-3 rounded-lg border text-center transition-colors ${
+                    key={phase.number}
+                    className={`p-4 rounded-lg border text-center transition-all duration-200 ${
                       status === 'completed'
-                        ? 'bg-green-50 border-green-200 text-green-700'
+                        ? 'bg-green-50 border-green-200 text-green-700 shadow-sm'
                         : status === 'current'
-                        ? 'bg-blue-50 border-blue-200 text-blue-700'
+                        ? 'bg-blue-50 border-blue-200 text-blue-700 ring-2 ring-blue-100'
                         : 'bg-muted border-muted-foreground/20 text-muted-foreground'
                     }`}
                   >
                     <div className="flex justify-center mb-2">
                       {status === 'completed' ? (
-                        <CheckCircle className="w-5 h-5" />
+                        <CheckCircle className="w-6 h-6" />
                       ) : (
-                        <IconComponent className="w-5 h-5" />
+                        <IconComponent className="w-6 h-6" />
                       )}
                     </div>
-                    <p className="text-xs font-medium">{step.title}</p>
+                    <p className="text-sm font-medium mb-1">{phase.title}</p>
+                    <p className="text-xs opacity-80">{phase.description}</p>
                   </div>
                 );
               })}
@@ -314,8 +301,8 @@ const Acelerador5 = () => {
         </CardContent>
       </Card>
 
-      {/* Current Step Content */}
-      {renderCurrentStep()}
+      {/* Current Phase Content */}
+      {renderCurrentPhase()}
     </div>
   );
 };
