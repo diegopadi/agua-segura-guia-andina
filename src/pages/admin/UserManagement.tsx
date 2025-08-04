@@ -38,21 +38,20 @@ interface UserData {
   id: string;
   user_id: string;
   full_name: string | null;
-  email: string;
   ie_name: string | null;
   ie_district: string | null;
   ie_province: string | null;
-    ie_region: string | null;
-    phone: string | null;
-    area_docencia: string | null;
-    photo_url: string | null;
-    created_at: string;
-    accelerator_progress: {
-      accelerator1: number;
-      accelerator2: number;
-      accelerator3: number;
-    };
-    total_files: number;
+  ie_region: string | null;
+  ie_country: string | null;
+  phone: string | null;
+  area_docencia: string | null;
+  photo_url?: string | null;
+  created_at: string;
+  updated_at: string;
+  acelerador1_progress: string;
+  acelerador2_progress: string;
+  acelerador3_progress: string;
+  total_files: number;
 }
 
 export const UserManagement = ({ onRefresh }: UserManagementProps) => {
@@ -70,7 +69,6 @@ export const UserManagement = ({ onRefresh }: UserManagementProps) => {
     // Filter users based on search term
     const filtered = users.filter(user => 
       user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.ie_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.ie_district?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.ie_province?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -81,62 +79,36 @@ export const UserManagement = ({ onRefresh }: UserManagementProps) => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Get profiles with user emails from auth.users
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          files(count)
-        `);
+      console.log('Fetching users via admin edge function...');
+      
+      const { data, error } = await supabase.functions.invoke('admin-get-users', {
+        body: {}
+      });
 
-      if (profilesError) throw profilesError;
+      if (error) {
+        console.error('Error calling admin-get-users function:', error);
+        toast({
+          title: "Error",
+          description: "Error al cargar los usuarios: " + error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
-      // Get user emails from auth admin API would require service role
-      // For now, we'll use user_id as email placeholder
-      const usersWithProgress = await Promise.all(
-        profilesData.map(async (profile) => {
-          // Get accelerator progress for this user
-          const { data: sessions } = await supabase
-            .from('acelerador_sessions')
-            .select('acelerador_number, status, current_step')
-            .eq('user_id', profile.user_id);
+      if (!data || !data.users) {
+        console.log('No users data received from function');
+        setUsers([]);
+        return;
+      }
 
-          const progress = {
-            accelerator1: 0,
-            accelerator2: 0,
-            accelerator3: 0
-          };
-
-          sessions?.forEach(session => {
-            const progressValue = session.status === 'completed' ? 100 : 
-              Math.round((session.current_step / 6) * 100);
-            
-            if (session.acelerador_number === 1) progress.accelerator1 = progressValue;
-            if (session.acelerador_number === 2) progress.accelerator2 = progressValue;
-            if (session.acelerador_number === 3) progress.accelerator3 = progressValue;
-          });
-
-          // Get file count
-          const { count: fileCount } = await supabase
-            .from('files')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', profile.user_id);
-
-          return {
-            ...profile,
-            email: profile.user_id, // Placeholder - in real app would fetch from auth.users
-            accelerator_progress: progress,
-            total_files: fileCount || 0
-          };
-        })
-      );
-
-      setUsers(usersWithProgress);
+      console.log(`Received ${data.users.length} users from admin function`);
+      setUsers(data.users);
+      
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error in fetchUsers:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los usuarios",
+        description: "Error al cargar los datos de usuarios",
         variant: "destructive",
       });
     } finally {
@@ -146,8 +118,20 @@ export const UserManagement = ({ onRefresh }: UserManagementProps) => {
 
   const resetUserPassword = async (userId: string, userName: string) => {
     try {
-      // This would need a Supabase Edge Function to reset password
-      // For now, we'll show a success message
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: { userId }
+      });
+
+      if (error) {
+        console.error('Error calling reset password function:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo restablecer la contraseña: " + error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Contraseña restablecida",
         description: `La contraseña de ${userName} ha sido restablecida a: AguaSegura2025`,
@@ -196,13 +180,20 @@ export const UserManagement = ({ onRefresh }: UserManagementProps) => {
 
   const deleteUser = async (userId: string, userName: string) => {
     try {
-      // Delete user data cascading
-      await supabase.from('files').delete().eq('user_id', userId);
-      await supabase.from('acelerador_sessions').delete().eq('user_id', userId);
-      await supabase.from('profiles').delete().eq('user_id', userId);
-      
-      // Note: Deleting from auth.users would require service role
-      
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId }
+      });
+
+      if (error) {
+        console.error('Error calling delete user function:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar el usuario: " + error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Usuario eliminado",
         description: `${userName} ha sido eliminado del sistema`,
@@ -312,35 +303,17 @@ export const UserManagement = ({ onRefresh }: UserManagementProps) => {
                           Registrado: {new Date(user.created_at).toLocaleDateString()}
                         </p>
                         
-                        {/* Progress bars */}
+                        {/* Progress badges */}
                         <div className="flex gap-2 mt-2">
-                          <div className="text-xs">
-                            <span>A1:</span>
-                            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full ${getProgressColor(user.accelerator_progress.accelerator1)}`}
-                                style={{ width: `${user.accelerator_progress.accelerator1}%` }}
-                              />
-                            </div>
-                          </div>
-                          <div className="text-xs">
-                            <span>A2:</span>
-                            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full ${getProgressColor(user.accelerator_progress.accelerator2)}`}
-                                style={{ width: `${user.accelerator_progress.accelerator2}%` }}
-                              />
-                            </div>
-                          </div>
-                          <div className="text-xs">
-                            <span>A3:</span>
-                            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full ${getProgressColor(user.accelerator_progress.accelerator3)}`}
-                                style={{ width: `${user.accelerator_progress.accelerator3}%` }}
-                              />
-                            </div>
-                          </div>
+                          <Badge variant={user.acelerador1_progress === 'completed' ? 'default' : 'secondary'} className="text-xs">
+                            A1: {user.acelerador1_progress === 'completed' ? 'Completado' : 'Pendiente'}
+                          </Badge>
+                          <Badge variant={user.acelerador2_progress === 'completed' ? 'default' : 'secondary'} className="text-xs">
+                            A2: {user.acelerador2_progress === 'completed' ? 'Completado' : 'Pendiente'}
+                          </Badge>
+                          <Badge variant={user.acelerador3_progress === 'completed' ? 'default' : 'secondary'} className="text-xs">
+                            A3: {user.acelerador3_progress === 'completed' ? 'Completado' : 'Pendiente'}
+                          </Badge>
                         </div>
                       </div>
                     </div>

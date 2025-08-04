@@ -24,7 +24,6 @@ interface UserDetailsProps {
     id: string;
     user_id: string;
     full_name: string | null;
-    email: string;
     ie_name: string | null;
     ie_district: string | null;
     ie_province: string | null;
@@ -32,11 +31,9 @@ interface UserDetailsProps {
     phone: string | null;
     area_docencia: string | null;
     created_at: string;
-    accelerator_progress: {
-      accelerator1: number;
-      accelerator2: number;
-      accelerator3: number;
-    };
+    acelerador1_progress: string;
+    acelerador2_progress: string;
+    acelerador3_progress: string;
     total_files: number;
   };
   onBack: () => void;
@@ -81,34 +78,38 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
   }, [user.user_id]);
 
   const fetchDetailedData = async () => {
+    if (!user?.user_id) return;
+    
+    setLoading(true);
     try {
-      // Get accelerator sessions
-      const { data: sessions } = await supabase
-        .from('acelerador_sessions')
-        .select('*')
-        .eq('user_id', user.user_id)
-        .order('created_at', { ascending: false });
+      console.log('Fetching detailed data for user via admin function:', user.user_id);
 
-      // Get files
-      const { data: files } = await supabase
-        .from('files')
-        .select('*')
-        .eq('user_id', user.user_id)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.functions.invoke('admin-get-user-details', {
+        body: { userId: user.user_id }
+      });
 
-      // Get form responses
-      const sessionIds = sessions?.map(s => s.id) || [];
-      const { data: responses } = sessionIds.length > 0 ? await supabase
-        .from('form_responses')
-        .select('*')
-        .in('session_id', sessionIds)
-        .order('created_at', { ascending: false }) : { data: [] };
+      if (error) {
+        console.error('Error calling admin-get-user-details function:', error);
+        toast({
+          title: "Error",
+          description: "Error al cargar los datos detallados: " + error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data) {
+        console.log('No detailed data received from function');
+        return;
+      }
 
       setDetailedData({
-        sessions: sessions || [],
-        files: files || [],
-        responses: responses || []
+        sessions: data.sessions || [],
+        files: data.files || [],
+        responses: data.responses || []
       });
+
+      console.log(`Loaded detailed data: ${data.sessions?.length || 0} sessions, ${data.files?.length || 0} files, ${data.responses?.length || 0} responses`);
     } catch (error) {
       console.error('Error fetching detailed data:', error);
       toast({
@@ -186,7 +187,7 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
             <div class="card">
                 <h2>Información Personal</h2>
                 <p><strong>Nombre:</strong> ${user.full_name || 'No especificado'}</p>
-                <p><strong>Email:</strong> ${user.email}</p>
+                <p><strong>ID Usuario:</strong> ${user.user_id}</p>
                 <p><strong>Teléfono:</strong> ${user.phone || 'No especificado'}</p>
                 <p><strong>Área de Docencia:</strong> ${user.area_docencia || 'No especificado'}</p>
                 <p><strong>Fecha de Registro:</strong> ${new Date(user.created_at).toLocaleDateString()}</p>
@@ -203,21 +204,21 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
             <div class="card">
                 <h2>Progreso de Aceleradores</h2>
                 <div style="margin-bottom: 15px;">
-                    <p><strong>Acelerador 1:</strong> ${user.accelerator_progress.accelerator1}%</p>
+                    <p><strong>Acelerador 1:</strong> ${user.acelerador1_progress === 'completed' ? 'Completado' : 'Pendiente'}</p>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${user.accelerator_progress.accelerator1}%"></div>
+                        <div class="progress-fill" style="width: ${user.acelerador1_progress === 'completed' ? 100 : 0}%"></div>
                     </div>
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <p><strong>Acelerador 2:</strong> ${user.accelerator_progress.accelerator2}%</p>
+                    <p><strong>Acelerador 2:</strong> ${user.acelerador2_progress === 'completed' ? 'Completado' : 'Pendiente'}</p>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${user.accelerator_progress.accelerator2}%"></div>
+                        <div class="progress-fill" style="width: ${user.acelerador2_progress === 'completed' ? 100 : 0}%"></div>
                     </div>
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <p><strong>Acelerador 3:</strong> ${user.accelerator_progress.accelerator3}%</p>
+                    <p><strong>Acelerador 3:</strong> ${user.acelerador3_progress === 'completed' ? 'Completado' : 'Pendiente'}</p>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${user.accelerator_progress.accelerator3}%"></div>
+                        <div class="progress-fill" style="width: ${user.acelerador3_progress === 'completed' ? 100 : 0}%"></div>
                     </div>
                 </div>
             </div>
@@ -344,7 +345,7 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
             </Avatar>
             <div>
               <h1 className="text-2xl font-bold">{user.full_name || 'Usuario sin nombre'}</h1>
-              <p className="text-muted-foreground">{user.email}</p>
+              <p className="text-muted-foreground">ID: {user.user_id}</p>
             </div>
           </div>
         </div>
@@ -368,7 +369,7 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="w-4 h-4 text-muted-foreground" />
-                  <span>{user.email}</span>
+                  <span>ID: {user.user_id}</span>
                 </div>
                 {user.phone && (
                   <div className="flex items-center gap-2 text-sm">
@@ -417,36 +418,36 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm">Acelerador 1</span>
-                  <span className="text-sm font-medium">{user.accelerator_progress.accelerator1}%</span>
+                  <span className="text-sm font-medium">{user.acelerador1_progress === 'completed' ? 'Completado' : 'Pendiente'}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-blue-600 h-2 rounded-full" 
-                    style={{ width: `${user.accelerator_progress.accelerator1}%` }}
+                    style={{ width: `${user.acelerador1_progress === 'completed' ? 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm">Acelerador 2</span>
-                  <span className="text-sm font-medium">{user.accelerator_progress.accelerator2}%</span>
+                  <span className="text-sm font-medium">{user.acelerador2_progress === 'completed' ? 'Completado' : 'Pendiente'}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-green-600 h-2 rounded-full" 
-                    style={{ width: `${user.accelerator_progress.accelerator2}%` }}
+                    style={{ width: `${user.acelerador2_progress === 'completed' ? 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm">Acelerador 3</span>
-                  <span className="text-sm font-medium">{user.accelerator_progress.accelerator3}%</span>
+                  <span className="text-sm font-medium">{user.acelerador3_progress === 'completed' ? 'Completado' : 'Pendiente'}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-purple-600 h-2 rounded-full" 
-                    style={{ width: `${user.accelerator_progress.accelerator3}%` }}
+                    style={{ width: `${user.acelerador3_progress === 'completed' ? 100 : 0}%` }}
                   ></div>
                 </div>
               </div>

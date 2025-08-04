@@ -43,48 +43,42 @@ export const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
 
   const fetchDashboardStats = async () => {
     try {
-      // Get total users
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-
-      // Get completed accelerators by type
-      const { data: sessions } = await supabase
-        .from('acelerador_sessions')
-        .select('acelerador_number, status');
-
-      const completedSessions = sessions?.filter(s => s.status === 'completed') || [];
-      const completedAccelerator1 = completedSessions.filter(s => s.acelerador_number === 1).length;
-      const completedAccelerator2 = completedSessions.filter(s => s.acelerador_number === 2).length;
-      const completedAccelerator3 = completedSessions.filter(s => s.acelerador_number === 3).length;
-
-      // Get total files
-      const { count: totalFiles } = await supabase
-        .from('files')
-        .select('*', { count: 'exact', head: true });
-
-      // Get recent activity (last 10 profiles created)
-      const { data: recentProfiles } = await supabase
-        .from('profiles')
-        .select('full_name, created_at')
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      const recentActivity = recentProfiles?.map(profile => ({
-        user_name: profile.full_name || 'Usuario sin nombre',
-        action: 'Registro de cuenta',
-        created_at: profile.created_at
-      })) || [];
-
-      setStats({
-        totalUsers: totalUsers || 0,
-        activeUsers: totalUsers || 0, // For now, all users are considered active
-        completedAccelerator1,
-        completedAccelerator2,
-        completedAccelerator3,
-        totalFiles: totalFiles || 0,
-        recentActivity
+      // Use the admin function to get all users data
+      const { data: usersData, error: usersError } = await supabase.functions.invoke('admin-get-users', {
+        body: {}
       });
+
+      if (usersError) {
+        console.error('Error fetching users via admin function:', usersError);
+      } else if (usersData?.users) {
+        setStats(prev => ({ ...prev, totalUsers: usersData.users.length }));
+        
+        // Calculate accelerator completions from user data
+        const acelerador1Completed = usersData.users.filter((u: any) => u.acelerador1_progress === 'completed').length;
+        const acelerador2Completed = usersData.users.filter((u: any) => u.acelerador2_progress === 'completed').length;
+        const acelerador3Completed = usersData.users.filter((u: any) => u.acelerador3_progress === 'completed').length;
+
+        setStats(prev => ({
+          ...prev,
+          totalUsers: usersData.users.length,
+          activeUsers: usersData.users.length,
+          completedAccelerator1: acelerador1Completed,
+          completedAccelerator2: acelerador2Completed,
+          completedAccelerator3: acelerador3Completed,
+          totalFiles: usersData.users.reduce((sum: number, user: any) => sum + user.total_files, 0)
+        }));
+
+        // Create recent activity from user data (last 5 users by creation date)
+        const recentUsers = usersData.users
+          .slice(0, 5)
+          .map((user: any) => ({
+            user_name: user.full_name || 'Usuario sin nombre',
+            action: 'Registro de cuenta',
+            created_at: user.created_at
+          }));
+        
+        setStats(prev => ({ ...prev, recentActivity: recentUsers }));
+      }
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
