@@ -14,7 +14,8 @@ import {
   Mail,
   School,
   User,
-  Activity
+  Activity,
+  MessageSquare
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -62,6 +63,7 @@ interface DetailedUserData {
     response_text: string;
     response_data: any;
     created_at: string;
+    session_id: string;
   }>;
   diagnostic_reports?: any[];
   accelerator_reports?: Array<{
@@ -269,23 +271,98 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
     }
   };
 
-  const downloadAllAcceleratorReports = () => {
-    if (!detailedData?.accelerator_reports?.length) {
+  const downloadUserFile = async (fileUrl: string, fileName: string) => {
+    try {
+      const response = await fetch(fileUrl);
+      if (!response.ok) throw new Error('Failed to fetch file');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
       toast({
-        title: "Sin reportes",
-        description: "No hay reportes de aceleradores disponibles",
+        title: "Archivo descargado",
+        description: "El archivo se ha descargado exitosamente",
+      });
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo descargar el archivo",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const downloadFormResponses = (acceleratorNumber: number, responses: any[]) => {
+    const acceleratorResponses = responses.filter(response => {
+      const session = detailedData?.sessions.find(s => s.id === response.session_id);
+      return session?.acelerador_number === acceleratorNumber;
+    });
+
+    if (acceleratorResponses.length === 0) {
+      toast({
+        title: "Sin respuestas",
+        description: "No hay respuestas disponibles para este acelerador",
         variant: "destructive",
       });
       return;
     }
 
-    detailedData.accelerator_reports.forEach((report, index) => {
-      setTimeout(() => downloadAcceleratorReport(report), index * 500);
-    });
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Respuestas Acelerador ${acceleratorNumber} - ${user.full_name || user.user_id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .response { margin-bottom: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+            .question { font-weight: bold; color: #333; margin-bottom: 10px; }
+            .answer { margin-left: 20px; color: #666; }
+            .metadata { font-size: 12px; color: #888; margin-top: 10px; }
+            @media print { body { margin: 20px; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Respuestas del Acelerador ${acceleratorNumber}</h1>
+            <h2>${user.full_name || user.user_id}</h2>
+            <p>Generado el ${new Date().toLocaleDateString('es-ES')}</p>
+          </div>
+          <div class="content">
+            ${acceleratorResponses.map((response, index) => `
+              <div class="response">
+                <div class="question">Pregunta ${response.question_number || index + 1}:</div>
+                <div class="answer">${response.response_text || JSON.stringify(response.response_data, null, 2)}</div>
+                <div class="metadata">Respondido el: ${new Date(response.created_at).toLocaleDateString('es-ES')}</div>
+              </div>
+            `).join('')}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `respuestas-acelerador-${acceleratorNumber}-${user.full_name || user.user_id}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
 
     toast({
-      title: "Descarga iniciada",
-      description: `Descargando ${detailedData.accelerator_reports.length} reportes`,
+      title: "Respuestas descargadas",
+      description: `Respuestas del Acelerador ${acceleratorNumber} descargadas exitosamente`,
     });
   };
 
@@ -643,16 +720,6 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
                     )}
                   </div>
                 ))}
-                <div className="pt-4 border-t">
-                  <Button 
-                    onClick={downloadAllAcceleratorReports} 
-                    variant="outline" 
-                    className="w-full"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Descargar Todos los Reportes de Aceleradores
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           )}
@@ -709,12 +776,19 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
                     <div className="flex items-center gap-3">
                       <FileText className="w-4 h-4 text-muted-foreground" />
                       <div>
-                        <p className="font-medium text-sm">{file.file_type}</p>
+                        <p className="font-medium text-sm">{file.url.split('/').pop()}</p>
                         <p className="text-xs text-muted-foreground">
-                          {formatFileSize(file.size_bytes)} • {new Date(file.created_at).toLocaleDateString()}
+                          {file.file_type} • {formatFileSize(file.size_bytes)} • {new Date(file.created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
+                    <Button
+                      size="sm"
+                      onClick={() => downloadUserFile(file.url, file.url.split('/').pop() || 'archivo')}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Descargar
+                    </Button>
                   </div>
                 ))}
                 {detailedData.files.length === 0 && (
@@ -729,31 +803,48 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
           {/* Form Responses */}
           <Card>
             <CardHeader>
-              <CardTitle>Respuestas de Formularios ({detailedData.responses.length})</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Respuestas de Formularios
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {detailedData.responses.map((response) => (
-                  <div key={response.id} className="border rounded-lg p-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">Pregunta #{response.question_number}</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {response.response_text || JSON.stringify(response.response_data)}
-                        </p>
+              {detailedData?.responses && detailedData.responses.length > 0 ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((acceleratorNumber) => {
+                    const acceleratorResponses = detailedData.responses.filter(response => {
+                      const session = detailedData.sessions.find(s => s.id === response.session_id);
+                      return session?.acelerador_number === acceleratorNumber;
+                    });
+                    
+                    if (acceleratorResponses.length === 0) return null;
+                    
+                    return (
+                      <div key={acceleratorNumber} className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="font-medium">Acelerador {acceleratorNumber}</span>
+                            <p className="text-sm text-muted-foreground">
+                              {acceleratorResponses.length} respuesta{acceleratorResponses.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => downloadFormResponses(acceleratorNumber, detailedData.responses)}
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Descargar
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(response.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                {detailedData.responses.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">
-                    No hay respuestas de formularios registradas
-                  </p>
-                )}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-4">
+                  No hay respuestas de formularios registradas
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -103,21 +103,63 @@ serve(async (req) => {
     
     if (sessions) {
       for (const session of sessions) {
-        if (session.session_data?.final_report || session.session_data?.report_content) {
-          acceleratorReports.push({
-            accelerator_number: session.acelerador_number,
-            session_id: session.id,
-            status: session.status,
-            created_at: session.created_at,
-            updated_at: session.updated_at,
-            report_data: {
-              html_content: session.session_data.final_report?.html_content || session.session_data.report_content?.html_content,
-              markdown_content: session.session_data.final_report?.markdown_content || session.session_data.report_content?.markdown_content,
-              document_number: session.session_data.final_report?.document_number || session.session_data.report_content?.document_number,
-              report_type: session.session_data.final_report ? 'final_report' : 'report_content'
-            }
-          });
+        const sessionData = session.session_data || {};
+        let reportFound = false;
+        
+        // Look for reports in various possible locations within session_data
+        const reportSources = [
+          { data: sessionData.final_report, type: 'final_report' },
+          { data: sessionData.report_content, type: 'report_content' },
+          { data: sessionData.analysis_report, type: 'analysis_report' },
+          { data: sessionData.competency_report, type: 'competency_report' },
+          { data: sessionData.priority_report, type: 'priority_report' }
+        ];
+        
+        for (const source of reportSources) {
+          if (source.data && (source.data.html_content || source.data.markdown_content)) {
+            acceleratorReports.push({
+              accelerator_number: session.acelerador_number,
+              session_id: session.id,
+              status: session.status,
+              created_at: session.created_at,
+              updated_at: session.updated_at,
+              report_data: {
+                html_content: source.data.html_content,
+                markdown_content: source.data.markdown_content,
+                document_number: source.data.document_number,
+                report_type: source.type
+              }
+            });
+            reportFound = true;
+            break; // Take the first valid report found
+          }
         }
+        
+        // If no structured report found, check for any content in session_data
+        if (!reportFound) {
+          // Look for any property that might contain report content
+          for (const [key, value] of Object.entries(sessionData)) {
+            if (value && typeof value === 'object' && 
+                (value.html_content || value.markdown_content || value.content)) {
+              acceleratorReports.push({
+                accelerator_number: session.acelerador_number,
+                session_id: session.id,
+                status: session.status,
+                created_at: session.created_at,
+                updated_at: session.updated_at,
+                report_data: {
+                  html_content: value.html_content || value.content,
+                  markdown_content: value.markdown_content,
+                  document_number: value.document_number,
+                  report_type: key
+                }
+              });
+              break;
+            }
+          }
+        }
+        
+        console.log(`Session ${session.id} (Accelerator ${session.acelerador_number}): Report found = ${reportFound}`);
       }
     }
 
