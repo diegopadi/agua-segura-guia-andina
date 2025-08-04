@@ -65,6 +65,11 @@ export const StrategiesViewerStep = ({
   const [result, setResult] = useState(sessionData?.strategies_result || null);
   const [error, setError] = useState<string | null>(null);
   
+  // Single refinement token control
+  const [hasBeenRefined, setHasBeenRefined] = useState(
+    sessionData?.refinement_used || false
+  );
+  
   // Chat functionality
   const [chatMessages, setChatMessages] = useState<Message[]>(
     sessionData?.chat_history || []
@@ -156,7 +161,8 @@ export const StrategiesViewerStep = ({
           message: newMessage.content,
           chat_history: [...chatMessages, newMessage],
           session_data: sessionData,
-          template_id: step.template_id
+          template_id: step.template_id,
+          refinement_used: hasBeenRefined
         }
       });
 
@@ -172,15 +178,22 @@ export const StrategiesViewerStep = ({
       setChatMessages(prev => [...prev, assistantMessage]);
 
       // Update strategies if refinements were made
-      if (data.refined_strategies) {
-        const updatedResult = {
-          ...result,
-          strategies: data.refined_strategies
-        };
-        setResult(updatedResult);
-        onUpdateSessionData({
+      if (data.refined_result && !hasBeenRefined) {
+        setResult(data.refined_result);
+        setHasBeenRefined(true);
+        
+        const updatedSessionData = {
           ...sessionData,
-          strategies_result: updatedResult
+          strategies_result: data.refined_result,
+          refinement_used: true,
+          chat_history: [...chatMessages, newMessage, assistantMessage]
+        };
+        
+        onUpdateSessionData(updatedSessionData);
+
+        toast({
+          title: "Estrategias Refinadas",
+          description: "Las estrategias han sido actualizadas con tus modificaciones",
         });
       }
 
@@ -196,10 +209,6 @@ export const StrategiesViewerStep = ({
     }
   };
 
-  const sendRefineMessage = (strategyTitle: string, moment: string) => {
-    const message = `Por favor, refina la estrategia "${strategyTitle}" del momento "${moment}". Proporciona una versión mejorada o alternativas.`;
-    sendMessage(message);
-  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -400,9 +409,14 @@ export const StrategiesViewerStep = ({
               </CardTitle>
               <CardDescription>{step.description}</CardDescription>
             </div>
-            <Badge variant="secondary">
-              {result?.strategies?.length || 0} estrategias
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                {result?.strategies?.length || 0} estrategias
+              </Badge>
+              <Badge variant={hasBeenRefined ? "default" : "outline"}>
+                {hasBeenRefined ? "Refinado" : "Original"}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -431,7 +445,6 @@ export const StrategiesViewerStep = ({
             {result?.html_content ? (
               <StrategiesAccordion 
                 strategies={parseStrategies(result.html_content)}
-                onRefineStrategy={sendRefineMessage}
               />
             ) : (
               <div className="text-muted-foreground text-center py-8">
@@ -448,9 +461,17 @@ export const StrategiesViewerStep = ({
           <CardTitle className="flex items-center gap-2">
             <MessageCircle className="w-5 h-5" />
             Revisión y Ajuste de Estrategias
+            {hasBeenRefined && (
+              <Badge variant="secondary" className="ml-2">
+                Token usado
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>
-            Conversa con la IA para refinar y ajustar las estrategias generadas
+            {hasBeenRefined 
+              ? "Ya has usado tu refinamiento único. Las estrategias mostradas arriba son las finales."
+              : "Conversa con la IA para refinar y ajustar las estrategias generadas (solo 1 refinamiento permitido)"
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -515,7 +536,10 @@ export const StrategiesViewerStep = ({
             {/* Chat Input */}
             <div className="flex gap-2">
               <Textarea
-                placeholder="Escribe tu mensaje para refinar las estrategias..."
+                placeholder={hasBeenRefined 
+                  ? "Puedes hacer preguntas sobre las estrategias refinadas..."
+                  : "Escribe tu mensaje para refinar las estrategias (solo 1 refinamiento permitido)..."
+                }
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 onKeyDown={handleKeyPress}
@@ -556,10 +580,9 @@ interface StrategiesAccordionProps {
     desarrollo: Array<{ title: string; description: string; reference: string }>;
     cierre: Array<{ title: string; description: string; reference: string }>;
   };
-  onRefineStrategy: (title: string, moment: string) => void;
 }
 
-const StrategiesAccordion = ({ strategies, onRefineStrategy }: StrategiesAccordionProps) => {
+const StrategiesAccordion = ({ strategies }: StrategiesAccordionProps) => {
   const moments = [
     {
       key: 'inicio',
@@ -614,20 +637,9 @@ const StrategiesAccordion = ({ strategies, onRefineStrategy }: StrategiesAccordi
                         <p className="text-sm text-muted-foreground mb-3">
                           {strategy.description}
                         </p>
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline" className="text-xs">
-                            {strategy.reference}
-                          </Badge>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => onRefineStrategy(strategy.title, moment.title)}
-                            className="text-xs hover:bg-primary/10"
-                          >
-                            <Edit3 className="w-3 h-3 mr-1" />
-                            Refinar estrategia
-                          </Button>
-                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {strategy.reference}
+                        </Badge>
                       </div>
                     </div>
                   </CardContent>
