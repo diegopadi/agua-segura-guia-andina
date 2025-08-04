@@ -18,32 +18,41 @@ export type Database = {
         Row: {
           acelerador_number: number
           created_at: string
+          current_phase: number | null
           current_step: number
           id: string
+          phase_data: Json | null
           session_data: Json | null
           status: string | null
           updated_at: string
           user_id: string
+          validations: Json | null
         }
         Insert: {
           acelerador_number: number
           created_at?: string
+          current_phase?: number | null
           current_step?: number
           id?: string
+          phase_data?: Json | null
           session_data?: Json | null
           status?: string | null
           updated_at?: string
           user_id: string
+          validations?: Json | null
         }
         Update: {
           acelerador_number?: number
           created_at?: string
+          current_phase?: number | null
           current_step?: number
           id?: string
+          phase_data?: Json | null
           session_data?: Json | null
           status?: string | null
           updated_at?: string
           user_id?: string
+          validations?: Json | null
         }
         Relationships: []
       }
