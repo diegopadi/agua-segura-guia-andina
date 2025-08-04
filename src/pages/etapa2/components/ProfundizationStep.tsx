@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, MessageSquare, CheckCircle } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Loader2, MessageSquare, CheckCircle, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -35,6 +36,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
   step
 }) => {
   const [loading, setLoading] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [responses, setResponses] = useState<Record<number, string>>({});
   const [questionsGenerated, setQuestionsGenerated] = useState(false);
@@ -125,6 +127,58 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
     }
   };
 
+  const regenerateQuestions = async () => {
+    try {
+      setRegenerating(true);
+      console.log('Regenerating profundization questions...');
+
+      // Clear existing responses
+      setResponses({});
+      
+      const { data, error } = await supabase.functions.invoke('generate-profundization-questions', {
+        body: {
+          session_id: sessionId,
+          session_data: sessionData,
+          template_id: step.template_id
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Error regenerating questions');
+      }
+
+      if (!data.success || !data.questions) {
+        console.error('Invalid response from questions generator:', data);
+        throw new Error('Invalid response from questions generator');
+      }
+
+      const normalizedQuestions = normalizeQuestions(data.questions);
+      
+      if (normalizedQuestions.length === 0) {
+        throw new Error('No valid questions generated');
+      }
+      
+      setQuestions(normalizedQuestions);
+
+      // Save new questions to session and clear old responses
+      const updatedData = {
+        ...sessionData,
+        profundization_questions: data.questions,
+        profundization_responses: {},
+        profundization_context: data.context
+      };
+
+      onUpdateSession(updatedData);
+      toast.success('Preguntas regeneradas exitosamente');
+
+    } catch (error) {
+      console.error('Error regenerating questions:', error);
+      toast.error('Error al regenerar las preguntas: ' + error.message);
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   const handleResponseChange = (questionId: number, response: string) => {
     const newResponses = { ...responses, [questionId]: response };
     setResponses(newResponses);
@@ -159,7 +213,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
     }
   };
 
-  if (loading) {
+  if (loading || regenerating) {
     return (
       <Card>
         <CardHeader>
@@ -173,7 +227,9 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-              <p className="text-muted-foreground">Generando preguntas de profundización...</p>
+              <p className="text-muted-foreground">
+                {regenerating ? 'Regenerando preguntas de profundización...' : 'Generando preguntas de profundización...'}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -185,11 +241,39 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            {step.title}
-          </CardTitle>
-          <CardDescription>{step.description}</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                {step.title}
+              </CardTitle>
+              <CardDescription>{step.description}</CardDescription>
+            </div>
+            {questionsGenerated && questions.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    Regenerar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Regenerar preguntas?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esto generará nuevas preguntas de profundización. Las respuestas actuales se perderán. ¿Estás seguro de que quieres continuar?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={regenerateQuestions}>
+                      Regenerar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {questionsGenerated && questions.length > 0 ? (
