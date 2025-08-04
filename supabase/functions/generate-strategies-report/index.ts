@@ -41,42 +41,68 @@ serve(async (req) => {
 
     const template = templates[0].content;
 
+    // Get Accelerator 3 results for context
+    const getAc3ResultsResponse = await fetch(`${supabaseUrl}/functions/v1/get-accelerator3-results`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ session_id })
+    });
+
+    let ac3Context = {};
+    let prioridades = [];
+    if (getAc3ResultsResponse.ok) {
+      const ac3Data = await getAc3ResultsResponse.json();
+      ac3Context = {
+        grado: ac3Data.priorities?.[0]?.grado || 'No especificado',
+        area: ac3Data.priorities?.[0]?.area || 'No especificado', 
+        competencia: ac3Data.priorities?.[0]?.competencia || 'No especificado'
+      };
+      prioridades = ac3Data.priorities || [];
+    }
+
     // Compile all session data
-    const strategies = session_data.ai_analysis_result?.strategies || 
-                      session_data.refined_strategies || 
+    const strategies = session_data.refined_result?.strategies || 
+                      session_data.ai_analysis_result?.strategies || 
                       [];
     
     const context = session_data.context_data || {};
     const chatHistory = session_data.chat_history || [];
     const profundizationQuestions = session_data.profundization_questions || [];
+    const profundizationResponses = session_data.profundization_responses || {};
 
-    const systemPrompt = template.system_prompt;
-    
-    const userPrompt = `${template.user_prompt}
+    // Prepare template variables
+    const estrategiasText = strategies.map((strategy: string, index: number) => 
+      `${index + 1}. ${strategy}`
+    ).join('\n');
 
-DATOS DE LA SESIÓN:
+    const respuestasProfundizacion = profundizationQuestions.map((q: any, index: number) => {
+      const response = profundizationResponses[q.id] || 'Sin respuesta';
+      return `**${q.enfoque?.toUpperCase() || 'ANÁLISIS'} - ${q.pregunta}**
+Respuesta del docente: ${response}`;
+    }).join('\n\n');
 
-1. CONTEXTO EDUCATIVO:
-- Tipo de aula: ${context[1] || 'No especificado'}
-- Modalidad educativa: ${context[2] || 'No especificado'}
-- Recursos TIC disponibles: ${context[3] || 'No especificado'}
+    const prioridadesAc3 = prioridades.map((p: any, index: number) => 
+      `${index + 1}. ${p.descripcion || p.grado + ' - ' + p.area + ' - ' + p.competencia}`
+    ).join('\n');
 
-2. ESTRATEGIAS METODOLÓGICAS SELECCIONADAS:
-${strategies.map((strategy: string, index: number) => `${index + 1}. ${strategy}`).join('\n')}
+    const contextoCompleto = `
+Aula: ${context[1] || 'No especificado'}
+Modalidad: ${context[2] || 'No especificado'}  
+Recursos TIC: ${context[3] || 'No especificado'}
+${chatHistory.length > 0 ? '\nRefinamientos aplicados: Sí' : '\nRefinamientos aplicados: No'}`;
 
-3. PROCESO DE REFINAMIENTO:
-${chatHistory.length > 0 ? 
-  chatHistory.map((msg: any) => `${msg.role === 'user' ? 'Docente' : 'Asistente'}: ${msg.content}`).join('\n\n') : 
-  'No se realizaron refinamientos adicionales'
-}
-
-4. PREGUNTAS DE PROFUNDIZACIÓN ABORDADAS:
-${profundizationQuestions.length > 0 ? 
-  profundizationQuestions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n') : 
-  'Pendientes de análisis'
-}
-
-Genera un informe técnico completo que sirva como insumo directo para el Acelerador 5: Planificación y Preparación de Unidades.`;
+    // Replace template variables
+    let userPrompt = template.user_prompt
+      .replace('{{grado}}', ac3Context.grado)
+      .replace('{{area}}', ac3Context.area) 
+      .replace('{{competencia}}', ac3Context.competencia)
+      .replace('{{contexto}}', contextoCompleto)
+      .replace('{{estrategias}}', estrategiasText)
+      .replace('{{respuestas_profundizacion}}', respuestasProfundizacion)
+      .replace('{{prioridades_ac3}}', prioridadesAc3);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -87,7 +113,7 @@ Genera un informe técnico completo que sirva como insumo directo para el Aceler
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: template.system_prompt },
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.6

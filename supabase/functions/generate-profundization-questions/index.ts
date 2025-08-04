@@ -41,39 +41,48 @@ serve(async (req) => {
 
     const template = templates[0].content;
 
-    // Get strategies from previous steps
-    const strategies = session_data.ai_analysis_result?.strategies || 
-                      session_data.refined_strategies || 
+    // Get Accelerator 3 results for context
+    const getAc3ResultsResponse = await fetch(`${supabaseUrl}/functions/v1/get-accelerator3-results`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ session_id })
+    });
+
+    let ac3Context = {};
+    if (getAc3ResultsResponse.ok) {
+      const ac3Data = await getAc3ResultsResponse.json();
+      ac3Context = {
+        grado: ac3Data.priorities?.[0]?.grado || 'No especificado',
+        area: ac3Data.priorities?.[0]?.area || 'No especificado', 
+        competencia: ac3Data.priorities?.[0]?.competencia || 'No especificado'
+      };
+    }
+
+    // Get strategies from previous steps (prefer refined over original)
+    const strategies = session_data.refined_result?.strategies || 
+                      session_data.ai_analysis_result?.strategies || 
                       [];
 
-    const chatHistory = session_data.chat_history || [];
-    const context = session_data.context_data || {};
+    // Prepare context variables
+    const estrategiasText = strategies.map((strategy: string, index: number) => 
+      `${index + 1}. ${strategy}`
+    ).join('\n');
 
-    const systemPrompt = `${template.system_prompt}
+    const contextoAdicional = `
+Características del aula: ${session_data.context_data || 'No especificado'}
+Refinamientos aplicados: ${session_data.refined_result ? 'Sí' : 'No'}
+`;
 
-Tu tarea específica es formular exactamente 3 preguntas de profundización que ayuden a:
-1. Evaluar la PERTINENCIA de las estrategias para el contexto específico
-2. Verificar la VIABILIDAD con los recursos disponibles  
-3. Ajustar el NIVEL DE COMPLEJIDAD según las características del aula
-
-Contexto del aula:
-- Tipo: ${context[1] || 'No especificado'}
-- Modalidad: ${context[2] || 'No especificado'}
-- Recursos TIC: ${context[3] || 'No especificado'}`;
-
-    const userPrompt = `Basándote en las siguientes estrategias metodológicas:
-
-${strategies.map((strategy: string, index: number) => `${index + 1}. ${strategy}`).join('\n')}
-
-Y considerando el historial de refinamiento:
-${chatHistory.length > 0 ? chatHistory.map((msg: any) => `${msg.role}: ${msg.content}`).join('\n') : 'Sin refinamientos previos'}
-
-Formula exactamente 3 preguntas específicas que permitan:
-1. Validar la pertinencia al contexto educativo
-2. Evaluar la viabilidad con los recursos disponibles
-3. Ajustar la complejidad según las necesidades del aula
-
-Las preguntas deben ser concretas, orientadas a la acción y que permitan mejorar la implementación de las estrategias.`;
+    // Replace template variables
+    let userPrompt = template.user_prompt
+      .replace('{{grado}}', ac3Context.grado)
+      .replace('{{area}}', ac3Context.area) 
+      .replace('{{competencia}}', ac3Context.competencia)
+      .replace('{{estrategias}}', estrategiasText)
+      .replace('{{contexto_adicional}}', contextoAdicional);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -84,10 +93,11 @@ Las preguntas deben ser concretas, orientadas a la acción y que permitan mejora
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: template.system_prompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7
+        temperature: 0.7,
+        response_format: { type: "json_object" }
       }),
     });
 
@@ -98,21 +108,26 @@ Las preguntas deben ser concretas, orientadas a la acción y que permitan mejora
     }
 
     const aiResponse = data.choices[0].message.content;
+    
+    // Parse JSON response
+    let parsedResult;
+    try {
+      parsedResult = JSON.parse(aiResponse);
+    } catch (parseError) {
+      console.error('Error parsing JSON response:', parseError);
+      throw new Error('Invalid JSON response from AI');
+    }
 
-    // Extract questions from the response
-    const questions = aiResponse
-      .split('\n')
-      .filter(line => line.match(/^\d+\./) || line.includes('?'))
-      .slice(0, 3)
-      .map(q => q.replace(/^\d+\.\s*/, '').trim());
-
-    console.log('Generated profundization questions successfully');
+    const questions = parsedResult.preguntas || [];
+    
+    console.log('Generated profundization questions successfully:', questions.length);
 
     return new Response(JSON.stringify({
       success: true,
       content: aiResponse,
       questions: questions,
-      analysis_focus: ['pertinencia', 'viabilidad', 'complejidad']
+      context: ac3Context,
+      strategies_count: strategies.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

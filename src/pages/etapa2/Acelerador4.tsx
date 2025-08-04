@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { FileUploaderStep } from './components/FileUploaderStep';
 import { StaticFormStep } from './components/StaticFormStep';
 import { AIAnalysisStep } from './components/AIAnalysisStep';
+import { ProfundizationStep } from './components/ProfundizationStep';
 import { InteractiveChatStep } from './components/InteractiveChatStep';
 import { ReportViewerStep } from './components/ReportViewerStep';
 import { WelcomeWithPrioritiesStep } from './components/WelcomeWithPrioritiesStep';
@@ -73,10 +74,10 @@ const steps = [
     title: "Preguntas de Profundización",
     description: "IA formula hasta 3 preguntas para afinar pertinencia, viabilidad y nivel de complejidad",
     icon: HelpCircle,
-    type: "ai_analysis",
+    type: "profundization",
     uses_ai: true,
     template_id: "plantilla8_profundizacion_ac4",
-    ui_component: "AIAnalysisStep",
+    ui_component: "ProfundizationStep",
     prev_step: 3,
     next_step: 5
   },
@@ -244,6 +245,20 @@ const Acelerador4 = () => {
           template_id: step.template_id,
           icon: step.icon
         }} /> : null;
+      
+      case 'ProfundizationStep':
+        return step.template_id ? <ProfundizationStep 
+          {...commonProps} 
+          onUpdateSession={(data: any) => {
+            const updatedSession = { ...session, session_data: data };
+            updateSession(updatedSession);
+          }}
+          step={{
+            title: step.title,
+            description: step.description,
+            template_id: step.template_id
+          }} 
+        /> : null;
       
       case 'AIAnalysisStep':
         return step.template_id ? <AIAnalysisStep {...commonProps} step={{
