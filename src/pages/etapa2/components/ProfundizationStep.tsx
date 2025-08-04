@@ -42,14 +42,17 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
   useEffect(() => {
     // Check if questions are already generated
     if (sessionData?.profundization_questions?.length > 0) {
+      console.log('Loading existing profundization questions:', sessionData.profundization_questions);
       setQuestions(sessionData.profundization_questions);
       setQuestionsGenerated(true);
       
       // Load existing responses if any
       if (sessionData?.profundization_responses) {
+        console.log('Loading existing responses:', sessionData.profundization_responses);
         setResponses(sessionData.profundization_responses);
       }
     } else {
+      console.log('No existing questions found, generating new ones...');
       generateQuestions();
     }
   }, [sessionId]);
@@ -72,10 +75,24 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
       }
 
       if (!data.success || !data.questions) {
+        console.error('Invalid response from questions generator:', data);
         throw new Error('Invalid response from questions generator');
       }
 
-      setQuestions(data.questions);
+      console.log('Generated questions from AI:', data.questions);
+      
+      // Validate question structure
+      const validQuestions = data.questions.filter(q => 
+        q && typeof q === 'object' && q.id && q.enfoque && q.pregunta
+      );
+      
+      if (validQuestions.length === 0) {
+        console.error('No valid questions found in response:', data.questions);
+        throw new Error('No valid questions generated');
+      }
+      
+      console.log('Valid questions to set:', validQuestions);
+      setQuestions(validQuestions);
       setQuestionsGenerated(true);
 
       // Save questions to session
@@ -170,7 +187,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
               </div>
               
               {questions.map((question, index) => (
-                <div key={question.id} className="space-y-3 p-4 border rounded-lg">
+                <div key={`question-${question.id}-${index}`} className="space-y-3 p-4 border rounded-lg">
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className={getEnfoqueColor(question.enfoque)}>
                       {getEnfoqueLabel(question.enfoque)}
@@ -178,7 +195,16 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
                     <span className="text-sm font-medium">Pregunta {index + 1}</span>
                   </div>
                   
-                  <p className="text-sm font-medium">{question.pregunta}</p>
+                  {/* Debug info - remove after fixing */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                      Debug: {JSON.stringify(question, null, 2)}
+                    </div>
+                  )}
+                  
+                  <p className="text-sm font-medium">
+                    {question.pregunta || `[No question text available - check data structure: ${JSON.stringify(question)}]`}
+                  </p>
                   
                   <Textarea
                     placeholder="Escribe tu respuesta aquí..."

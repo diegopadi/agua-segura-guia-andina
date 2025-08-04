@@ -108,17 +108,39 @@ Refinamientos aplicados: ${session_data.refined_result ? 'Sí' : 'No'}
     }
 
     const aiResponse = data.choices[0].message.content;
+    console.log('AI Response content:', aiResponse);
     
     // Parse JSON response
     let parsedResult;
     try {
-      parsedResult = JSON.parse(aiResponse);
+      // Clean the content to ensure it's valid JSON
+      const cleanContent = aiResponse.trim().replace(/```json\n?|\n?```/g, '');
+      console.log('Cleaned content for parsing:', cleanContent);
+      
+      parsedResult = JSON.parse(cleanContent);
+      console.log('Parsed result:', JSON.stringify(parsedResult, null, 2));
     } catch (parseError) {
       console.error('Error parsing JSON response:', parseError);
-      throw new Error('Invalid JSON response from AI');
+      console.error('Raw AI response:', aiResponse);
+      throw new Error(`Invalid JSON response from AI: ${parseError.message}`);
     }
 
-    const questions = parsedResult.preguntas || [];
+    let questions = parsedResult.preguntas || parsedResult.questions || parsedResult || [];
+    
+    // Ensure questions is an array
+    if (!Array.isArray(questions)) {
+      console.error('Questions is not an array:', questions);
+      throw new Error('AI response should contain an array of questions');
+    }
+    
+    // Validate and normalize question structure
+    questions = questions.map((q, index) => ({
+      id: q.id || index + 1,
+      enfoque: q.enfoque || q.focus || 'general',
+      pregunta: q.pregunta || q.question || q.text || 'Pregunta no disponible'
+    }));
+    
+    console.log('Final normalized questions:', JSON.stringify(questions, null, 2));
     
     console.log('Generated profundization questions successfully:', questions.length);
 
