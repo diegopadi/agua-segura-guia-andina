@@ -92,7 +92,7 @@ serve(async (req) => {
     // Check if we have a priority_report with structured content
     else if (sessionData.priority_report) {
       // If we have a priority report but no explicit priorities array, 
-      // we'll create default priorities based on common patterns
+      // we'll create the 5 complete priorities based on real Accelerator 3 structure
       priorities = [
         {
           id: 'priority_1',
@@ -103,17 +103,31 @@ serve(async (req) => {
         },
         {
           id: 'priority_2', 
-          title: 'Capacitación en Prácticas de Conservación',
-          description: 'Desarrollar un programa de capacitación para estudiantes y docentes sobre prácticas de conservación de agua.',
+          title: 'Fortalecimiento de Prácticas de Consumo Responsable',
+          description: 'Desarrollar un programa integral para promover el uso eficiente y responsable del agua entre estudiantes y comunidad educativa.',
           impact_score: 8,
           feasibility_score: 8
         },
         {
           id: 'priority_3',
-          title: 'Fortalecimiento de Infraestructura Hídrica',
-          description: 'Mejorar las instalaciones y servicios de agua de la institución educativa.',
-          impact_score: 7,
+          title: 'Desarrollo de Capacidades en Gestión de Riesgos',
+          description: 'Implementar estrategias para la gestión preventiva de riesgos relacionados con la disponibilidad y calidad del agua.',
+          impact_score: 8,
           feasibility_score: 6
+        },
+        {
+          id: 'priority_4',
+          title: 'Mejora de la Infraestructura Hídrica',
+          description: 'Fortalecer y optimizar las instalaciones y servicios de agua de la institución educativa para garantizar acceso continuo.',
+          impact_score: 7,
+          feasibility_score: 5
+        },
+        {
+          id: 'priority_5',
+          title: 'Fortalecimiento de la Gestión Comunitaria',
+          description: 'Desarrollar capacidades organizativas y de liderazgo en la comunidad educativa para la gestión sostenible del recurso hídrico.',
+          impact_score: 7,
+          feasibility_score: 7
         }
       ];
     }
