@@ -42,20 +42,39 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
   useEffect(() => {
     // Check if questions are already generated
     if (sessionData?.profundization_questions?.length > 0) {
-      console.log('Loading existing profundization questions:', sessionData.profundization_questions);
-      setQuestions(sessionData.profundization_questions);
+      const normalizedQuestions = normalizeQuestions(sessionData.profundization_questions);
+      setQuestions(normalizedQuestions);
       setQuestionsGenerated(true);
       
       // Load existing responses if any
       if (sessionData?.profundization_responses) {
-        console.log('Loading existing responses:', sessionData.profundization_responses);
         setResponses(sessionData.profundization_responses);
       }
     } else {
-      console.log('No existing questions found, generating new ones...');
       generateQuestions();
     }
   }, [sessionId]);
+
+  const normalizeQuestions = (rawQuestions: any[]): Question[] => {
+    return rawQuestions.map((item, index) => {
+      // Handle if question is a string
+      if (typeof item === 'string') {
+        const enfoques = ['pertinencia', 'viabilidad', 'complejidad'];
+        return {
+          id: index + 1,
+          enfoque: enfoques[index % 3],
+          pregunta: item
+        };
+      }
+      
+      // Handle if question is already an object
+      return {
+        id: item.id || index + 1,
+        enfoque: item.enfoque || 'pertinencia',
+        pregunta: item.pregunta || item.question || item
+      };
+    }).filter(q => q.pregunta && q.pregunta.trim().length > 0);
+  };
 
   const generateQuestions = async () => {
     try {
@@ -79,20 +98,13 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
         throw new Error('Invalid response from questions generator');
       }
 
-      console.log('Generated questions from AI:', data.questions);
+      const normalizedQuestions = normalizeQuestions(data.questions);
       
-      // Validate question structure
-      const validQuestions = data.questions.filter(q => 
-        q && typeof q === 'object' && q.id && q.enfoque && q.pregunta
-      );
-      
-      if (validQuestions.length === 0) {
-        console.error('No valid questions found in response:', data.questions);
+      if (normalizedQuestions.length === 0) {
         throw new Error('No valid questions generated');
       }
       
-      console.log('Valid questions to set:', validQuestions);
-      setQuestions(validQuestions);
+      setQuestions(normalizedQuestions);
       setQuestionsGenerated(true);
 
       // Save questions to session
@@ -131,10 +143,10 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
 
   const getEnfoqueColor = (enfoque: string) => {
     switch (enfoque) {
-      case 'pertinencia': return 'bg-blue-100 text-blue-800';
-      case 'viabilidad': return 'bg-green-100 text-green-800';
-      case 'complejidad': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pertinencia': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'viabilidad': return 'bg-green-50 text-green-700 border-green-200';
+      case 'complejidad': return 'bg-orange-50 text-orange-700 border-orange-200';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -187,38 +199,33 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
               </div>
               
               {questions.map((question, index) => (
-                <div key={`question-${question.id}-${index}`} className="space-y-3 p-4 border rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className={getEnfoqueColor(question.enfoque)}>
-                      {getEnfoqueLabel(question.enfoque)}
-                    </Badge>
-                    <span className="text-sm font-medium">Pregunta {index + 1}</span>
+                <div key={`question-${question.id}-${index}`} className="space-y-4 p-6 border rounded-lg bg-card">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className={getEnfoqueColor(question.enfoque)}>
+                        {getEnfoqueLabel(question.enfoque)}
+                      </Badge>
+                      <span className="text-sm font-medium text-muted-foreground">Pregunta {index + 1}</span>
+                    </div>
+                    {responses[question.id]?.trim() && (
+                      <div className="flex items-center gap-1 text-green-600">
+                        <CheckCircle className="h-4 w-4" />
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Debug info - remove after fixing */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                      Debug: {JSON.stringify(question, null, 2)}
-                    </div>
-                  )}
-                  
-                  <p className="text-sm font-medium">
-                    {question.pregunta || `[No question text available - check data structure: ${JSON.stringify(question)}]`}
-                  </p>
-                  
-                  <Textarea
-                    placeholder="Escribe tu respuesta aquí..."
-                    value={responses[question.id] || ''}
-                    onChange={(e) => handleResponseChange(question.id, e.target.value)}
-                    className="min-h-[80px]"
-                  />
-                  
-                  {responses[question.id]?.trim() && (
-                    <div className="flex items-center gap-1 text-green-600 text-sm">
-                      <CheckCircle className="h-4 w-4" />
-                      Respondida
-                    </div>
-                  )}
+                  <div className="space-y-3">
+                    <p className="text-foreground leading-relaxed">
+                      {question.pregunta}
+                    </p>
+                    
+                    <Textarea
+                      placeholder="Escribe tu respuesta detallada aquí..."
+                      value={responses[question.id] || ''}
+                      onChange={(e) => handleResponseChange(question.id, e.target.value)}
+                      className="min-h-[100px] resize-none"
+                    />
+                  </div>
                 </div>
               ))}
               
