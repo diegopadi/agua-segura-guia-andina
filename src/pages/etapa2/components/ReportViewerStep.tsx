@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Download, CheckCircle, Loader2, ExternalLink } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { FileText, Download, CheckCircle, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +30,7 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(sessionData?.final_report || null);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   useEffect(() => {
     // Auto-generate report if it doesn't exist
@@ -67,7 +69,7 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
         .eq('id', sessionId);
 
       toast({
-        title: "Informe generado exitosamente",
+        title: regenerating ? "Informe regenerado exitosamente" : "Informe generado exitosamente",
         description: "El informe de estrategias metodológicas ha sido creado."
       });
 
@@ -80,7 +82,19 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
       });
     } finally {
       setGeneratingReport(false);
+      setRegenerating(false);
     }
+  };
+
+  const regenerateReport = async () => {
+    setRegenerating(true);
+    setReport(null);
+    onUpdateSessionData({
+      ...sessionData,
+      final_report: null
+    });
+    
+    await generateReport();
   };
 
   const downloadReport = () => {
@@ -123,9 +137,11 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <div className="text-center">
-                <h3 className="font-medium">Generando informe final...</h3>
+                <h3 className="font-medium">
+                  {regenerating ? "Regenerando informe final..." : "Generando informe final..."}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Creando el informe con citas normativas
+                  {regenerating ? "Creando un nuevo informe con los insumos actualizados" : "Creando el informe con citas normativas"}
                 </p>
               </div>
             </div>
@@ -157,11 +173,36 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 <Button onClick={downloadReport} variant="outline">
                   <Download className="w-4 h-4 mr-2" />
                   Descargar Informe
                 </Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" disabled={generatingReport}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Regenerar Informe
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Regenerar informe?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción creará un nuevo informe utilizando los insumos actualizados del acelerador. 
+                        El informe actual se perderá. ¿Deseas continuar?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={regenerateReport}>
+                        Regenerar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                
                 <Button onClick={goToAccelerator5}>
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Continuar al Acelerador 5
