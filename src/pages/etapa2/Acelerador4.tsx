@@ -8,6 +8,11 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { FileUploaderStep } from './components/FileUploaderStep';
+import { StaticFormStep } from './components/StaticFormStep';
+import { AIAnalysisStep } from './components/AIAnalysisStep';
+import { InteractiveChatStep } from './components/InteractiveChatStep';
+import { ReportViewerStep } from './components/ReportViewerStep';
 
 interface Session {
   id: string;
@@ -23,38 +28,79 @@ const steps = [
   {
     number: 1,
     title: "Cargar Informe de Priorización",
-    description: "Ingesta del output final del Acelerador 3",
-    icon: UploadCloud
+    description: "Sube el producto final del Acelerador 3 (Informe de Priorización)",
+    icon: UploadCloud,
+    type: "upload",
+    uses_ai: false,
+    ui_component: "FileUploaderStep",
+    prev_step: null,
+    next_step: 2
   },
   {
     number: 2,
     title: "Definición de Contexto",
-    description: "Responde si el aula es urbana/rural, multigrado/EIB y recursos TIC",
-    icon: MapPin
+    description: "Indica si tu aula es urbana o rural, multigrado/EIB y qué recursos TIC dispones",
+    icon: MapPin,
+    type: "form",
+    uses_ai: false,
+    ui_component: "StaticFormStep",
+    static_data: {
+      questions: [
+        { id: 1, text: "¿Su aula es urbana o rural?", type: "select" as const, options: ["Urbana","Rural"], required: true },
+        { id: 2, text: "¿Es multigrado, EIB o regular?", type: "select" as const, options: ["Multigrado","EIB","Regular"], required: true },
+        { id: 3, text: "¿Qué recursos TIC tiene disponibles?", type: "textarea" as const, required: true }
+      ]
+    },
+    prev_step: 1,
+    next_step: 3
   },
   {
     number: 3,
     title: "Generación Inicial de Estrategias",
-    description: "Extrae 6 estrategias textuales de documentos embebidos",
-    icon: Wand2
+    description: "Extrae 6 estrategias textuales de los documentos embebidos DIGEBR-MINEDU y Orientaciones MINEDU",
+    icon: Wand2,
+    type: "ai_analysis",
+    uses_ai: true,
+    template_id: "plantilla6_estrategias_ac4",
+    ui_component: "AIAnalysisStep",
+    prev_step: 2,
+    next_step: 4
   },
   {
     number: 4,
     title: "Revisión y Ajuste de Estrategias",
-    description: "Chat único para solicitar un refinamiento de las estrategias",
-    icon: MessageCircle
+    description: "Chat único para solicitar un refinamiento de las estrategias generadas",
+    icon: MessageCircle,
+    type: "chat",
+    uses_ai: true,
+    template_id: "plantilla8_profundizacion_ac4",
+    ui_component: "InteractiveChatStep",
+    prev_step: 3,
+    next_step: 5
   },
   {
     number: 5,
     title: "Preguntas de Profundización",
-    description: "IA formula hasta 3 preguntas para afinar pertinencia y viabilidad",
-    icon: HelpCircle
+    description: "IA formula hasta 3 preguntas para afinar pertinencia, viabilidad y nivel de complejidad",
+    icon: HelpCircle,
+    type: "ai_analysis",
+    uses_ai: true,
+    template_id: "plantilla8_profundizacion_ac4",
+    ui_component: "AIAnalysisStep",
+    prev_step: 4,
+    next_step: 6
   },
   {
     number: 6,
     title: "Generar Informe de Estrategias",
-    description: "Crea el informe justificativo con citas normativas y prepares insumos para Acel.5",
-    icon: FileText
+    description: "Crea el informe justificativo con citas normativas y prepara insumos para el siguiente acelerador",
+    icon: FileText,
+    type: "report",
+    uses_ai: true,
+    template_id: "plantilla7_informe_ac4",
+    ui_component: "ReportViewerStep",
+    prev_step: 5,
+    next_step: null
   }
 ];
 
@@ -117,27 +163,24 @@ const Acelerador4 = () => {
     }
   };
 
-  const updateSession = async (step: number, data: any = {}) => {
-    if (!session) return;
+  const updateSession = async (newSession: Session) => {
+    if (!newSession) return;
 
     try {
       const { error } = await supabase
         .from('acelerador_sessions')
         .update({
-          current_step: step,
-          session_data: { ...session.session_data, ...data },
+          current_step: newSession.current_step,
+          session_data: newSession.session_data,
+          status: newSession.status,
           updated_at: new Date().toISOString()
         })
-        .eq('id', session.id);
+        .eq('id', newSession.id);
 
       if (error) throw error;
 
-      setSession(prev => prev ? {
-        ...prev,
-        current_step: step,
-        session_data: { ...prev.session_data, ...data }
-      } : null);
-      setCurrentStep(step);
+      setSession(newSession);
+      setCurrentStep(newSession.current_step);
     } catch (error) {
       console.error('Error updating session:', error);
       toast({
@@ -148,14 +191,24 @@ const Acelerador4 = () => {
     }
   };
 
-  const nextStep = (data: any = {}) => {
+  const nextStep = () => {
+    if (!session) return;
     const next = Math.min(currentStep + 1, steps.length);
-    updateSession(next, data);
+    const updatedSession = {
+      ...session,
+      current_step: next
+    };
+    updateSession(updatedSession);
   };
 
   const prevStep = () => {
+    if (!session) return;
     const prev = Math.max(currentStep - 1, 1);
-    updateSession(prev);
+    const updatedSession = {
+      ...session,
+      current_step: prev
+    };
+    updateSession(updatedSession);
   };
 
   const getStepStatus = (stepNumber: number) => {
@@ -165,55 +218,128 @@ const Acelerador4 = () => {
   };
 
   const renderCurrentStep = () => {
-    if (!session) return null;
+    const step = steps.find(s => s.number === currentStep);
+    if (!step || !session) return null;
 
-    switch (currentStep) {
-      case 1:
+    const commonProps = {
+      sessionId: session.id,
+      onNext: nextStep,
+      onPrev: prevStep,
+      sessionData: session.session_data || {},
+      onUpdateSessionData: (data: any) => {
+        const updatedSession = {
+          ...session,
+          session_data: data
+        };
+        updateSession(updatedSession);
+      },
+      step
+    };
+
+    // Render component based on ui_component
+    switch (step.ui_component) {
+      case 'FileUploaderStep':
+        return <FileUploaderStep {...commonProps} />;
+      
+      case 'StaticFormStep':
+        return <StaticFormStep {...commonProps} staticData={step.static_data} />;
+      
+      case 'AIAnalysisStep':
+        return step.template_id ? <AIAnalysisStep {...commonProps} step={{
+          title: step.title,
+          description: step.description,
+          template_id: step.template_id,
+          icon: step.icon
+        }} /> : null;
+      
+      case 'InteractiveChatStep':
+        return step.template_id ? <InteractiveChatStep {...commonProps} step={{
+          title: step.title,
+          description: step.description,
+          template_id: step.template_id
+        }} /> : null;
+      
+      case 'ReportViewerStep':
+        return step.template_id ? <ReportViewerStep 
+          sessionId={session.id}
+          onPrev={prevStep}
+          sessionData={session.session_data || {}}
+          onUpdateSessionData={(data: any) => {
+            const updatedSession = { ...session, session_data: data };
+            updateSession(updatedSession);
+          }}
+          step={{
+            title: step.title,
+            description: step.description,
+            template_id: step.template_id
+          }}
+        /> : null;
+      
+      default:
+        // Welcome step for step 1
+        if (currentStep === 1) {
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  Bienvenido al Acelerador 4: Selección de Estrategias Metodológicas
+                </CardTitle>
+                <CardDescription>
+                  Este acelerador te guiará para generar y ajustar un catálogo de estrategias pedagógicas activas basadas en normativa MINEDU.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-2">¿Qué lograrás?</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Catálogo de 6 estrategias pedagógicas adaptadas a tu contexto</li>
+                    <li>• Estrategias alineadas con normativa MINEDU y seguridad hídrica</li>
+                    <li>• Informe justificativo con citas normativas</li>
+                    <li>• Insumos preparados para diseño de unidades didácticas</li>
+                  </ul>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-yellow-900 mb-2">Lo que necesitarás:</h4>
+                  <ul className="text-sm text-yellow-800 space-y-1">
+                    <li>• Informe de priorización del Acelerador 3</li>
+                    <li>• Información sobre tu contexto educativo (urbano/rural, multigrado, recursos TIC)</li>
+                  </ul>
+                </div>
+                <Button onClick={() => nextStep()} className="w-full">
+                  Comenzar selección de estrategias
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        }
+        
+        // Fallback for development
+        const IconComponent = step.icon;
         return (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-primary" />
-                Bienvenido al Acelerador 4: Selección de Estrategias Metodológicas
+                <IconComponent className="w-5 h-5" />
+                {step.title}
               </CardTitle>
               <CardDescription>
-                Este acelerador te guiará para generar y ajustar un catálogo de estrategias pedagógicas activas basadas en normativa MINEDU.
+                {step.description}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium text-blue-900 mb-2">¿Qué lograrás?</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Catálogo de 6 estrategias pedagógicas adaptadas a tu contexto</li>
-                  <li>• Estrategias alineadas con normativa MINEDU y seguridad hídrica</li>
-                  <li>• Informe justificativo con citas normativas</li>
-                  <li>• Insumos preparados para diseño de unidades didácticas</li>
-                </ul>
-              </div>
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <h4 className="font-medium text-yellow-900 mb-2">Lo que necesitarás:</h4>
-                <ul className="text-sm text-yellow-800 space-y-1">
-                  <li>• Informe de priorización del Acelerador 3</li>
-                  <li>• Información sobre tu contexto educativo (urbano/rural, multigrado, recursos TIC)</li>
-                </ul>
-              </div>
-              <Button onClick={() => nextStep()} className="w-full">
-                Comenzar selección de estrategias
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
-        );
-      default:
-        return (
-          <Card>
-            <CardContent className="text-center py-12">
-              <div className="text-muted-foreground">
-                <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Paso en desarrollo</h3>
-                <p className="text-sm">
-                  Este paso del acelerador se está desarrollando. Pronto estará disponible con todas las funcionalidades.
-                </p>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-center py-8">
+                  <div className="text-muted-foreground">
+                    <IconComponent className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">Paso {step.number}</h3>
+                    <p className="text-sm">{step.description}</p>
+                    <p className="text-xs mt-4 text-yellow-600">
+                      🚧 Componente {step.ui_component} en desarrollo
+                    </p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
