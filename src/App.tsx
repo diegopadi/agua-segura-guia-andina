@@ -16,6 +16,7 @@ import Etapa2 from "./pages/Etapa2";
 import Etapa3 from "./pages/Etapa3";
 import Documentos from "./pages/Documentos";
 import Ayuda from "./pages/Ayuda";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import PublicSurvey from "./pages/PublicSurvey";
 
@@ -46,6 +47,7 @@ const App = () => (
                     <Route path="/etapa3" element={<Etapa3 />} />
                     <Route path="/documentos" element={<Documentos />} />
                     <Route path="/ayuda" element={<Ayuda />} />
+                    <Route path="/administracion" element={<Admin />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>

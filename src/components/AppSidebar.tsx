@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, BookOpen, FileText, HelpCircle, Droplets, ChevronRight } from "lucide-react";
+import { Home, BookOpen, FileText, HelpCircle, Droplets, ChevronRight, Shield } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { WaterLogo } from "@/components/WaterLogo";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, useSidebar } from "@/components/ui/sidebar";
@@ -27,6 +27,10 @@ const mainItems = [{
   title: "Ayuda",
   url: "/ayuda",
   icon: HelpCircle
+}, {
+  title: "Administración",
+  url: "/administracion",
+  icon: Shield
 }];
 export function AppSidebar() {
   const {
