@@ -41,27 +41,46 @@ serve(async (req) => {
 
     const template = templates[0].content;
 
-    // Prepare context from session data
-    const context = {
-      uploaded_file: session_data.uploaded_file,
-      context_data: session_data.context_data,
-      classroom_type: session_data.context_data?.[1], // Urbana/Rural
-      modality: session_data.context_data?.[2], // Multigrado/EIB/Regular
-      tic_resources: session_data.context_data?.[3]
-    };
+    // Get Accelerator 3 results for context
+    const accelerator3Response = await fetch(`${supabaseUrl}/functions/v1/get-accelerator3-results`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ session_id })
+    });
 
-    const systemPrompt = template.system_prompt;
-    const userPrompt = `${template.user_prompt}
+    let accelerator3Data = null;
+    if (accelerator3Response.ok) {
+      accelerator3Data = await accelerator3Response.json();
+    }
 
-CONTEXTO DEL AULA:
-- Tipo de aula: ${context.classroom_type || 'No especificado'}
-- Modalidad: ${context.modality || 'No especificado'}
-- Recursos TIC disponibles: ${context.tic_resources || 'No especificado'}
+    // Extract context data
+    const grado = accelerator3Data?.priorities?.[0]?.grado || session_data.context_data?.[0] || 'No especificado';
+    const area = accelerator3Data?.priorities?.[0]?.area || 'No especificado';
+    const competencia = accelerator3Data?.priorities?.[0]?.competencia || 'No especificado';
+    const contexto = `${session_data.context_data?.[1] || 'No especificado'}, ${session_data.context_data?.[2] || 'No especificado'}`;
 
-INFORME DE PRIORIZACIÓN CARGADO:
-${context.uploaded_file ? `Archivo: ${context.uploaded_file.name}` : 'No se cargó archivo'}
+    // Replace template variables
+    let promptWithVariables = template.prompt || template.user_prompt || '';
+    promptWithVariables = promptWithVariables
+      .replace(/\{\{grado\}\}/g, grado)
+      .replace(/\{\{area\}\}/g, area)
+      .replace(/\{\{competencia\}\}/g, competencia)
+      .replace(/\{\{contexto\}\}/g, contexto);
 
-Por favor, genera exactamente 6 estrategias metodológicas activas basadas en este contexto.`;
+    // Add additional context
+    const enhancedPrompt = `${promptWithVariables}
+
+CONTEXTO ADICIONAL:
+- Tipo de aula: ${session_data.context_data?.[1] || 'No especificado'}
+- Modalidad: ${session_data.context_data?.[2] || 'No especificado'}
+- Recursos TIC disponibles: ${session_data.context_data?.[3] || 'No especificado'}
+${session_data.uploaded_file ? `- Archivo de priorización: ${session_data.uploaded_file.name}` : ''}
+${accelerator3Data?.priorities ? `- Prioridades identificadas: ${accelerator3Data.priorities.length}` : ''}`;
+
+    const systemPrompt = template.system_prompt || 'Eres un especialista en metodologías activas y diseño curricular del Ministerio de Educación del Perú.';
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -73,7 +92,7 @@ Por favor, genera exactamente 6 estrategias metodológicas activas basadas en es
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: enhancedPrompt }
         ],
         temperature: 0.7
       }),
@@ -88,26 +107,120 @@ Por favor, genera exactamente 6 estrategias metodológicas activas basadas en es
     const aiResponse = data.choices[0].message.content;
 
     // Try to parse as JSON, fallback to text
-    let parsedResponse;
+    let strategiesArray;
     try {
-      parsedResponse = JSON.parse(aiResponse);
+      strategiesArray = JSON.parse(aiResponse);
     } catch {
-      // If not valid JSON, create a structured response
-      parsedResponse = {
-        strategies: aiResponse.split('\n').filter(line => line.trim().length > 0),
-        context_analysis: `Análisis basado en: ${context.classroom_type}, ${context.modality}`,
-        minedu_references: ['Documentos MINEDU consultados durante la generación']
-      };
+      // If not valid JSON, try to extract strategies from text
+      const lines = aiResponse.split('\n').filter(line => line.trim().length > 0);
+      strategiesArray = lines.map((line, index) => ({
+        momento: index < 2 ? 'inicio' : index < 4 ? 'desarrollo' : 'cierre',
+        estrategia: line.trim(),
+        referencia: 'Documentos MINEDU'
+      }));
     }
+
+    // Ensure we have an array of strategies
+    if (!Array.isArray(strategiesArray)) {
+      strategiesArray = [];
+    }
+
+    // Generate HTML content for display
+    const generateHTML = (strategies) => {
+      const momentos = {
+        inicio: strategies.filter(s => s.momento === 'inicio'),
+        desarrollo: strategies.filter(s => s.momento === 'desarrollo'),
+        cierre: strategies.filter(s => s.momento === 'cierre')
+      };
+
+      return `
+        <div class="estrategias-metodologicas">
+          <h2>Estrategias Metodológicas Activas</h2>
+          <div class="contexto">
+            <p><strong>Grado:</strong> ${grado}</p>
+            <p><strong>Área:</strong> ${area}</p>
+            <p><strong>Competencia:</strong> ${competencia}</p>
+            <p><strong>Contexto:</strong> ${contexto}</p>
+          </div>
+          
+          <div class="momentos">
+            <div class="momento">
+              <h3>🚀 Momento de Inicio</h3>
+              ${momentos.inicio.map(e => `
+                <div class="estrategia">
+                  <p>${e.estrategia}</p>
+                  <small><em>Referencia: ${e.referencia}</em></small>
+                </div>
+              `).join('')}
+            </div>
+            
+            <div class="momento">
+              <h3>🔄 Momento de Desarrollo</h3>
+              ${momentos.desarrollo.map(e => `
+                <div class="estrategia">
+                  <p>${e.estrategia}</p>
+                  <small><em>Referencia: ${e.referencia}</em></small>
+                </div>
+              `).join('')}
+            </div>
+            
+            <div class="momento">
+              <h3>✅ Momento de Cierre</h3>
+              ${momentos.cierre.map(e => `
+                <div class="estrategia">
+                  <p>${e.estrategia}</p>
+                  <small><em>Referencia: ${e.referencia}</em></small>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    // Generate markdown content
+    const generateMarkdown = (strategies) => {
+      const momentos = {
+        inicio: strategies.filter(s => s.momento === 'inicio'),
+        desarrollo: strategies.filter(s => s.momento === 'desarrollo'),
+        cierre: strategies.filter(s => s.momento === 'cierre')
+      };
+
+      return `# Estrategias Metodológicas Activas
+
+**Grado:** ${grado}  
+**Área:** ${area}  
+**Competencia:** ${competencia}  
+**Contexto:** ${contexto}
+
+## 🚀 Momento de Inicio
+${momentos.inicio.map(e => `- ${e.estrategia}\n  *Referencia: ${e.referencia}*`).join('\n\n')}
+
+## 🔄 Momento de Desarrollo
+${momentos.desarrollo.map(e => `- ${e.estrategia}\n  *Referencia: ${e.referencia}*`).join('\n\n')}
+
+## ✅ Momento de Cierre
+${momentos.cierre.map(e => `- ${e.estrategia}\n  *Referencia: ${e.referencia}*`).join('\n\n')}`;
+    };
+
+    const result = {
+      strategies: strategiesArray,
+      html_content: generateHTML(strategiesArray),
+      markdown_content: generateMarkdown(strategiesArray),
+      context_analysis: `Estrategias generadas para ${grado} - ${area}, competencia: ${competencia}`,
+      minedu_references: strategiesArray.map(s => s.referencia).filter((ref, index, arr) => arr.indexOf(ref) === index)
+    };
 
     console.log('Generated strategies successfully');
 
     return new Response(JSON.stringify({
       success: true,
-      content: parsedResponse,
-      strategies: parsedResponse.strategies || [],
-      context_analysis: parsedResponse.context_analysis,
-      minedu_references: parsedResponse.minedu_references || []
+      content: result,
+      strategies: strategiesArray,
+      html_content: result.html_content,
+      markdown_content: result.markdown_content,
+      context_analysis: result.context_analysis,
+      minedu_references: result.minedu_references
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
