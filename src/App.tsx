@@ -13,6 +13,8 @@ import Acelerador1 from "./pages/etapa1/Acelerador1";
 import Acelerador2 from "./pages/etapa1/Acelerador2";
 import Acelerador3 from "./pages/etapa1/Acelerador3";
 import Etapa2 from "./pages/Etapa2";
+import Acelerador4 from "./pages/etapa2/Acelerador4";
+import Acelerador5 from "./pages/etapa2/Acelerador5";
 import Etapa3 from "./pages/Etapa3";
 import Documentos from "./pages/Documentos";
 import Ayuda from "./pages/Ayuda";
@@ -44,6 +46,8 @@ const App = () => (
                     <Route path="/etapa1/acelerador2" element={<Acelerador2 />} />
                     <Route path="/etapa1/acelerador3" element={<Acelerador3 />} />
                     <Route path="/etapa2" element={<Etapa2 />} />
+                    <Route path="/etapa2/acelerador4" element={<Acelerador4 />} />
+                    <Route path="/etapa2/acelerador5" element={<Acelerador5 />} />
                     <Route path="/etapa3" element={<Etapa3 />} />
                     <Route path="/documentos" element={<Documentos />} />
                     <Route path="/ayuda" element={<Ayuda />} />
