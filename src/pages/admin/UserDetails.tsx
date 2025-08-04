@@ -63,13 +63,30 @@ interface DetailedUserData {
     response_data: any;
     created_at: string;
   }>;
+  diagnostic_reports?: any[];
+  accelerator_reports?: Array<{
+    accelerator_number: number;
+    session_id: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    document_number?: number;
+    report_data: {
+      html_content?: string;
+      markdown_content?: string;
+      document_number?: number;
+      report_type: string;
+    };
+  }>;
 }
 
 export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
   const [detailedData, setDetailedData] = useState<DetailedUserData>({
     sessions: [],
     files: [],
-    responses: []
+    responses: [],
+    diagnostic_reports: [],
+    accelerator_reports: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -106,10 +123,12 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
       setDetailedData({
         sessions: data.sessions || [],
         files: data.files || [],
-        responses: data.responses || []
+        responses: data.responses || [],
+        diagnostic_reports: data.diagnostic_reports || [],
+        accelerator_reports: data.accelerator_reports || []
       });
 
-      console.log(`Loaded detailed data: ${data.sessions?.length || 0} sessions, ${data.files?.length || 0} files, ${data.responses?.length || 0} responses`);
+      console.log(`Loaded detailed data: ${data.sessions?.length || 0} sessions, ${data.files?.length || 0} files, ${data.responses?.length || 0} responses, ${data.accelerator_reports?.length || 0} accelerator reports`);
     } catch (error) {
       console.error('Error fetching detailed data:', error);
       toast({
@@ -150,6 +169,124 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
         variant: "destructive",
       });
     }
+  };
+
+  const downloadAcceleratorReport = (report: DetailedUserData['accelerator_reports'][0]) => {
+    try {
+      const htmlContent = report.report_data.html_content || report.report_data.markdown_content || '';
+      
+      if (!htmlContent) {
+        toast({
+          title: "Error",
+          description: "El reporte no tiene contenido disponible",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const reportHTML = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Reporte Acelerador ${report.accelerator_number} - ${user.full_name}</title>
+          <style>
+            body { 
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              border-bottom: 3px solid #0066cc;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+            }
+            .header h1 {
+              color: #0066cc;
+              margin: 0;
+            }
+            .metadata {
+              background: #f8f9fa;
+              padding: 15px;
+              border-radius: 8px;
+              margin-bottom: 20px;
+            }
+            .content {
+              margin-top: 20px;
+            }
+            @media print {
+              body { margin: 0; padding: 10mm; }
+              .header { page-break-after: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Reporte Acelerador ${report.accelerator_number}</h1>
+            <p><strong>Usuario:</strong> ${user.full_name || 'N/A'}</p>
+            <p><strong>Institución:</strong> ${user.ie_name || 'N/A'}</p>
+          </div>
+          
+          <div class="metadata">
+            <p><strong>Tipo de reporte:</strong> ${report.report_data.report_type}</p>
+            <p><strong>Documento #:</strong> ${report.document_number || report.report_data.document_number || 'N/A'}</p>
+            <p><strong>Fecha de generación:</strong> ${new Date(report.updated_at).toLocaleDateString('es-ES')}</p>
+            <p><strong>Estado:</strong> ${report.status}</p>
+          </div>
+          
+          <div class="content">
+            ${htmlContent}
+          </div>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob([reportHTML], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `acelerador-${report.accelerator_number}-${user.full_name || user.id}-${new Date(report.updated_at).toISOString().split('T')[0]}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Descarga completada",
+        description: `Reporte del Acelerador ${report.accelerator_number} descargado`,
+      });
+    } catch (error) {
+      console.error('Error downloading accelerator report:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo descargar el reporte",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const downloadAllAcceleratorReports = () => {
+    if (!detailedData?.accelerator_reports?.length) {
+      toast({
+        title: "Sin reportes",
+        description: "No hay reportes de aceleradores disponibles",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    detailedData.accelerator_reports.forEach((report, index) => {
+      setTimeout(() => downloadAcceleratorReport(report), index * 500);
+    });
+
+    toast({
+      title: "Descarga iniciada",
+      description: `Descargando ${detailedData.accelerator_reports.length} reportes`,
+    });
   };
 
   const generateUserReportHTML = (user: any, data: DetailedUserData) => {
@@ -457,6 +594,69 @@ export const UserDetails = ({ user, onBack, onRefresh }: UserDetailsProps) => {
 
         {/* Detailed Data */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Accelerator Reports */}
+          {detailedData?.accelerator_reports?.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Reportes Generados por Acelerador ({detailedData.accelerator_reports.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {detailedData.accelerator_reports.map((report, index) => (
+                  <div key={`${report.session_id}-${index}`} className="p-4 border rounded-lg">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-medium">Acelerador {report.accelerator_number}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Tipo: {report.report_data.report_type.replace('_', ' ')}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Documento: #{report.document_number || report.report_data.document_number || 'N/A'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Generado: {new Date(report.updated_at).toLocaleDateString('es-ES')}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {getStatusBadge(report.status)}
+                        <Button 
+                          size="sm" 
+                          onClick={() => downloadAcceleratorReport(report)}
+                          disabled={!report.report_data.html_content && !report.report_data.markdown_content}
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          Descargar
+                        </Button>
+                      </div>
+                    </div>
+                    {report.report_data.html_content && (
+                      <div className="text-xs text-muted-foreground">
+                        ✓ Contenido HTML disponible
+                      </div>
+                    )}
+                    {report.report_data.markdown_content && (
+                      <div className="text-xs text-muted-foreground">
+                        ✓ Contenido Markdown disponible
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div className="pt-4 border-t">
+                  <Button 
+                    onClick={downloadAllAcceleratorReports} 
+                    variant="outline" 
+                    className="w-full"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Descargar Todos los Reportes de Aceleradores
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Sessions */}
           <Card>
             <CardHeader>

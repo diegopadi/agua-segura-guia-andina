@@ -58,6 +58,17 @@ serve(async (req) => {
       console.error('Error fetching sessions:', sessionsError);
     }
 
+    // Get diagnostic reports
+    const { data: diagnosticReports, error: reportsError } = await supabaseAdmin
+      .from('diagnostic_reports')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (reportsError) {
+      console.error('Error fetching diagnostic reports:', reportsError);
+    }
+
     // Get files
     const { data: files, error: filesError } = await supabaseAdmin
       .from('files')
@@ -87,14 +98,61 @@ serve(async (req) => {
       }
     }
 
+    // Extract accelerator reports from sessions
+    const acceleratorReports = [];
+    
+    if (sessions) {
+      for (const session of sessions) {
+        if (session.session_data?.final_report || session.session_data?.report_content) {
+          acceleratorReports.push({
+            accelerator_number: session.acelerador_number,
+            session_id: session.id,
+            status: session.status,
+            created_at: session.created_at,
+            updated_at: session.updated_at,
+            report_data: {
+              html_content: session.session_data.final_report?.html_content || session.session_data.report_content?.html_content,
+              markdown_content: session.session_data.final_report?.markdown_content || session.session_data.report_content?.markdown_content,
+              document_number: session.session_data.final_report?.document_number || session.session_data.report_content?.document_number,
+              report_type: session.session_data.final_report ? 'final_report' : 'report_content'
+            }
+          });
+        }
+      }
+    }
+
+    // Add diagnostic reports
+    if (diagnosticReports) {
+      for (const report of diagnosticReports) {
+        if (report.metadata?.report_content || report.metadata?.html_content) {
+          acceleratorReports.push({
+            accelerator_number: 1, // Diagnostic reports are typically for Accelerator 1
+            session_id: report.session_id,
+            status: report.status,
+            created_at: report.created_at,
+            updated_at: report.updated_at,
+            document_number: report.document_number,
+            report_data: {
+              html_content: report.metadata.html_content || report.metadata.report_content,
+              markdown_content: report.metadata.markdown_content,
+              document_number: report.document_number,
+              report_type: 'diagnostic_report'
+            }
+          });
+        }
+      }
+    }
+
     const detailedData = {
       profile,
       sessions: sessions || [],
       files: files || [],
-      responses: responses
+      responses: responses,
+      diagnostic_reports: diagnosticReports || [],
+      accelerator_reports: acceleratorReports
     };
 
-    console.log(`Returning detailed data for user ${userId}: ${sessions?.length || 0} sessions, ${files?.length || 0} files, ${responses.length} responses`);
+    console.log(`Returning detailed data for user ${userId}: ${sessions?.length || 0} sessions, ${files?.length || 0} files, ${responses.length} responses, ${acceleratorReports.length} accelerator reports`);
 
     return new Response(
       JSON.stringify(detailedData),
