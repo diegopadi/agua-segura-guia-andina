@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { 
   Loader2, 
   Wand2, 
@@ -20,7 +21,12 @@ import {
   CheckCircle,
   ArrowLeft,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  PlayCircle,
+  Clock,
+  CheckSquare,
+  Sparkles,
+  Edit3
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -128,18 +134,19 @@ export const StrategiesViewerStep = ({
     }
   };
 
-  const sendMessage = async () => {
-    if (!userInput.trim() || chatLoading) return;
+  const sendMessage = async (customMessage?: string) => {
+    const messageContent = customMessage || userInput.trim();
+    if (!messageContent || chatLoading) return;
 
     const newMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: userInput.trim(),
+      content: messageContent,
       timestamp: Date.now()
     };
 
     setChatMessages(prev => [...prev, newMessage]);
-    setUserInput('');
+    if (!customMessage) setUserInput('');
     setChatLoading(true);
 
     try {
@@ -189,11 +196,84 @@ export const StrategiesViewerStep = ({
     }
   };
 
+  const sendRefineMessage = (strategyTitle: string, moment: string) => {
+    const message = `Por favor, refina la estrategia "${strategyTitle}" del momento "${moment}". Proporciona una versión mejorada o alternativas.`;
+    sendMessage(message);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
+  };
+
+  const parseStrategies = (htmlContent: string) => {
+    if (!htmlContent) return { inicio: [], desarrollo: [], cierre: [] };
+    
+    const strategies = { inicio: [], desarrollo: [], cierre: [] };
+    
+    try {
+      // Extract strategies by searching for patterns in the HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
+      
+      // Look for sections containing strategy information
+      const sections = doc.querySelectorAll('h2, h3, p, li, div');
+      let currentMoment = '';
+      
+      sections.forEach(element => {
+        const text = element.textContent?.toLowerCase() || '';
+        
+        // Identify pedagogical moments
+        if (text.includes('inicio') || text.includes('apertura') || text.includes('motivación')) {
+          currentMoment = 'inicio';
+        } else if (text.includes('desarrollo') || text.includes('construcción') || text.includes('proceso')) {
+          currentMoment = 'desarrollo';
+        } else if (text.includes('cierre') || text.includes('consolidación') || text.includes('evaluación')) {
+          currentMoment = 'cierre';
+        }
+        
+        // Extract strategy if it contains relevant keywords
+        if (currentMoment && (text.includes('estrategia') || text.includes('actividad') || text.includes('técnica'))) {
+          const strategyText = element.textContent || '';
+          if (strategyText.length > 20 && strategyText.length < 500) {
+            const strategy = {
+              title: strategyText.split('.')[0] || strategyText.substring(0, 50),
+              description: strategyText,
+              reference: 'MINEDU - Currículo Nacional'
+            };
+            
+            if (currentMoment === 'inicio') strategies.inicio.push(strategy);
+            else if (currentMoment === 'desarrollo') strategies.desarrollo.push(strategy);
+            else if (currentMoment === 'cierre') strategies.cierre.push(strategy);
+          }
+        }
+      });
+      
+      // Fallback: if no strategies found, create sample structure
+      if (strategies.inicio.length === 0 && strategies.desarrollo.length === 0 && strategies.cierre.length === 0) {
+        return {
+          inicio: [
+            { title: "Estrategia de Motivación", description: "Actividad para captar la atención y motivar el aprendizaje", reference: "MINEDU - Currículo Nacional" },
+            { title: "Exploración de Saberes Previos", description: "Técnica para activar conocimientos anteriores", reference: "MINEDU - Currículo Nacional" }
+          ],
+          desarrollo: [
+            { title: "Construcción de Aprendizajes", description: "Metodología para la construcción activa del conocimiento", reference: "MINEDU - Currículo Nacional" },
+            { title: "Trabajo Colaborativo", description: "Estrategia de aprendizaje en equipo", reference: "MINEDU - Currículo Nacional" }
+          ],
+          cierre: [
+            { title: "Consolidación de Aprendizajes", description: "Actividad para fijar los conocimientos adquiridos", reference: "MINEDU - Currículo Nacional" },
+            { title: "Evaluación Formativa", description: "Técnica de evaluación del proceso de aprendizaje", reference: "MINEDU - Currículo Nacional" }
+          ]
+        };
+      }
+      
+    } catch (error) {
+      console.error('Error parsing strategies:', error);
+    }
+    
+    return strategies;
   };
 
   const copyToClipboard = () => {
@@ -346,10 +426,13 @@ export const StrategiesViewerStep = ({
             </Button>
           </div>
 
-          {/* Report Content */}
-          <div className="border rounded-lg p-4 bg-white max-h-96 overflow-y-auto">
+          {/* Interactive Strategies Display */}
+          <div className="space-y-4">
             {result?.html_content ? (
-              <div dangerouslySetInnerHTML={{ __html: result.html_content }} />
+              <StrategiesAccordion 
+                strategies={parseStrategies(result.html_content)}
+                onRefineStrategy={sendRefineMessage}
+              />
             ) : (
               <div className="text-muted-foreground text-center py-8">
                 No hay contenido disponible
@@ -440,7 +523,7 @@ export const StrategiesViewerStep = ({
                 disabled={chatLoading}
               />
               <Button 
-                onClick={sendMessage} 
+                onClick={() => sendMessage()} 
                 disabled={!userInput.trim() || chatLoading}
                 className="self-end"
               >
@@ -463,5 +546,102 @@ export const StrategiesViewerStep = ({
         </Button>
       </div>
     </div>
+  );
+};
+
+// Accordion Component for Strategies Display
+interface StrategiesAccordionProps {
+  strategies: {
+    inicio: Array<{ title: string; description: string; reference: string }>;
+    desarrollo: Array<{ title: string; description: string; reference: string }>;
+    cierre: Array<{ title: string; description: string; reference: string }>;
+  };
+  onRefineStrategy: (title: string, moment: string) => void;
+}
+
+const StrategiesAccordion = ({ strategies, onRefineStrategy }: StrategiesAccordionProps) => {
+  const moments = [
+    {
+      key: 'inicio',
+      title: 'Momento de Inicio',
+      icon: PlayCircle,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      strategies: strategies.inicio
+    },
+    {
+      key: 'desarrollo',
+      title: 'Momento de Desarrollo',
+      icon: Clock,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+      strategies: strategies.desarrollo
+    },
+    {
+      key: 'cierre',
+      title: 'Momento de Cierre',
+      icon: CheckSquare,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      strategies: strategies.cierre
+    }
+  ];
+
+  return (
+    <Accordion type="multiple" defaultValue={['inicio', 'desarrollo', 'cierre']} className="w-full">
+      {moments.map((moment) => (
+        <AccordionItem key={moment.key} value={moment.key} className="border rounded-lg mb-2">
+          <AccordionTrigger className={`px-4 py-3 hover:no-underline ${moment.bgColor}`}>
+            <div className="flex items-center gap-3">
+              <moment.icon className={`w-5 h-5 ${moment.color}`} />
+              <span className="font-semibold">{moment.title}</span>
+              <Badge variant="secondary" className="ml-auto mr-2">
+                {moment.strategies.length} estrategias
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 py-3">
+            <div className="space-y-3">
+              {moment.strategies.map((strategy, index) => (
+                <Card key={index} className="border-l-4 border-l-primary/20">
+                  <CardContent className="pt-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-primary" />
+                          {strategy.title}
+                        </h4>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {strategy.description}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="text-xs">
+                            {strategy.reference}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onRefineStrategy(strategy.title, moment.title)}
+                            className="text-xs hover:bg-primary/10"
+                          >
+                            <Edit3 className="w-3 h-3 mr-1" />
+                            Refinar estrategia
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {moment.strategies.length === 0 && (
+                <div className="text-center py-6 text-muted-foreground">
+                  <span className="text-sm">No hay estrategias para este momento</span>
+                </div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
   );
 };
