@@ -30,11 +30,7 @@ const Inicio = () => {
           </p>
           <Dialog open={isVideoOpen} onOpenChange={setIsVideoOpen}>
             <DialogTrigger asChild>
-              <Button variant="secondary" size="lg" className="gap-2">
-                <Play className="w-5 h-5" />
-                Ver video de bienvenida
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+              
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
               <DialogHeader>
