@@ -77,6 +77,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
       setQuestionsGenerated(true);
       const updatedData = { ...sessionData, profundization_questions: fixed };
       onUpdateSession(updatedData);
+      console.log('[A4][Profundization] Prepared', fixed.length, 'questions for', baseStrategies.length, 'strategies (3 c/u).');
       toast.success('Preguntas preparadas');
     } catch (error: any) {
       console.error('Error generating questions:', error);
@@ -209,38 +210,50 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
               <div className="text-sm text-muted-foreground">
                 Responde las siguientes preguntas para optimizar las estrategias metodológicas según tu contexto específico:
               </div>
-              
-              {questions.map((question, index) => (
-                <div key={`question-${question.id}-${index}`} className="space-y-4 p-6 border rounded-lg bg-card">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className={getEnfoqueColor(question.enfoque)}>
-                        {getEnfoqueLabel(question.enfoque)}
-                      </Badge>
-                      <span className="text-sm font-medium text-muted-foreground">Pregunta {index + 1}</span>
-                    </div>
-                    {responses[question.id]?.trim() && (
-                      <div className="flex items-center gap-1 text-green-600">
-                        <CheckCircle className="h-4 w-4" />
-                      </div>
-                    )}
+              {(() => {
+                const baseStrategies = sessionData?.strategies_adapted?.strategies || sessionData?.strategies_result?.strategies || [];
+                return (
+                  <div className="space-y-8">
+                    {baseStrategies.slice(0,6).map((s: any, sIdx: number) => {
+                      const startId = sIdx * 3 + 1;
+                      const groupQs = [startId, startId + 1, startId + 2]
+                        .map((id) => questions.find((q) => q.id === id))
+                        .filter(Boolean) as Question[];
+                      return (
+                        <div key={`strategy-${sIdx}`} className="space-y-4 p-6 border rounded-lg bg-card">
+                          <h3 className="text-base font-semibold">
+                            {s?.title || s?.nombre || `Estrategia ${sIdx + 1}`}
+                          </h3>
+                          {groupQs.map((question, index) => (
+                            <div key={`question-${question.id}-${index}`} className="space-y-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary" className={getEnfoqueColor(question.enfoque)}>
+                                    {getEnfoqueLabel(question.enfoque)}
+                                  </Badge>
+                                  <span className="text-sm font-medium text-muted-foreground">Pregunta {question.id}</span>
+                                </div>
+                                {responses[question.id]?.trim() && (
+                                  <div className="flex items-center gap-1 text-green-600">
+                                    <CheckCircle className="h-4 w-4" />
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-foreground leading-relaxed">{question.pregunta}</p>
+                              <Textarea
+                                placeholder="Escribe tu respuesta detallada aquí..."
+                                value={responses[question.id] || ''}
+                                onChange={(e) => handleResponseChange(question.id, e.target.value)}
+                                className="min-h-[100px] resize-none"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
                   </div>
-                  
-                  <div className="space-y-3">
-                    <p className="text-foreground leading-relaxed">
-                      {question.pregunta}
-                    </p>
-                    
-                    <Textarea
-                      placeholder="Escribe tu respuesta detallada aquí..."
-                      value={responses[question.id] || ''}
-                      onChange={(e) => handleResponseChange(question.id, e.target.value)}
-                      className="min-h-[100px] resize-none"
-                    />
-                  </div>
-                </div>
-              ))}
-              
+                );
+              })()}
               {questions.length > 0 && (
                 <div className="bg-muted/50 p-4 rounded-lg">
                   <p className="text-sm text-muted-foreground">
@@ -275,6 +288,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
               try {
                 setLoading(true);
                 const baseStrategies = sessionData?.strategies_result?.strategies || [];
+                console.log('[A4][Profundization] Adapting strategies (repo-based). count:', baseStrategies.length, 'hasResponses:', !!sessionData?.profundization_responses);
                 const { data, error } = await supabase.functions.invoke('adapt-ac4-strategies', {
                   body: {
                     session_id: sessionId,

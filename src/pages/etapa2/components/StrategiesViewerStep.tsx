@@ -129,6 +129,7 @@ export const StrategiesViewerStep = ({
 
   const handleAnalysis = async () => {
     try {
+      console.log('[A4] handleAnalysis: selecting from repo (sin IA)');
       setLoading(true);
       setError(null);
       const payload = sessionData?.suggestion_payload || { prioridades: sessionData?.priorities || [], contexto: sessionData?.contexto };
@@ -136,6 +137,9 @@ export const StrategiesViewerStep = ({
       if (!selected.length) {
         setError('Repositorio vacío. Configura estrategias en APP_CONFIG_A4 (admin).');
         toast({ title: 'Repositorio vacío', description: 'Configura APP_CONFIG_A4 para continuar. Usando modo demo.' });
+      }
+      if (selected.length < 6) {
+        toast({ title: 'Repositorio con menos de 6 ítems', description: `Se seleccionaron ${selected.length} estrategias disponibles.` });
       }
       const resultObj = { source: 'repo', strategies: selected };
       setResult(resultObj);
@@ -170,6 +174,7 @@ export const StrategiesViewerStep = ({
       if (!hasBeenRefined) {
         const payload = sessionData?.suggestion_payload || { prioridades: sessionData?.priorities || [], contexto: sessionData?.contexto };
         const reselected = getRepoStrategies(payload, true);
+        console.log('[A4] Chat refinement: reselección desde repo (sin IA).');
         const refined = { source: 'repo', strategies: reselected };
         setResult(refined);
         setHasBeenRefined(true);
@@ -177,6 +182,7 @@ export const StrategiesViewerStep = ({
         onUpdateSessionData(updatedSessionData);
         assistantText = 'He reajustado el orden/conjunto de estrategias desde el repositorio según tu indicación. Recuerda que solo se permite un refinamiento.';
       } else {
+        console.log('[A4] Chat refinement: token ya usado; sin cambios.');
         assistantText = 'Ya usaste tu refinamiento único. Puedes continuar o ajustar manualmente.';
       }
       const assistantMessage: Message = { id: (Date.now()+1).toString(), role: 'assistant', content: assistantText, timestamp: Date.now() };
@@ -340,7 +346,7 @@ export const StrategiesViewerStep = ({
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
             <p className="text-muted-foreground">Generando estrategias metodológicas...</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Esto puede tomar unos momentos mientras la IA analiza tu contexto educativo.
+              Esto puede tomar unos momentos mientras se seleccionan estrategias del repositorio según tu contexto.
             </p>
           </div>
         </CardContent>
@@ -467,7 +473,7 @@ export const StrategiesViewerStep = ({
           <CardDescription>
             {hasBeenRefined 
               ? "Ya has usado tu refinamiento único. Las estrategias mostradas arriba son las finales."
-              : "Conversa con la IA para refinar y ajustar las estrategias generadas (solo 1 refinamiento permitido)"
+              : "Usa el chat para solicitar un refinamiento (sin IA, 1 vez). Reordenaremos o sustituiremos desde el repositorio."
             }
           </CardDescription>
         </CardHeader>

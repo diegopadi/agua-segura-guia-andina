@@ -52,7 +52,9 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
     try {
       if (!sessionId || !sessionData) throw new Error('Faltan datos requeridos');
       const strategies = sessionData?.strategies_adapted?.strategies || sessionData?.strategies_result?.strategies || [];
+      const sourceUsed = sessionData?.strategies_adapted?.strategies ? 'adapted' : 'result';
       const plantilla = sessionData?.app_config?.plantilla_informe_ac4 || {};
+      console.log('[A4] Report: usando estrategias', sourceUsed, 'cantidad', strategies.length, 'plantilla título:', plantilla?.titulo);
       if (strategies.length === 0) throw new Error('No hay estrategias seleccionadas');
 
       const resumen = `Informe de estrategias metodológicas adaptadas. Total: ${strategies.length}.`;
