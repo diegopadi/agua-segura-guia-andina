@@ -241,6 +241,10 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
                   <Download className="w-4 h-4 mr-2" />
                   Descargar Informe
                 </Button>
+                <Button onClick={downloadReport} variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Descargar HTML
+                </Button>
                 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>

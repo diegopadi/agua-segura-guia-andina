@@ -16,7 +16,8 @@ import { InteractiveChatStep } from './components/InteractiveChatStep';
 import { ReportViewerStep } from './components/ReportViewerStep';
 import { WelcomeWithPrioritiesStep } from './components/WelcomeWithPrioritiesStep';
 import { StrategiesViewerStep } from './components/StrategiesViewerStep';
-import { getAppConfig } from "@/integrations/supabase/appConfig";
+import { getAppConfig, upsertAppConfig } from "@/integrations/supabase/appConfig";
+import { APP_CONFIG_A4_DEFAULT } from "@/integrations/supabase/appConfigDefaults";
 
 interface Session {
   id: string;
@@ -150,8 +151,9 @@ const Acelerador4 = () => {
         if (!appConfig) {
           const cfg = await getAppConfig<any>("APP_CONFIG_A4");
           if (!cfg) {
-            toast({ title: "APP_CONFIG_A4 no encontrada", description: "Usando configuración por defecto (demo)" });
-            appConfig = { estrategias_repo: { items: [] }, plantilla_informe_ac4: null };
+            toast({ title: "APP_CONFIG_A4 no encontrada", description: "Se cargó la configuración por defecto (repo y plantilla)." });
+            await upsertAppConfig("APP_CONFIG_A4", APP_CONFIG_A4_DEFAULT);
+            appConfig = APP_CONFIG_A4_DEFAULT;
           } else {
             appConfig = cfg.data;
           }
@@ -230,7 +232,11 @@ const Acelerador4 = () => {
     try {
       setRefreshing(true);
       const cfg = await getAppConfig<any>("APP_CONFIG_A4");
-      const newAppConfig = cfg?.data ?? { estrategias_repo: { items: [] }, plantilla_informe_ac4: null };
+      if (!cfg || !cfg.data?.estrategias_repo?.items?.length || !cfg.data?.plantilla_informe_ac4) {
+        await upsertAppConfig("APP_CONFIG_A4", APP_CONFIG_A4_DEFAULT);
+      }
+      const updatedCfg = await getAppConfig<any>("APP_CONFIG_A4");
+      const newAppConfig = updatedCfg?.data ?? APP_CONFIG_A4_DEFAULT;
       const updatedSession = {
         ...session,
         // Keep current step as-is

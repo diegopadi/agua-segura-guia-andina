@@ -291,8 +291,8 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
                 const baseStrategies = sessionData?.strategies_result?.strategies || [];
                 const payloadSummary = {
                   strategies: baseStrategies.length,
-                  responses: Object.keys(sessionData?.profundization_responses || {}).length,
-                  contexto: Object.keys(sessionData?.contexto || {}).length,
+                  responses: Object.keys(sessionData?.profundization_responses || {}),
+                  contexto: Object.keys(sessionData?.contexto || {}),
                 };
                 console.log('[A4][Profundization] Adapt payload:', payloadSummary);
                 const { data, error } = await supabase.functions.invoke('adapt-ac4-strategies', {
