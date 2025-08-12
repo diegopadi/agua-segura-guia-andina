@@ -102,12 +102,15 @@ export const StrategiesViewerStep = ({
     const priors = (payload?.prioridades || []).map((p: any) => (p.title || '').toLowerCase());
     const tic = (payload?.contexto?.recursos_tic || '').toLowerCase();
     let score = 0;
-    const haystack = `${(item.title||'')}. ${(item.description||'')}. ${(item.tags||[]).join(' ')}`.toLowerCase();
+    const name = (item.title || item.nombre || '');
+    const desc = (item.description || item.descripcion || '');
+    const tags = Array.isArray(item.tags) ? item.tags : (Array.isArray(item.etiquetas) ? item.etiquetas : []);
+    const recursos = Array.isArray(item.recursos_tic) ? item.recursos_tic : (Array.isArray(item.recursos) ? item.recursos : []);
+    const haystack = `${name}. ${desc}. ${tags.join(' ')} ${recursos.join(' ')}`.toLowerCase();
     priors.forEach((t: string) => { if (t && haystack.includes(t)) score += 2; });
     if (tic) {
-      if (Array.isArray(item.recursos_tic)) {
-        item.recursos_tic.forEach((r: string) => { if (tic.includes((r||'').toLowerCase())) score += 1; });
-      } else if (haystack.includes('tic') || haystack.includes('digital')) {
+      recursos.forEach((r: string) => { if ((r || '') && tic.includes((r || '').toLowerCase())) score += 1; });
+      if (haystack.includes('tic') || haystack.includes('digital')) {
         score += 1;
       }
     }
@@ -435,8 +438,9 @@ export const StrategiesViewerStep = ({
                   const byMoment = { inicio: [], desarrollo: [], cierre: [] } as any;
                   if (list && list.length) {
                     list.forEach((s, i) => {
-                      const m = (s.momento || (i<2?'inicio': i<4?'desarrollo':'cierre')).toLowerCase();
-                      const entry = { title: s.title || s.nombre || `Estrategia ${i+1}`, description: s.description || s.descripcion || '', reference: s.reference || 'MINEDU - Currículo Nacional' };
+                      const ms = Array.isArray(s.momento_sugerido) ? s.momento_sugerido[0] : s.momento;
+                      const m = (ms || (i<2?'inicio': i<4?'desarrollo':'cierre')).toString().toLowerCase();
+                      const entry = { title: s.title || s.nombre || `Estrategia ${i+1}`, description: s.description || s.descripcion || '', reference: s.reference || s.referencia || 'MINEDU - Currículo Nacional' };
                       if (m.includes('inicio')) byMoment.inicio.push(entry);
                       else if (m.includes('desarrollo')) byMoment.desarrollo.push(entry);
                       else byMoment.cierre.push(entry);

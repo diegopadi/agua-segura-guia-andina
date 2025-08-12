@@ -252,6 +252,27 @@ const Acelerador4 = () => {
     }
   };
 
+  const handleReplaceConfig = async () => {
+    if (!session) return;
+    try {
+      setRefreshing(true);
+      await upsertAppConfig("APP_CONFIG_A4", APP_CONFIG_A4_DEFAULT);
+      const updatedCfg = await getAppConfig<any>("APP_CONFIG_A4");
+      const newAppConfig = updatedCfg?.data ?? APP_CONFIG_A4_DEFAULT;
+      const updatedSession = {
+        ...session,
+        session_data: { ...(session.session_data || {}), app_config: newAppConfig }
+      };
+      await updateSession(updatedSession);
+      toast({ title: "Configuración reemplazada" });
+    } catch (e) {
+      console.error("Error replacing APP_CONFIG_A4", e);
+      toast({ title: "Error", description: "No se pudo reemplazar la configuración", variant: "destructive" });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const getStepStatus = (stepNumber: number) => {
     if (stepNumber < currentStep) return 'completed';
     if (stepNumber === currentStep) return 'current';
@@ -445,6 +466,10 @@ const Acelerador4 = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleReplaceConfig} disabled={refreshing}>
+            <RefreshCcw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+            Reemplazar configuración
+          </Button>
           <Button variant="outline" size="sm" onClick={handleRefreshConfig} disabled={refreshing}>
             <RefreshCcw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
             Actualizar configuración

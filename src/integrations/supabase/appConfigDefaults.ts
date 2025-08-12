@@ -1,118 +1,79 @@
 // Default APP_CONFIG_A4 data: estrategias repo and report template
 // This is used to seed app_configs when missing or empty
+// Default APP_CONFIG_A4 data: estrategias repo and report template (seguridad hídrica)
+// This is used to seed app_configs when missing or to replace via admin action
 export const APP_CONFIG_A4_DEFAULT = {
   estrategias_repo: {
     items: [
       {
-        id: 'e1',
-        title: 'Aprendizaje Basado en Proyectos (ABP)',
-        description: 'Diseño y desarrollo de proyectos interdisciplinarios orientados a resolver problemas reales del entorno.',
-        tags: ['ABP','proyecto','colaborativo','interdisciplinario'],
-        recursos_tic: ['computadora','internet','presentaciones'],
-        momento: 'desarrollo'
+        id: 'observacion-guiada-fuentes',
+        nombre: 'Observación guiada de fuentes de agua en el entorno',
+        descripcion: 'Salida corta al patio/entorno inmediato para identificar puntos de agua, escurrimientos, zonas húmedas, vegetación indicadora y evidencias de contaminación. Registro en bitácora con croquis y checklist; cierre con puesta en común de hallazgos y primeras hipótesis sobre riesgos y usos del agua en la IE.',
+        momento_sugerido: ['inicio'],
+        etiquetas: ['indagacion','trabajo-de-campo','diagnostico'],
+        recursos: ['bitacoras','lupas opcionales','cinta para delimitar','celulares para fotos'],
+        referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
       {
-        id: 'e2',
-        title: 'Aprendizaje Basado en Problemas (ABPbl)',
-        description: 'Planteamiento de problemas auténticos para desarrollar habilidades de indagación y pensamiento crítico.',
-        tags: ['problemas','indagación','pensamiento crítico'],
-        recursos_tic: ['buscadores','foros','documentos compartidos'],
-        momento: 'desarrollo'
+        id: 'mapa-riesgos-agua',
+        nombre: 'Mapa participativo de riesgos y usos del agua',
+        descripcion: 'En equipo, elaborar un mapa del patio y aulas marcando puntos de consumo, riesgo (encharcamientos, fugas), y oportunidades (reuso, infiltración). Priorizar dos problemas y dos oportunidades para el ciclo de mejora.',
+        momento_sugerido: ['inicio','desarrollo'],
+        etiquetas: ['aprendizaje-basado-en-problemas','colaborativo','visual'],
+        recursos: ['papelografo','stickers','cinta','marcadores'],
+        referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
       {
-        id: 'e3',
-        title: 'Estaciones de Aprendizaje',
-        description: 'Rotación por estaciones con actividades diferenciadas que promueven autonomía y trabajo cooperativo.',
-        tags: ['rotación','cooperativo','autonomía'],
-        recursos_tic: ['tablets','apps educativas'],
-        momento: 'desarrollo'
+        id: 'experimento-filtracion',
+        nombre: 'Mini-experimento de filtración e infiltración',
+        descripcion: 'Construcción de filtros caseros comparando materiales (arena, grava, carbón, tela). Medición de turbidez relativa y tiempo de filtrado. Discusión sobre potabilización básica y límites de la técnica en contexto escolar.',
+        momento_sugerido: ['desarrollo'],
+        etiquetas: ['experimento','cyt','manos-a-la-obra'],
+        recursos: ['botellas PET','tijeras','arena','grava','carbon activado','tela','cronometro'],
+        referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
       {
-        id: 'e4',
-        title: 'Debate Reglas de Oro',
-        description: 'Discusión estructurada para argumentar con evidencias y escuchar activamente.',
-        tags: ['debate','argumentación','comunicación'],
-        recursos_tic: ['proyector','timer','grabación'],
-        momento: 'cierre'
+        id: 'ruta-agua-en-la-ie',
+        nombre: 'Ruta del agua en la IE',
+        descripcion: 'Trazar el recorrido del agua: ingreso (cisterna/red), almacenamiento, distribución a servicios higiénicos y lavamanos, y salida a desagüe. Identificar puntos críticos de desperdicio y acciones de mejora de bajo costo.',
+        momento_sugerido: ['desarrollo'],
+        etiquetas: ['proyecto','estudio-de-caso-local','gestion-escolar'],
+        recursos: ['planos simples','visitas guiadas','checklist'],
+        referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
       {
-        id: 'e5',
-        title: 'Clase Invertida (Flipped Classroom)',
-        description: 'Estudio previo de contenidos en casa y resolución de dudas y retos en clase.',
-        tags: ['flipped','autonomía','diferenciación'],
-        recursos_tic: ['video','plataforma','quiz online'],
-        momento: 'inicio'
+        id: 'campana-cultura-del-agua',
+        nombre: 'Campaña ‘Cultura del Agua’',
+        descripcion: 'Diseño de mensajes, afiches y micro-demostraciones para promover uso responsable del agua (lavado de manos eficiente, cierre de caños, reporte de fugas). Integrar roles estudiantiles y cronograma.',
+        momento_sugerido: ['cierre'],
+        etiquetas: ['comunicacion','participacion-estudiantil','ciudadania'],
+        recursos: ['plantillas de afiches','impresion o mural','rubrica de impacto'],
+        referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
       {
-        id: 'e6',
-        title: 'Aprendizaje Servicio (ApS)',
-        description: 'Proyectos que combinan aprendizaje y servicio a la comunidad con impacto real.',
-        tags: ['servicio','comunidad','ciudadanía'],
-        recursos_tic: ['mapas','redes','documentación'],
-        momento: 'desarrollo'
-      },
-      {
-        id: 'e7',
-        title: 'Taller de Prototipado Rápido',
-        description: 'Diseño y construcción de prototipos con iteraciones y retroalimentación.',
-        tags: ['diseño','prototipo','iteración'],
-        recursos_tic: ['impresora 3D','CAD','fotos'],
-        momento: 'desarrollo'
-      },
-      {
-        id: 'e8',
-        title: 'Estudio de Casos',
-        description: 'Análisis de casos reales para transferir aprendizajes a contextos diversos.',
-        tags: ['casos','análisis','transferencia'],
-        recursos_tic: ['documentos','presentaciones'],
-        momento: 'desarrollo'
-      },
-      {
-        id: 'e9',
-        title: 'Rutinas de Pensamiento Visible',
-        description: 'Activación de destrezas de pensamiento mediante rutinas breves y visibles.',
-        tags: ['pensamiento','metacognición','rutinas'],
-        recursos_tic: ['pizarras','notas digitales'],
-        momento: 'inicio'
-      },
-      {
-        id: 'e10',
-        title: 'Galería de Productos (Exposición)',
-        description: 'Socialización y evaluación de productos con criterios, rúbricas y feedback.',
-        tags: ['exposición','rúbricas','feedback'],
-        recursos_tic: ['galería virtual','fotografía'],
-        momento: 'cierre'
-      },
-      {
-        id: 'e11',
-        title: 'Laboratorio de Indagación',
-        description: 'Ciclo de hipótesis, experimentación, registro y conclusiones.',
-        tags: ['indagación','experimento','registro'],
-        recursos_tic: ['sensores','hojas de cálculo'],
-        momento: 'desarrollo'
-      },
-      {
-        id: 'e12',
-        title: 'Aprendizaje Cooperativo (roles)',
-        description: 'Estructuras cooperativas con asignación de roles y metas compartidas.',
-        tags: ['cooperativo','roles','interdependencia'],
-        recursos_tic: ['documentos colaborativos','timer'],
-        momento: 'desarrollo'
+        id: 'metacognicion-y-evidencias',
+        nombre: 'Cierre metacognitivo con evidencias',
+        descripcion: 'Revisión de bitácoras, fotos antes/después y compromisos. Ronda de metacognición (qué aprendimos, qué cambió en la IE, próximos pasos).',
+        momento_sugerido: ['cierre'],
+        etiquetas: ['metacognicion','evaluacion-formativa','portafolio'],
+        recursos: ['bitacoras','galeria de evidencias','guia de preguntas'],
+        referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       }
     ]
   },
   plantilla_informe_ac4: {
-    titulo: 'Informe de Estrategias (AC4)',
-    intro: 'Plantilla base para el informe de estrategias seleccionadas y adaptadas.',
+    titulo: 'Estrategias Pedagógicas para la Seguridad Hídrica – {{ie_nombre}}',
+    intro: 'Este informe recoge estrategias seleccionadas/adaptadas a partir de prioridades docentes y del repositorio basado en la metodología ecología en el patio de la escuela.',
     estructura: {
       parte_1: ['portada','introduccion','estrategia_1','estrategia_2'],
       parte_2: ['estrategia_3','estrategia_4'],
       parte_3: ['estrategia_5','estrategia_6']
     },
     insumos_para_a5: [
-      'Competencias y capacidades vinculadas',
-      'Recursos TIC identificados',
-      'Momentos pedagógicos sugeridos'
+      'Situación significativa (borrador)',
+      'Recursos/ambientes y riesgos',
+      'Productos esperados y evidencias',
+      'Vínculos con PCI/PEI/PAT'
     ]
   }
 };
