@@ -143,6 +143,25 @@ const Acelerador4 = () => {
         existingSession = newSession;
       }
 
+      // Cache APP_CONFIG_A4 into session_data.app_config (once)
+      try {
+        let appConfig = (existingSession as any).session_data?.app_config;
+        if (!appConfig) {
+          const cfg = await getAppConfig<any>("APP_CONFIG_A4");
+          if (!cfg) {
+            toast({ title: "APP_CONFIG_A4 no encontrada", description: "Usando configuración por defecto (demo)" });
+            appConfig = { estrategias_repo: { items: [] }, plantilla_informe_ac4: null };
+          } else {
+            appConfig = cfg.data;
+          }
+          const newData = { ...((existingSession as any).session_data || {}), app_config: appConfig };
+          await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', (existingSession as any).id);
+          (existingSession as any).session_data = newData;
+        }
+      } catch (e) {
+        console.error('Error caching APP_CONFIG_A4:', e);
+      }
+
       setSession(existingSession as Session);
       setCurrentStep(existingSession.current_step);
     } catch (error) {
