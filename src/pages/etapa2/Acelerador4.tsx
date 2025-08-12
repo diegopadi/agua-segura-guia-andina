@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, BookOpen, UploadCloud, MapPin, Wand2, MessageCircle, HelpCircle, FileText, CheckCircle, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, UploadCloud, MapPin, Wand2, MessageCircle, HelpCircle, FileText, CheckCircle, Clock, RefreshCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,6 +104,7 @@ const Acelerador4 = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -222,6 +223,27 @@ const Acelerador4 = () => {
       current_step: prev
     };
     updateSession(updatedSession);
+  };
+
+  const handleRefreshConfig = async () => {
+    if (!session) return;
+    try {
+      setRefreshing(true);
+      const cfg = await getAppConfig<any>("APP_CONFIG_A4");
+      const newAppConfig = cfg?.data ?? { estrategias_repo: { items: [] }, plantilla_informe_ac4: null };
+      const updatedSession = {
+        ...session,
+        // Keep current step as-is
+        session_data: { ...(session.session_data || {}), app_config: newAppConfig }
+      };
+      await updateSession(updatedSession);
+      toast({ title: "Configuración recargada" });
+    } catch (e) {
+      console.error("Error refreshing APP_CONFIG_A4", e);
+      toast({ title: "Error", description: "No se pudo recargar la configuración", variant: "destructive" });
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const getStepStatus = (stepNumber: number) => {
@@ -416,10 +438,16 @@ const Acelerador4 = () => {
             </p>
           </div>
         </div>
-        <Badge variant="outline" className="gap-2">
-          <Clock className="w-4 h-4" />
-          En desarrollo
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefreshConfig} disabled={refreshing}>
+            <RefreshCcw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+            Actualizar configuración
+          </Button>
+          <Badge variant="outline" className="gap-2">
+            <Clock className="w-4 h-4" />
+            En desarrollo
+          </Badge>
+        </div>
       </div>
 
       {/* Progress Steps */}
