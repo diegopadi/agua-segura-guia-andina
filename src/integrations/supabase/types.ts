@@ -56,6 +56,30 @@ export type Database = {
         }
         Relationships: []
       }
+      app_configs: {
+        Row: {
+          data: Json
+          key: string
+          updated_at: string
+          updated_by: string | null
+          version: string
+        }
+        Insert: {
+          data?: Json
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Update: {
+          data?: Json
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       diagnostic_reports: {
         Row: {
           created_at: string
