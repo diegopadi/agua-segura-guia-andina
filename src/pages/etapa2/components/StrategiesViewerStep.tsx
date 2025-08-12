@@ -174,7 +174,7 @@ export const StrategiesViewerStep = ({
       if (!hasBeenRefined) {
         const payload = sessionData?.suggestion_payload || { prioridades: sessionData?.priorities || [], contexto: sessionData?.contexto };
         const reselected = getRepoStrategies(payload, true);
-        console.log('[A4] Chat refinement: reselección desde repo (sin IA).');
+        console.log('[A4] Chat refinement: reselección desde repo (sin IA) — reselected = getRepoStrategies(...)');
         const refined = { source: 'repo', strategies: reselected };
         setResult(refined);
         setHasBeenRefined(true);
@@ -422,7 +422,7 @@ export const StrategiesViewerStep = ({
             </Button>
             <Button onClick={handleAnalysis} variant="outline" size="sm">
               <RefreshCw className="w-4 h-4 mr-2" />
-              Regenerar
+              {result ? 'Regenerar' : 'Sugerir estrategias'}
             </Button>
           </div>
 

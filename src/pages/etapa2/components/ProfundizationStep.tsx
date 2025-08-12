@@ -48,6 +48,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
       const fixed = buildFixedQuestions(baseStrategies);
       setQuestions(fixed);
       setQuestionsGenerated(true);
+      console.log(`[A4][Profundization] Prepared ${fixed.length} questions for ${baseStrategies.length} strategies (3 c/u)`);
       if (sessionData?.profundization_responses) {
         setResponses(sessionData.profundization_responses_flat || {});
       }
@@ -77,7 +78,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
       setQuestionsGenerated(true);
       const updatedData = { ...sessionData, profundization_questions: fixed };
       onUpdateSession(updatedData);
-      console.log('[A4][Profundization] Prepared', fixed.length, 'questions for', baseStrategies.length, 'strategies (3 c/u).');
+      console.log(`[A4][Profundization] Prepared ${fixed.length} questions for ${baseStrategies.length} strategies (3 c/u)`);
       toast.success('Preguntas preparadas');
     } catch (error: any) {
       console.error('Error generating questions:', error);
@@ -264,13 +265,13 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No se pudieron generar las preguntas de profundización.</p>
+              <p className="text-muted-foreground">Prepara las preguntas de profundización para cada estrategia.</p>
               <Button 
                 variant="outline" 
                 onClick={generateQuestions}
                 className="mt-4"
               >
-                Reintentar
+                Preparar preguntas
               </Button>
             </div>
           )}
@@ -288,7 +289,12 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
               try {
                 setLoading(true);
                 const baseStrategies = sessionData?.strategies_result?.strategies || [];
-                console.log('[A4][Profundization] Adapting strategies (repo-based). count:', baseStrategies.length, 'hasResponses:', !!sessionData?.profundization_responses);
+                const payloadSummary = {
+                  strategies: baseStrategies.length,
+                  responses: Object.keys(sessionData?.profundization_responses || {}).length,
+                  contexto: Object.keys(sessionData?.contexto || {}).length,
+                };
+                console.log('[A4][Profundization] Adapt payload:', payloadSummary);
                 const { data, error } = await supabase.functions.invoke('adapt-ac4-strategies', {
                   body: {
                     session_id: sessionId,

@@ -51,48 +51,63 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
     setError(null);
     try {
       if (!sessionId || !sessionData) throw new Error('Faltan datos requeridos');
-      const strategies = sessionData?.strategies_adapted?.strategies || sessionData?.strategies_result?.strategies || [];
-      const sourceUsed = sessionData?.strategies_adapted?.strategies ? 'adapted' : 'result';
+
+      const usedAdapted = Array.isArray(sessionData?.strategies_adapted?.strategies) && sessionData.strategies_adapted.strategies.length > 0;
+      const strategies = usedAdapted ? sessionData.strategies_adapted.strategies : (sessionData?.strategies_result?.strategies || []);
+      const sourceUsed = usedAdapted ? 'adapted' : 'result';
       const plantilla = sessionData?.app_config?.plantilla_informe_ac4 || {};
-      console.log('[A4] Report: usando estrategias', sourceUsed, 'cantidad', strategies.length, 'plantilla título:', plantilla?.titulo);
+      const estructura = plantilla?.estructura || {};
+
+      const mapping = [
+        ...(estructura.parte_1 || ['portada','introduccion','estrategia_1','estrategia_2']),
+        ...(estructura.parte_2 || ['estrategia_3','estrategia_4']),
+        ...(estructura.parte_3 || ['estrategia_5','estrategia_6'])
+      ];
+      console.log(`[A4] Report: fuente=${sourceUsed}; partes=3; mapping=${JSON.stringify(mapping)}`);
+      console.log('[A4] Report: usando plantilla_informe_ac4 de app_config');
+
       if (strategies.length === 0) throw new Error('No hay estrategias seleccionadas');
 
-      const resumen = `Informe de estrategias metodológicas adaptadas. Total: ${strategies.length}.`;
-      const estrategiasHtml = strategies.map((s: any, i: number) => `
-        <article>
-          <h3>${i+1}. ${s.title || s.nombre || 'Estrategia'}</h3>
-          <p>${s.description || s.descripcion || ''}</p>
-          <p><small>${s.reference || 'MINEDU - Currículo Nacional'}</small></p>
-        </article>
-      `).join('\n');
+      const renderToken = (token: string) => {
+        const t = (token || '').toLowerCase();
+        if (t === 'portada') {
+          return `<section><h1>${plantilla.titulo || 'Informe de Estrategias (AC4)'}</h1><p>${new Date().toLocaleDateString()}</p></section>`;
+        }
+        if (t === 'introduccion') {
+          return `<section><h2>Introducción</h2><p>${plantilla.intro || ''}</p></section>`;
+        }
+        if (t.startsWith('estrategia_')) {
+          const n = parseInt(t.split('_')[1], 10);
+          if (!isNaN(n) && n >= 1 && n <= 6 && strategies[n-1]) {
+            const s = strategies[n-1];
+            return `<article><h3>${n}. ${s.title || s.nombre || 'Estrategia'}</h3><p>${s.description || s.descripcion || ''}</p><p><small>${s.reference || 'MINEDU - Currículo Nacional'}</small></p></article>`;
+          }
+        }
+        return '';
+      };
 
-      const insumosA5 = `
-        <section>
-          <h2>Insumos para A5</h2>
-          <ul>
-            <li>Competencias y capacidades vinculadas</li>
-            <li>Recursos TIC identificados</li>
-            <li>Momentos pedagógicos sugeridos</li>
-          </ul>
-        </section>
-      `;
+      const partHtml = (tokens: string[] = [], idx: number) => {
+        const content = tokens.map(renderToken).join('\n');
+        return `<section><h2>Parte ${idx}</h2>\n${content}\n</section>`;
+      };
 
-      const html = `
-        <section>
-          <h2>${plantilla.titulo || 'Informe de Estrategias (AC4)'}</h2>
-          <p>${plantilla.intro || ''}</p>
-        </section>
-        <section>
-          <h2>Resumen</h2>
-          <p>${resumen}</p>
-        </section>
-        <section>
-          <h2>Estrategias Seleccionadas</h2>
-          ${estrategiasHtml}
-        </section>
-        ${insumosA5}
-      `;
+      const parte1 = partHtml(estructura.parte_1 || ['portada','introduccion','estrategia_1','estrategia_2'], 1);
+      const parte2 = partHtml(estructura.parte_2 || ['estrategia_3','estrategia_4'], 2);
+      const parte3 = partHtml(estructura.parte_3 || ['estrategia_5','estrategia_6'], 3);
 
+      const insumosList = Array.isArray(plantilla?.insumos_para_a5)
+        ? plantilla.insumos_para_a5
+        : [
+            'Competencias y capacidades vinculadas',
+            'Recursos TIC identificados',
+            'Momentos pedagógicos sugeridos',
+          ];
+
+      const insumosA5 = `<section><h2>Insumos para A5</h2><ul>${insumosList.map((i: string) => `<li>${i}</li>`).join('')}</ul></section>`;
+
+      const html = `${parte1}\n${parte2}\n${parte3}\n${insumosA5}`;
+
+      const resumen = `Informe de estrategias metodológicas. Total: ${strategies.length}.`;
       const wordCount = html.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
       const data = { success: true, html_content: html, summary: resumen, strategies_count: strategies.length, word_count: wordCount };
       setReport(data);
