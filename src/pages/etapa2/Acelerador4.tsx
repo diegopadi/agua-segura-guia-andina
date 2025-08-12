@@ -16,6 +16,7 @@ import { InteractiveChatStep } from './components/InteractiveChatStep';
 import { ReportViewerStep } from './components/ReportViewerStep';
 import { WelcomeWithPrioritiesStep } from './components/WelcomeWithPrioritiesStep';
 import { StrategiesViewerStep } from './components/StrategiesViewerStep';
+import { getAppConfig } from "@/integrations/supabase/appConfig";
 
 interface Session {
   id: string;
@@ -26,6 +27,8 @@ interface Session {
   created_at: string;
   updated_at: string;
 }
+
+interface AppConfig { estrategias_repo?: { items: any[] }; plantilla_informe_ac4?: any; }
 
 const steps = [
   {

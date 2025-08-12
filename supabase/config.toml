@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.generate-priority-report]
 verify_jwt = false
+
+[functions.adapt-ac4-strategies]
+verify_jwt = true

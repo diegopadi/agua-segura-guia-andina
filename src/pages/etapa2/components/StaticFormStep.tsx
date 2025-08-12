@@ -76,6 +76,18 @@ export const StaticFormStep: React.FC<StaticFormStepProps> = ({
 
   const handleNext = () => {
     if (validateForm()) {
+      const contexto = {
+        tipo_aula: formData[1] || '',
+        modalidad: formData[2] || '',
+        recursos_tic: formData[3] || '',
+      };
+      const prioridades = Array.isArray(sessionData?.priorities) ? sessionData.priorities : [];
+      onUpdateSessionData({
+        ...sessionData,
+        context_data: formData,
+        contexto,
+        suggestion_payload: { prioridades, contexto },
+      });
       onNext();
     }
   };

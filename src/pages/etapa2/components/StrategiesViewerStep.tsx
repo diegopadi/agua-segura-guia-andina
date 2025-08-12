@@ -97,43 +97,54 @@ export const StrategiesViewerStep = ({
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
+  // Select 6 strategies from repo based on priorities and recursos_tic
+  const scoreItem = (item: any, payload: any) => {
+    const priors = (payload?.prioridades || []).map((p: any) => (p.title || '').toLowerCase());
+    const tic = (payload?.contexto?.recursos_tic || '').toLowerCase();
+    let score = 0;
+    const haystack = `${(item.title||'')}. ${(item.description||'')}. ${(item.tags||[]).join(' ')}`.toLowerCase();
+    priors.forEach((t: string) => { if (t && haystack.includes(t)) score += 2; });
+    if (tic) {
+      if (Array.isArray(item.recursos_tic)) {
+        item.recursos_tic.forEach((r: string) => { if (tic.includes((r||'').toLowerCase())) score += 1; });
+      } else if (haystack.includes('tic') || haystack.includes('digital')) {
+        score += 1;
+      }
+    }
+    return score;
+  };
+
+  const getRepoStrategies = (payload: any, diversify = false) => {
+    const repoItems: any[] = sessionData?.app_config?.estrategias_repo?.items || [];
+    if (!repoItems.length) return [];
+    const scored = repoItems
+      .map((it, idx) => ({ item: it, idx, s: scoreItem(it, payload) + (diversify ? (Math.random()*0.5) : 0) }))
+      .sort((a,b) => b.s - a.s)
+      .map(x => x.item);
+    const pick = scored.slice(0, 6);
+    // Ensure exactly 6
+    while (pick.length < 6 && scored[pick.length]) pick.push(scored[pick.length]);
+    return pick.slice(0,6);
+  };
+
   const handleAnalysis = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const { data, error } = await supabase.functions.invoke('generate-strategies-ac4', {
-        body: {
-          session_id: sessionId,
-          session_data: sessionData,
-          template_id: step.template_id
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        setResult(data.result);
-        onUpdateSessionData({
-          ...sessionData,
-          strategies_result: data.result
-        });
-        
-        toast({
-          title: "Éxito",
-          description: "Estrategias generadas correctamente",
-        });
-      } else {
-        throw new Error(data.error || 'Error desconocido');
+      const payload = sessionData?.suggestion_payload || { prioridades: sessionData?.priorities || [], contexto: sessionData?.contexto };
+      const selected = getRepoStrategies(payload);
+      if (!selected.length) {
+        setError('Repositorio vacío. Configura estrategias en APP_CONFIG_A4 (admin).');
+        toast({ title: 'Repositorio vacío', description: 'Configura APP_CONFIG_A4 para continuar. Usando modo demo.' });
       }
-    } catch (error) {
-      console.error('Error generating strategies:', error);
-      setError('Error al generar las estrategias');
-      toast({
-        title: "Error",
-        description: "No se pudieron generar las estrategias",
-        variant: "destructive",
-      });
+      const resultObj = { source: 'repo', strategies: selected };
+      setResult(resultObj);
+      onUpdateSessionData({ ...sessionData, strategies_result: resultObj });
+      toast({ title: 'Listo', description: 'Estrategias seleccionadas desde el repositorio.' });
+    } catch (e) {
+      console.error(e);
+      setError('Error al seleccionar estrategias del repositorio');
+      toast({ title: 'Error', description: 'No fue posible seleccionar estrategias', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -155,55 +166,24 @@ export const StrategiesViewerStep = ({
     setChatLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('chat-strategies-refinement', {
-        body: {
-          session_id: sessionId,
-          message: newMessage.content,
-          chat_history: [...chatMessages, newMessage],
-          session_data: sessionData,
-          template_id: step.template_id,
-          refinement_used: hasBeenRefined
-        }
-      });
-
-      if (error) throw error;
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.response,
-        timestamp: Date.now()
-      };
-
-      setChatMessages(prev => [...prev, assistantMessage]);
-
-      // Update strategies if refinements were made
-      if (data.refined_result && !hasBeenRefined) {
-        setResult(data.refined_result);
+      let assistantText = '';
+      if (!hasBeenRefined) {
+        const payload = sessionData?.suggestion_payload || { prioridades: sessionData?.priorities || [], contexto: sessionData?.contexto };
+        const reselected = getRepoStrategies(payload, true);
+        const refined = { source: 'repo', strategies: reselected };
+        setResult(refined);
         setHasBeenRefined(true);
-        
-        const updatedSessionData = {
-          ...sessionData,
-          strategies_result: data.refined_result,
-          refinement_used: true,
-          chat_history: [...chatMessages, newMessage, assistantMessage]
-        };
-        
+        const updatedSessionData = { ...sessionData, strategies_result: refined, refinement_used: true, chat_history: [...chatMessages, newMessage] };
         onUpdateSessionData(updatedSessionData);
-
-        toast({
-          title: "Estrategias Refinadas",
-          description: "Las estrategias han sido actualizadas con tus modificaciones",
-        });
+        assistantText = 'He reajustado el orden/conjunto de estrategias desde el repositorio según tu indicación. Recuerda que solo se permite un refinamiento.';
+      } else {
+        assistantText = 'Ya usaste tu refinamiento único. Puedes continuar o ajustar manualmente.';
       }
-
-    } catch (error) {
-      console.error('Error in chat:', error);
-      toast({
-        title: "Error",
-        description: "Error en la conversación",
-        variant: "destructive",
-      });
+      const assistantMessage: Message = { id: (Date.now()+1).toString(), role: 'assistant', content: assistantText, timestamp: Date.now() };
+      setChatMessages(prev => [...prev, assistantMessage]);
+    } catch (e) {
+      console.error('Error in local refinement:', e);
+      toast({ title: 'Error', description: 'No fue posible refinar', variant: 'destructive' });
     } finally {
       setChatLoading(false);
     }
@@ -442,7 +422,24 @@ export const StrategiesViewerStep = ({
 
           {/* Interactive Strategies Display */}
           <div className="space-y-4">
-            {result?.html_content ? (
+            {result?.strategies ? (
+              <StrategiesAccordion 
+                strategies={(function(){
+                  const list = result.strategies as any[];
+                  const byMoment = { inicio: [], desarrollo: [], cierre: [] } as any;
+                  if (list && list.length) {
+                    list.forEach((s, i) => {
+                      const m = (s.momento || (i<2?'inicio': i<4?'desarrollo':'cierre')).toLowerCase();
+                      const entry = { title: s.title || s.nombre || `Estrategia ${i+1}`, description: s.description || s.descripcion || '', reference: s.reference || 'MINEDU - Currículo Nacional' };
+                      if (m.includes('inicio')) byMoment.inicio.push(entry);
+                      else if (m.includes('desarrollo')) byMoment.desarrollo.push(entry);
+                      else byMoment.cierre.push(entry);
+                    });
+                  }
+                  return byMoment;
+                })()}
+              />
+            ) : result?.html_content ? (
               <StrategiesAccordion 
                 strategies={parseStrategies(result.html_content)}
               />

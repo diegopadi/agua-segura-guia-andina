@@ -42,86 +42,45 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
   const [questionsGenerated, setQuestionsGenerated] = useState(false);
 
   useEffect(() => {
-    // Check if questions are already generated
-    if (sessionData?.profundization_questions?.length > 0) {
-      const normalizedQuestions = normalizeQuestions(sessionData.profundization_questions);
-      setQuestions(normalizedQuestions);
+    // Base strategies (adapted if available, else selected)
+    const baseStrategies = sessionData?.strategies_adapted?.strategies || sessionData?.strategies_result?.strategies || [];
+    if (baseStrategies.length > 0) {
+      const fixed = buildFixedQuestions(baseStrategies);
+      setQuestions(fixed);
       setQuestionsGenerated(true);
-      
-      // Load existing responses if any
       if (sessionData?.profundization_responses) {
-        setResponses(sessionData.profundization_responses);
+        setResponses(sessionData.profundization_responses_flat || {});
       }
     } else {
-      generateQuestions();
+      setQuestions([]);
+      setQuestionsGenerated(false);
     }
   }, [sessionId]);
 
-  const normalizeQuestions = (rawQuestions: any[]): Question[] => {
-    return rawQuestions.map((item, index) => {
-      // Handle if question is a string
-      if (typeof item === 'string') {
-        const enfoques = ['pertinencia', 'viabilidad', 'complejidad'];
-        return {
-          id: index + 1,
-          enfoque: enfoques[index % 3],
-          pregunta: item
-        };
-      }
-      
-      // Handle if question is already an object
-      return {
-        id: item.id || index + 1,
-        enfoque: item.enfoque || 'pertinencia',
-        pregunta: item.pregunta || item.question || item
-      };
-    }).filter(q => q.pregunta && q.pregunta.trim().length > 0);
+  const buildFixedQuestions = (strategies: any[]): Question[] => {
+    const qs: Question[] = [];
+    let idCounter = 1;
+    strategies.slice(0,6).forEach((_s, idx) => {
+      qs.push({ id: idCounter++, enfoque: 'pertinencia', pregunta: `E${idx+1}. ¿Cómo asegurar pertinencia cultural/contextual para esta estrategia?` });
+      qs.push({ id: idCounter++, enfoque: 'viabilidad', pregunta: `E${idx+1}. ¿Qué recursos (TIC y no TIC) concretos usarás y cómo los garantizarás?` });
+      qs.push({ id: idCounter++, enfoque: 'complejidad', pregunta: `E${idx+1}. ¿Qué ajustes harás para el nivel de complejidad y andamiajes?` });
+    });
+    return qs;
   };
 
   const generateQuestions = async () => {
     try {
       setLoading(true);
-      console.log('Generating profundization questions...');
-
-      const { data, error } = await supabase.functions.invoke('generate-profundization-questions', {
-        body: {
-          session_id: sessionId,
-          session_data: sessionData,
-          template_id: step.template_id
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Error generating questions');
-      }
-
-      if (!data.success || !data.questions) {
-        console.error('Invalid response from questions generator:', data);
-        throw new Error('Invalid response from questions generator');
-      }
-
-      const normalizedQuestions = normalizeQuestions(data.questions);
-      
-      if (normalizedQuestions.length === 0) {
-        throw new Error('No valid questions generated');
-      }
-      
-      setQuestions(normalizedQuestions);
+      const baseStrategies = sessionData?.strategies_adapted?.strategies || sessionData?.strategies_result?.strategies || [];
+      const fixed = buildFixedQuestions(baseStrategies);
+      setQuestions(fixed);
       setQuestionsGenerated(true);
-
-      // Save questions to session
-      const updatedData = {
-        ...sessionData,
-        profundization_questions: data.questions,
-        profundization_context: data.context
-      };
-
+      const updatedData = { ...sessionData, profundization_questions: fixed };
       onUpdateSession(updatedData);
-      toast.success('Preguntas de profundización generadas exitosamente');
-
-    } catch (error) {
+      toast.success('Preguntas preparadas');
+    } catch (error: any) {
       console.error('Error generating questions:', error);
-      toast.error('Error al generar las preguntas: ' + error.message);
+      toast.error('Error al preparar preguntas');
     } finally {
       setLoading(false);
     }
@@ -130,50 +89,14 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
   const regenerateQuestions = async () => {
     try {
       setRegenerating(true);
-      console.log('Regenerating profundization questions...');
-
-      // Clear existing responses
       setResponses({});
-      
-      const { data, error } = await supabase.functions.invoke('generate-profundization-questions', {
-        body: {
-          session_id: sessionId,
-          session_data: sessionData,
-          template_id: step.template_id
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Error regenerating questions');
-      }
-
-      if (!data.success || !data.questions) {
-        console.error('Invalid response from questions generator:', data);
-        throw new Error('Invalid response from questions generator');
-      }
-
-      const normalizedQuestions = normalizeQuestions(data.questions);
-      
-      if (normalizedQuestions.length === 0) {
-        throw new Error('No valid questions generated');
-      }
-      
-      setQuestions(normalizedQuestions);
-
-      // Save new questions to session and clear old responses
-      const updatedData = {
-        ...sessionData,
-        profundization_questions: data.questions,
-        profundization_responses: {},
-        profundization_context: data.context
-      };
-
+      await generateQuestions();
+      const updatedData = { ...sessionData, profundization_responses: {}, profundization_responses_flat: {} };
       onUpdateSession(updatedData);
       toast.success('Preguntas regeneradas exitosamente');
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error regenerating questions:', error);
-      toast.error('Error al regenerar las preguntas: ' + error.message);
+      toast.error('Error al regenerar las preguntas');
     } finally {
       setRegenerating(false);
     }
@@ -182,12 +105,17 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
   const handleResponseChange = (questionId: number, response: string) => {
     const newResponses = { ...responses, [questionId]: response };
     setResponses(newResponses);
-    
-    // Save responses to session data immediately
-    const updatedData = {
-      ...sessionData,
-      profundization_responses: newResponses
-    };
+    // Build structured responses grouped by strategy index
+    const structured: any = {};
+    Object.entries(newResponses).forEach(([qid, text]) => {
+      const q = questions.find(q => q.id === Number(qid));
+      if (!q) return;
+      const strategyIdx = Math.ceil(Number(qid) / 3); // 3 preguntas por estrategia
+      const enfoque = q.enfoque;
+      if (!structured[strategyIdx]) structured[strategyIdx] = { pertinencia: '', viabilidad: '', complejidad: '' };
+      structured[strategyIdx][enfoque] = text;
+    });
+    const updatedData = { ...sessionData, profundization_responses: structured, profundization_responses_flat: newResponses };
     onUpdateSession(updatedData);
   };
 
@@ -336,16 +264,47 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
+      <div className="flex justify-between gap-2 flex-wrap">
         <Button variant="outline" onClick={onPrev}>
           Anterior
         </Button>
-        <Button 
-          onClick={onNext}
-          disabled={!canProceed()}
-        >
-          Siguiente
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="secondary"
+            onClick={async () => {
+              try {
+                setLoading(true);
+                const baseStrategies = sessionData?.strategies_result?.strategies || [];
+                const { data, error } = await supabase.functions.invoke('adapt-ac4-strategies', {
+                  body: {
+                    session_id: sessionId,
+                    strategies: baseStrategies,
+                    responses: sessionData?.profundization_responses,
+                    contexto: sessionData?.contexto,
+                  }
+                });
+                if (error) throw error;
+                const adapted = { source: 'adapted', strategies: data?.strategies || baseStrategies };
+                onUpdateSession({ ...sessionData, strategies_adapted: adapted });
+                toast.success('Estrategias adaptadas con tus respuestas');
+              } catch (e: any) {
+                console.error(e);
+                toast.error('No se pudo adaptar las estrategias');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={!canProceed()}
+          >
+            Adaptar estrategias
+          </Button>
+          <Button 
+            onClick={onNext}
+            disabled={!canProceed()}
+          >
+            Siguiente
+          </Button>
+        </div>
       </div>
     </div>
   );

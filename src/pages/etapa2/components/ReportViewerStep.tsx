@@ -49,64 +49,57 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
     console.log('generateReport called');
     setGeneratingReport(true);
     setError(null);
-    
     try {
-      // Validate required data
-      if (!sessionId || !sessionData || !step.template_id) {
-        throw new Error('Faltan datos requeridos para generar el informe');
-      }
+      if (!sessionId || !sessionData) throw new Error('Faltan datos requeridos');
+      const strategies = sessionData?.strategies_adapted?.strategies || sessionData?.strategies_result?.strategies || [];
+      const plantilla = sessionData?.app_config?.plantilla_informe_ac4 || {};
+      if (strategies.length === 0) throw new Error('No hay estrategias seleccionadas');
 
-      console.log('Invoking generate-strategies-report with:', {
-        session_id: sessionId,
-        session_data: sessionData,
-        template_id: step.template_id
-      });
+      const resumen = `Informe de estrategias metodológicas adaptadas. Total: ${strategies.length}.`;
+      const estrategiasHtml = strategies.map((s: any, i: number) => `
+        <article>
+          <h3>${i+1}. ${s.title || s.nombre || 'Estrategia'}</h3>
+          <p>${s.description || s.descripcion || ''}</p>
+          <p><small>${s.reference || 'MINEDU - Currículo Nacional'}</small></p>
+        </article>
+      `).join('\n');
 
-      const { data, error } = await supabase.functions.invoke('generate-strategies-report', {
-        body: {
-          session_id: sessionId,
-          session_data: sessionData,
-          template_id: step.template_id
-        }
-      });
+      const insumosA5 = `
+        <section>
+          <h2>Insumos para A5</h2>
+          <ul>
+            <li>Competencias y capacidades vinculadas</li>
+            <li>Recursos TIC identificados</li>
+            <li>Momentos pedagógicos sugeridos</li>
+          </ul>
+        </section>
+      `;
 
-      console.log('Edge function response:', { data, error });
+      const html = `
+        <section>
+          <h2>${plantilla.titulo || 'Informe de Estrategias (AC4)'}</h2>
+          <p>${plantilla.intro || ''}</p>
+        </section>
+        <section>
+          <h2>Resumen</h2>
+          <p>${resumen}</p>
+        </section>
+        <section>
+          <h2>Estrategias Seleccionadas</h2>
+          ${estrategiasHtml}
+        </section>
+        ${insumosA5}
+      `;
 
-      if (error) throw error;
-
-      if (!data || !data.success) {
-        throw new Error(data?.error || 'La función no devolvió un resultado válido');
-      }
-
-      console.log('Report generated successfully:', data);
+      const wordCount = html.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
+      const data = { success: true, html_content: html, summary: resumen, strategies_count: strategies.length, word_count: wordCount };
       setReport(data);
-      onUpdateSessionData({
-        ...sessionData,
-        final_report: data
-      });
-
-      // Mark accelerator as completed but keep current_step at 5 (max step)
-      await supabase
-        .from('acelerador_sessions')
-        .update({ 
-          status: 'completed',
-          current_step: 5 
-        })
-        .eq('id', sessionId);
-
-      toast({
-        title: regenerating ? "Informe regenerado exitosamente" : "Informe generado exitosamente",
-        description: "El informe de estrategias metodológicas ha sido creado."
-      });
-
+      onUpdateSessionData({ ...sessionData, final_report: data });
+      toast({ title: regenerating ? 'Informe regenerado' : 'Informe generado', description: 'Se construyó con la plantilla de APP_CONFIG_A4' });
     } catch (error: any) {
       console.error('Error generating report:', error);
-      setError(error.message || "Hubo un problema al generar el informe.");
-      toast({
-        title: "Error al generar informe",
-        description: error.message || "Hubo un problema al generar el informe.",
-        variant: "destructive"
-      });
+      setError(error.message || 'Hubo un problema al generar el informe.');
+      toast({ title: 'Error al generar informe', description: error.message || 'Hubo un problema al generar el informe.', variant: 'destructive' });
     } finally {
       setGeneratingReport(false);
       setRegenerating(false);
