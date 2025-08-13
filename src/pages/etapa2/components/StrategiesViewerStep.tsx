@@ -95,8 +95,8 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
     return by;
   }, [repoItems]);
 
+  // Selección global hasta 5 (preserva el orden de selección)
   const MAX_SELECTION = 5;
-
   const initialSelectedIds = useMemo<string[]>(() => {
     const saved = sessionData?.strategies_result?.strategies || sessionData?.strategies_selected || [];
     const ids = (saved || []).map((s: any) => s.id).filter(Boolean);
@@ -104,9 +104,7 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
   }, [sessionData?.strategies_result, sessionData?.strategies_selected]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
-
   const canToggle = (id: string) => selectedIds.includes(id) || selectedIds.length < MAX_SELECTION;
-
   const toggleId = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
       if (checked) {
@@ -174,6 +172,7 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
       description: `Se cargaron ${defaults.length} estrategias (18 totales).`,
     });
   };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -189,41 +188,42 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
             </Button>
           </div>
           <CardDescription>
-            Selecciona 2 estrategias por cada momento (Inicio, Desarrollo y Cierre). Todas provienen del libro EEPE: "Enseñanza de Ecología en el Patio de la Escuela".
+            Selecciona hasta 5 estrategias del repositorio EEPE (agrupadas por tipo).
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-3">
-            {moments.map((m) => (
-              <div key={m} className="rounded-lg border">
+          <p className="text-sm text-muted-foreground mb-4">Seleccionadas: {selectedIds.length}/{MAX_SELECTION}</p>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {TYPE_KEYS.map((k) => (
+              <div key={k} className="rounded-lg border">
                 <div className="p-4 flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium">{momentTitle[m]}</h3>
+                    <h3 className="font-medium">{TYPE_LABELS[k]}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Selecciona 2 ({selectedByMoment[m].size}/2)
+                      {groupedByType[k].length} disponibles
                     </p>
                   </div>
-                  <Badge variant={selectedByMoment[m].size === 2 ? "default" : "secondary"}>
-                    {selectedByMoment[m].size === 2 ? "Listo" : "Pendiente"}
+                  <Badge variant={selectedIds.some(id => (groupedByType[k] || []).some(it => it.id === id)) ? "default" : "secondary"}>
+                    {selectedIds.filter(id => (groupedByType[k] || []).some(it => it.id === id)).length} seleccionada(s)
                   </Badge>
                 </div>
                 <Separator />
                 <ScrollArea className="h-[360px]">
                   <div className="p-3 space-y-3">
-                    {(grouped[m] || []).map((it) => {
-                      const checked = selectedByMoment[m].has(it.id);
-                      const disabled = !checked && selectedByMoment[m].size >= 2;
+                    {(groupedByType[k] || []).map((it) => {
+                      const checked = selectedIds.includes(it.id);
+                      const disabled = !checked && selectedIds.length >= MAX_SELECTION;
                       return (
                         <div key={it.id} className={`p-3 rounded-md border transition-colors ${checked ? "border-primary bg-primary/5" : "hover:border-muted-foreground/40"}`}>
                           <div className="flex items-start gap-3">
                             <Checkbox
-                              id={`${m}-${it.id}`}
+                              id={`${k}-${it.id}`}
                               checked={checked}
                               disabled={disabled}
-                              onCheckedChange={(c) => toggle(m, it.id, Boolean(c))}
+                              onCheckedChange={(c) => toggleId(it.id, Boolean(c))}
                             />
                             <div className="flex-1">
-                              <label htmlFor={`${m}-${it.id}`} className="font-medium cursor-pointer">
+                              <label htmlFor={`${k}-${it.id}`} className="font-medium cursor-pointer">
                                 {it.nombre || "Estrategia"}
                               </label>
                               <p className="text-sm text-muted-foreground mt-1">
@@ -244,9 +244,9 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
                         </div>
                       );
                     })}
-                    {grouped[m]?.length === 0 && (
+                    {groupedByType[k]?.length === 0 && (
                       <p className="text-sm text-muted-foreground p-3">
-                        No hay estrategias configuradas para este momento.
+                        No hay estrategias configuradas para esta categoría.
                       </p>
                     )}
                   </div>
