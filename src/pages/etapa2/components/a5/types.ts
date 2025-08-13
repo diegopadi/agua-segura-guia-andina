@@ -49,3 +49,24 @@ export interface A5MaterialItem {
 export interface A5MaterialsData {
   materiales: A5MaterialItem[];
 }
+
+// A4 recovered inputs to be used across A5
+export interface A4PriorityData {
+  id: string;
+  title: string;
+  description: string;
+  impact_score: number;
+  feasibility_score: number;
+}
+
+export interface A4StrategyData {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export interface A4Inputs {
+  priorities: A4PriorityData[];
+  strategies: A4StrategyData[];
+  source: 'adapted' | 'result' | 'selected' | 'unknown';
+}
