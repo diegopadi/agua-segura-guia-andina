@@ -123,6 +123,18 @@ export default function Acelerador5() {
               setComp(sd.comp as A5CompetenciesData);
             }
 
+            if (sd.sessions) {
+              setSessions(sd.sessions as A5SessionsStructureData);
+            }
+
+            if (sd.feedback) {
+              setFeedback(sd.feedback as A5FeedbackData);
+            }
+
+            if (sd.materials) {
+              setMaterials(sd.materials as A5MaterialsData);
+            }
+
             if (sd.ua_vars) {
               setUaVars(sd.ua_vars as Record<string, string>);
             }
@@ -200,6 +212,60 @@ export default function Acelerador5() {
     };
   }, [comp, sessionId, user?.id, hydrated]);
 
+  // Debounced autosave for Step 5 sessions
+  useEffect(() => {
+    if (!hydrated) return;
+
+    if (!user || !sessionId) return;
+
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(async () => {
+      const newData = { ...sessionData, sessions };
+      setSessionData(newData);
+      await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', sessionId);
+    }, 700);
+
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, [sessions, sessionId, user?.id, hydrated]);
+
+  // Debounced autosave for Step 6 feedback
+  useEffect(() => {
+    if (!hydrated) return;
+
+    if (!user || !sessionId) return;
+
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(async () => {
+      const newData = { ...sessionData, feedback };
+      setSessionData(newData);
+      await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', sessionId);
+    }, 700);
+
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, [feedback, sessionId, user?.id, hydrated]);
+
+  // Debounced autosave for Step 7 materials
+  useEffect(() => {
+    if (!hydrated) return;
+
+    if (!user || !sessionId) return;
+
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(async () => {
+      const newData = { ...sessionData, materials };
+      setSessionData(newData);
+      await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', sessionId);
+    }, 700);
+
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, [materials, sessionId, user?.id, hydrated]);
+
   const updateStep = (newStep: number) => {
     const clamped = Math.min(Math.max(newStep, 1), steps.length);
     setCurrent(clamped);
@@ -213,7 +279,7 @@ export default function Acelerador5() {
 
   const handleSaveVars = async (vars: Record<string, string>) => {
     setUaVars(vars);
-    const newData = { ...sessionData, ua_vars: vars, info };
+    const newData = { ...sessionData, ua_vars: vars, info, sessions };
     setSessionData(newData);
     try { localStorage.setItem(getDraftKey(), JSON.stringify(info)); } catch {}
     if (user && sessionId) {
