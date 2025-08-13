@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown, Info } from "lucide-react";
 import { A5CompetenciesData, A5InfoData } from "./types";
 import cnebCatalogo from "@/data/cneb_secundaria_catalogo.json";
+import { createCompetencyIndex } from "@/utils/a5-competencies";
 
 type Competencia = {
   id: string;
@@ -98,8 +99,12 @@ export default function Step4Competencies({ data, onChange, onNext, onPrev, info
       .filter(e => data.enfoques.includes(e.id))
       .map(e => ({ id: e.id, nombre: e.nombre }));
 
+    // Create competency index for name resolution
+    const compIndex = createCompetencyIndex(selectedCompetenciasData);
+
     const vars = {
       ua_competencias: JSON.stringify(selectedCompetenciasData),
+      ua_competencias_index: JSON.stringify(compIndex),
       ua_enfoques: JSON.stringify(selectedEnfoquesData)
     };
 

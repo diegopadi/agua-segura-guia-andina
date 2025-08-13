@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { A5InfoData, A5SituationPurposeData, A5CompetenciesData, A5SessionsStructureData, A5FeedbackData, A5MaterialsData } from "./types";
+import { resolveCompetenceNames, parseCompetencyIndex, CompetencyIndex } from "@/utils/a5-competencies";
 
 interface Props {
   onPrev: () => void;
@@ -146,6 +147,40 @@ export default function Step8FinalPreview({ onPrev }: Props) {
         const feedback: A5FeedbackData = sessionData.feedback || {};
         const materials: A5MaterialsData = sessionData.materials || { materiales: [] };
 
+        // Load competency index for name resolution
+        let competencyIndex: CompetencyIndex = {};
+        const compIndexString = sessionData.ua_competencias_index;
+        if (compIndexString) {
+          competencyIndex = parseCompetencyIndex(compIndexString);
+        } else {
+          // Fallback: create index from saved competencies if available
+          const competenciasData = sessionData.ua_competencias;
+          if (competenciasData) {
+            try {
+              const competencias = JSON.parse(competenciasData);
+              competencias.forEach((c: any) => {
+                if (c.id && c.nombre) {
+                  competencyIndex[c.id] = { nombre: c.nombre, capacidades: c.capacidades || [] };
+                }
+              });
+              
+              // Save the index for future use
+              await supabase
+                .from('acelerador_sessions')
+                .update({ 
+                  session_data: { 
+                    ...sessionData, 
+                    ua_competencias_index: JSON.stringify(competencyIndex) 
+                  } 
+                })
+                .eq('user_id', user.id)
+                .eq('acelerador_number', 5);
+            } catch {
+              console.warn('Could not parse competencias data for fallback index');
+            }
+          }
+        }
+
         // Check for missing critical data
         if (!info.institucion || !info.area || !info.grado) {
           missing.push("Datos informativos (Paso 2)");
@@ -162,6 +197,23 @@ export default function Step8FinalPreview({ onPrev }: Props) {
 
         setMissingData(missing);
 
+        // Process competencies with resolved names
+        const processedCompetencias = comp.competencias?.map((compId, index) => {
+          const compData = competencyIndex[compId];
+          return {
+            id: compId,
+            nombre: compData?.nombre || compId,
+            capacidades: compData?.capacidades || []
+          };
+        }) || [];
+
+        // Decorate sessions with resolved competency names
+        const sesionesDecoradas = sessions.estructura?.map((sesion) => ({
+          ...sesion,
+          competencias_string: resolveCompetenceNames(sesion.competencias, competencyIndex).join(", "),
+          capacidades_string: sesion.capacidades?.join(", ") || ""
+        })) || [];
+
         // Build master JSON document
         const masterDoc: UADocumento = {
           meta: {
@@ -176,16 +228,15 @@ export default function Step8FinalPreview({ onPrev }: Props) {
             reto: situation.reto || "",
             producto: situation.producto || ""
           },
-          competencias: comp.competencias?.map((nombre, index) => ({
-            id: `COMP${index + 1}`,
-            nombre,
-            capacidades: [] // Could be expanded if we stored detailed competency data
-          })) || [],
+          competencias: processedCompetencias,
           enfoques: comp.enfoques?.map((nombre, index) => ({
             id: `ENF${index + 1}`,
             nombre
           })) || [],
-          estructura_sesiones: sessions,
+          estructura_sesiones: {
+            ...sessions,
+            estructura: sesionesDecoradas
+          },
           retroalimentacion: feedback.feedback || "",
           materiales: materials.materiales || [],
           aprobacion: {
@@ -450,7 +501,7 @@ export default function Step8FinalPreview({ onPrev }: Props) {
                                 <strong>Cierre:</strong> {sesion.actividades.cierre}
                               </div>
                             </td>
-                            <td>{sesion.competencias?.join(", ") || "—"}</td>
+                            <td>{(sesion as any).competencias_string || "—"}</td>
                             <td>{sesion.capacidades?.join(", ") || "—"}</td>
                             <td>{sesion.recursos || "—"}</td>
                             <td>{sesion.evidencias || "—"}</td>

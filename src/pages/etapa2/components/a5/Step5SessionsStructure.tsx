@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { A5SessionsStructureData, A5SessionRow, A5InfoData, A5SituationPurposeData, A5CompetenciesData } from "./types";
 import { Loader2, RefreshCw } from "lucide-react";
+import { resolveCompetenceNames, parseCompetencyIndex } from "@/utils/a5-competencies";
 
 interface Props {
   data: A5SessionsStructureData;
@@ -36,6 +37,7 @@ export default function Step5SessionsStructure({
   const [infoData, setInfoData] = useState<A5InfoData | null>(null);
   const [situationData, setSituationData] = useState<A5SituationPurposeData | null>(null);
   const [competenciesData, setCompetenciesData] = useState<A5CompetenciesData | null>(null);
+  const [competencyIndex, setCompetencyIndex] = useState<Record<string, { nombre: string }>>({});
 
   // Load data from previous steps
   useEffect(() => {
@@ -56,6 +58,30 @@ export default function Step5SessionsStructure({
         setInfoData(sessionInfo.info || null);
         setSituationData(sessionInfo.situation || null);
         setCompetenciesData(sessionInfo.comp || null);
+
+        // Load competency index if available
+        const compIndexString = sessionInfo.ua_competencias_index;
+        if (compIndexString) {
+          const index = parseCompetencyIndex(compIndexString);
+          setCompetencyIndex(index);
+        } else {
+          // Fallback: create index from saved competencies
+          const competenciasData = sessionInfo.ua_competencias;
+          if (competenciasData) {
+            try {
+              const competencias = JSON.parse(competenciasData);
+              const fallbackIndex: Record<string, { nombre: string }> = {};
+              competencias.forEach((c: any) => {
+                if (c.id && c.nombre) {
+                  fallbackIndex[c.id] = { nombre: c.nombre };
+                }
+              });
+              setCompetencyIndex(fallbackIndex);
+            } catch {
+              console.warn('Could not parse competencias data for fallback index');
+            }
+          }
+        }
       } catch (error) {
         console.error('Error loading previous steps data:', error);
       }
@@ -64,7 +90,7 @@ export default function Step5SessionsStructure({
     if (sessionId && user?.id) {
       loadPreviousStepsData();
     }
-  }, [sessionId, user?.id]); // Fixed dependency array
+  }, [sessionId, user?.id]);
 
   // Debounced save function
   const debouncedSave = useCallback((updatedData: A5SessionsStructureData) => {
@@ -373,12 +399,17 @@ export default function Step5SessionsStructure({
                         />
                       </TableCell>
                       <TableCell className="align-top">
-                        <Textarea
-                          value={session.competencias.join(', ')}
-                          onChange={(e) => updateSession(index, 'competencias', e.target.value.split(', ').filter(c => c.trim()))}
-                          className="min-h-[60px]"
-                          placeholder="Lista separada por comas"
-                        />
+                        <div className="space-y-2">
+                          <div className="text-xs text-muted-foreground">
+                            {resolveCompetenceNames(session.competencias, competencyIndex).join(', ') || 'Sin competencias'}
+                          </div>
+                          <Textarea
+                            value={session.competencias.join(', ')}
+                            onChange={(e) => updateSession(index, 'competencias', e.target.value.split(', ').filter(c => c.trim()))}
+                            className="min-h-[60px] text-xs"
+                            placeholder="IDs separados por comas (ej: DPCC2, CYT1)"
+                          />
+                        </div>
                       </TableCell>
                       <TableCell className="align-top">
                         <Textarea
