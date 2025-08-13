@@ -53,9 +53,9 @@ export default function Step5SessionsStructure({
         if (error) throw error;
 
         const sessionInfo = sessionData?.session_data as any || {};
-        setInfoData(sessionInfo.a5_info || null);
-        setSituationData(sessionInfo.a5_situation || null);
-        setCompetenciesData(sessionInfo.a5_competencies || null);
+        setInfoData(sessionInfo.info || null);
+        setSituationData(sessionInfo.situation || null);
+        setCompetenciesData(sessionInfo.comp || null);
       } catch (error) {
         console.error('Error loading previous steps data:', error);
       }
