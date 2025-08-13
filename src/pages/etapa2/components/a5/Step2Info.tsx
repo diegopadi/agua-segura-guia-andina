@@ -92,6 +92,7 @@ export default function Step2Info({ data, onChange, onNext, onPrev, onSaveVars }
           <div>
             <Label>Duración</Label>
             <Input value={data.duracion} onChange={(e) => onChange({ ...data, duracion: e.target.value })} />
+            <p className="text-sm text-muted-foreground mt-1">Indicar fechas estimadas de inicio y final de esta Unidad</p>
           </div>
           <div>
             <Label>Periodo de ejecución</Label>
