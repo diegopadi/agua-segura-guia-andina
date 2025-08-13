@@ -1,0 +1,416 @@
+{
+  "competencias": {
+    "Comunicación": [
+      {
+        "id": "COM1",
+        "nombre": "Se comunica oralmente en su lengua materna",
+        "descripcion": "Expresa ideas, emociones y opiniones con claridad y respeto a normas sociolingüísticas y culturales.",
+        "capacidades": [
+          "Comprende textos orales",
+          "Se expresa oralmente",
+          "Interactúa estratégicamente en diversas situaciones comunicativas",
+          "Usa recursos no verbales y paraverbales de forma pertinente"
+        ],
+        "desempenos_por_grado": {
+          "1": [],
+          "2": [],
+          "3": [],
+          "4": [],
+          "5": []
+        },
+        "source": "Programa Curricular de Secundaria – Área Comunicación (MINEDU)"
+      },
+      {
+        "id": "COM2",
+        "nombre": "Lee diversos tipos de textos escritos en su lengua materna",
+        "descripcion": "Comprende, interpreta y evalúa textos de diversa complejidad.",
+        "capacidades": [
+          "Obtiene información del texto escrito",
+          "Infiere e interpreta información",
+          "Reflexiona y evalúa forma, contenido y contexto"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular de Secundaria – Comunicación (MINEDU)"
+      },
+      {
+        "id": "COM3",
+        "nombre": "Escribe diversos tipos de textos en su lengua materna",
+        "descripcion": "Produce textos coherentes y adecuados a propósito, destinatario y situación.",
+        "capacidades": [
+          "Planifica la escritura",
+          "Textualiza ideas con coherencia y cohesión",
+          "Revisa y reescribe considerando la norma y el propósito comunicativo"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular de Secundaria – Comunicación (MINEDU)"
+      },
+      {
+        "id": "COM4",
+        "nombre": "Se comunica oralmente en inglés como lengua extranjera",
+        "descripcion": "Interactúa oralmente en inglés con pronunciación y vocabulario adecuados.",
+        "capacidades": [
+          "Comprende textos orales en inglés",
+          "Se expresa oralmente en inglés",
+          "Interactúa estratégicamente en contextos comunicativos en inglés"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular de Secundaria – Inglés (MINEDU)"
+      },
+      {
+        "id": "COM5",
+        "nombre": "Lee diversos tipos de textos en inglés como lengua extranjera",
+        "descripcion": "Comprende ideas generales y específicas en textos escritos en inglés.",
+        "capacidades": [
+          "Obtiene información de textos en inglés",
+          "Infiere e interpreta",
+          "Reflexiona sobre forma y contenido"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular de Secundaria – Inglés (MINEDU)"
+      },
+      {
+        "id": "COM6",
+        "nombre": "Escribe diversos tipos de textos en inglés como lengua extranjera",
+        "descripcion": "Produce textos sencillos y coherentes en inglés según propósito y audiencia.",
+        "capacidades": [
+          "Planifica la escritura en inglés",
+          "Textualiza ideas",
+          "Revisa y edita textos en inglés"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular de Secundaria – Inglés (MINEDU)"
+      }
+    ],
+
+    "Matemática": [
+      {
+        "id": "MAT1",
+        "nombre": "Resuelve problemas de cantidad",
+        "descripcion": "Modela y resuelve situaciones con cantidades y operaciones.",
+        "capacidades": [
+          "Comunica y representa ideas matemáticas",
+          "Elabora y usa estrategias",
+          "Razona y argumenta",
+          "Emplea procedimientos y recursos"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Matemática (MINEDU); Orientaciones Secundaria Matemática"
+      },
+      {
+        "id": "MAT2",
+        "nombre": "Resuelve problemas de regularidad, equivalencia y cambio",
+        "descripcion": "Usa patrones, relaciones y funciones para modelar variaciones.",
+        "capacidades": [
+          "Comunica y representa ideas matemáticas",
+          "Elabora y usa estrategias",
+          "Razona y argumenta",
+          "Emplea procedimientos y recursos"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Matemática (MINEDU)"
+      },
+      {
+        "id": "MAT3",
+        "nombre": "Resuelve problemas de forma, movimiento y localización",
+        "descripcion": "Aplica conceptos geométricos y de movimiento en el espacio.",
+        "capacidades": [
+          "Comunica y representa ideas matemáticas",
+          "Elabora y usa estrategias",
+          "Razona y argumenta",
+          "Emplea procedimientos y recursos"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Matemática (MINEDU)"
+      },
+      {
+        "id": "MAT4",
+        "nombre": "Resuelve problemas de gestión de datos e incertidumbre",
+        "descripcion": "Recolecta, representa y analiza datos y asume decisiones bajo incertidumbre.",
+        "capacidades": [
+          "Comunica y representa ideas matemáticas",
+          "Elabora y usa estrategias",
+          "Razona y argumenta",
+          "Emplea procedimientos y recursos"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Matemática (MINEDU)"
+      }
+    ],
+
+    "Ciencia y Tecnología": [
+      {
+        "id": "CYT1",
+        "nombre": "Indaga mediante métodos científicos para construir conocimientos",
+        "descripcion": "Problematiza, diseña, obtiene y analiza datos, evalúa y comunica.",
+        "capacidades": [
+          "Problematiza situaciones",
+          "Diseña estrategias y procedimientos",
+          "Genera y registra datos",
+          "Analiza e interpreta datos",
+          "Evalúa y comunica"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Ciencia y Tecnología (MINEDU)"
+      },
+      {
+        "id": "CYT2",
+        "nombre": "Explica el mundo físico y natural",
+        "descripcion": "Integra saberes sobre seres vivos, materia y energía, biodiversidad, Tierra y universo.",
+        "capacidades": [
+          "Comprende y usa conocimientos científicos",
+          "Sustenta con evidencias",
+          "Establece relaciones y modelos explicativos",
+          "Comunica explicaciones"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – CyT (MINEDU)"
+      },
+      {
+        "id": "CYT3",
+        "nombre": "Diseña y produce soluciones tecnológicas",
+        "descripcion": "Aplica procesos de diseño para resolver problemas del entorno.",
+        "capacidades": [
+          "Identifica necesidades y condiciones",
+          "Genera alternativas de solución",
+          "Prototipa, prueba y mejora",
+          "Evalúa impacto y comunica"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – CyT (MINEDU)"
+      }
+    ],
+
+    "Ciencias Sociales": [
+      {
+        "id": "CS1",
+        "nombre": "Construye interpretaciones históricas",
+        "descripcion": "Analiza procesos históricos desde diversas fuentes y perspectivas.",
+        "capacidades": [
+          "Maneja información histórica",
+          "Comprende el tiempo histórico",
+          "Elabora interpretaciones",
+          "Argumenta históricamente"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Ciencias Sociales (MINEDU)"
+      },
+      {
+        "id": "CS2",
+        "nombre": "Gestiona responsablemente el espacio y el ambiente",
+        "descripcion": "Interpreta y actúa frente a problemáticas territoriales y ambientales.",
+        "capacidades": [
+          "Comprende relaciones sociedad-naturaleza",
+          "Maneja información espacial",
+          "Evalúa riesgos e impactos",
+          "Propone acciones sostenibles"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Ciencias Sociales (MINEDU)"
+      },
+      {
+        "id": "CS3",
+        "nombre": "Gestiona responsablemente los recursos económicos",
+        "descripcion": "Comprende procesos económicos y propone decisiones informadas.",
+        "capacidades": [
+          "Comprende principios económicos",
+          "Analiza información económica",
+          "Toma decisiones financieras responsables",
+          "Evalúa efectos en el bienestar común"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Ciencias Sociales (MINEDU)"
+      },
+      {
+        "id": "CS4",
+        "nombre": "Participa en la vida democrática, orientada al bien común",
+        "descripcion": "Ejercita ciudadanía con enfoque de derechos, diversidad y diálogo.",
+        "capacidades": [
+          "Conoce y valora derechos y responsabilidades",
+          "Delibera y argumenta",
+          "Toma acuerdos y participa",
+          "Promueve la convivencia y el bien común"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Ciencias Sociales (MINEDU)"
+      }
+    ],
+
+    "Educación Religiosa": [
+      {
+        "id": "ER1",
+        "nombre": "Construye su identidad como persona humana, amada por Dios, digna, libre y trascendente",
+        "descripcion": "Reflexiona su identidad a la luz de su fe.",
+        "capacidades": [
+          "Reconoce su dignidad y trascendencia",
+          "Reflexiona su proyecto de vida",
+          "Dialoga fe y cultura"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Educación Religiosa (MINEDU)"
+      },
+      {
+        "id": "ER2",
+        "nombre": "Asume la experiencia de fe como dinámica de vida",
+        "descripcion": "Integra su fe en decisiones y relaciones.",
+        "capacidades": [
+          "Comprende el mensaje",
+          "Vive celebraciones y signos",
+          "Discierne y actúa éticamente"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Educación Religiosa (MINEDU)"
+      },
+      {
+        "id": "ER3",
+        "nombre": "Practica los valores del Evangelio en su comunidad",
+        "descripcion": "Convive de manera solidaria, justa y pacífica.",
+        "capacidades": [
+          "Promueve la justicia y solidaridad",
+          "Cuida la creación",
+          "Construye paz"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Educación Religiosa (MINEDU)"
+      }
+    ],
+
+    "Arte y Cultura": [
+      {
+        "id": "AC1",
+        "nombre": "Aprecia de manera crítica manifestaciones artístico-culturales",
+        "descripcion": "Analiza, interpreta y valora prácticas y obras artísticas.",
+        "capacidades": [
+          "Observa y describe",
+          "Interpreta y contextualiza",
+          "Valora y argumenta estéticamente"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Arte y Cultura (MINEDU)"
+      },
+      {
+        "id": "AC2",
+        "nombre": "Crea proyectos desde los lenguajes artísticos",
+        "descripcion": "Explora, compone y presenta creaciones artísticas.",
+        "capacidades": [
+          "Explora materiales y técnicas",
+          "Compone y experimenta",
+          "Presenta y comunica su obra"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Arte y Cultura (MINEDU)"
+      }
+    ],
+
+    "Educación Física": [
+      {
+        "id": "EF1",
+        "nombre": "Se desenvuelve de manera autónoma a través de su motricidad",
+        "descripcion": "Aplica habilidades motrices para resolver desafíos de movimiento.",
+        "capacidades": [
+          "Adapta el movimiento",
+          "Resuelve situaciones motrices",
+          "Evalúa su desempeño"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Educación Física (MINEDU)"
+      },
+      {
+        "id": "EF2",
+        "nombre": "Asume una vida saludable",
+        "descripcion": "Practica hábitos, autocuidado y seguridad en la actividad física.",
+        "capacidades": [
+          "Comprende la actividad física y salud",
+          "Gestiona hábitos saludables",
+          "Previene riesgos"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Educación Física (MINEDU)"
+      },
+      {
+        "id": "EF3",
+        "nombre": "Interactúa a través de sus habilidades sociomotrices",
+        "descripcion": "Participa cooperando y respetando reglas y a los demás.",
+        "capacidades": [
+          "Coopera y se comunica",
+          "Respeta reglas y roles",
+          "Resuelve conflictos en juego"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – Educación Física (MINEDU)"
+      }
+    ],
+
+    "Desarrollo Personal, Ciudadanía y Cívica": [
+      {
+        "id": "DPCC1",
+        "nombre": "Construye su identidad",
+        "descripcion": "Se reconoce como persona digna con proyecto de vida.",
+        "capacidades": [
+          "Se valora y autorregula",
+          "Afirma su proyecto de vida",
+          "Ejercita su libertad responsable"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – DPCC (MINEDU)"
+      },
+      {
+        "id": "DPCC2",
+        "nombre": "Convive y participa democráticamente en la búsqueda del bien común",
+        "descripcion": "Ejercita ciudadanía, diálogo y respeto por la diversidad.",
+        "capacidades": [
+          "Ejerce derechos y responsabilidades",
+          "Delibera y participa",
+          "Promueve convivencia y bien común"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – DPCC (MINEDU)"
+      },
+      {
+        "id": "DPCC3",
+        "nombre": "Asume una vida saludable",
+        "descripcion": "Cuida su salud integral y bienestar socioemocional.",
+        "capacidades": [
+          "Comprende la salud integral",
+          "Toma decisiones saludables",
+          "Gestiona su bienestar emocional"
+        ],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "Programa Curricular – DPCC (MINEDU)"
+      }
+    ],
+
+    "Tutoría y Orientación Educativa": [
+      {
+        "id": "TOE1",
+        "nombre": "Próximamente",
+        "descripcion": "Competencias específicas para Tutoría se incorporarán en una actualización posterior.",
+        "capacidades": [],
+        "desempenos_por_grado": { "1": [], "2": [], "3": [], "4": [], "5": [] },
+        "source": "—"
+      }
+    ]
+  },
+
+  "enfoques_transversales": [
+    { "id": "E1", "nombre": "Enfoque de derechos", "descripcion": "Reconoce a toda persona como sujeto de derechos y promueve su ejercicio." },
+    { "id": "E2", "nombre": "Enfoque inclusivo o de atención a la diversidad", "descripcion": "Atiende y valora las diferencias individuales y colectivas." },
+    { "id": "E3", "nombre": "Enfoque intercultural", "descripcion": "Promueve diálogo y respeto entre culturas." },
+    { "id": "E4", "nombre": "Enfoque de igualdad de género", "descripcion": "Impulsa igualdad de oportunidades y trato." },
+    { "id": "E5", "nombre": "Enfoque ambiental", "descripcion": "Fomenta cuidado del ambiente y sostenibilidad." },
+    { "id": "E6", "nombre": "Enfoque orientado al bien común", "descripcion": "Orienta decisiones hacia el beneficio de la comunidad." },
+    { "id": "E7", "nombre": "Enfoque crítico", "descripcion": "Desarrolla análisis, argumentación y reflexión." },
+    { "id": "E8", "nombre": "Enfoque de excelencia", "descripcion": "Promueve mejora continua y altos estándares." },
+    { "id": "E9", "nombre": "Enfoque lúdico", "descripcion": "Integra el juego como medio para aprender y convivir." }
+  ],
+
+  "fuentes_ministeriales": [
+    {
+      "nombre": "Currículo Nacional (portal)",
+      "url": "https://minedu.gob.pe/curriculo/"
+    },
+    {
+      "nombre": "Programa Curricular de Educación Secundaria",
+      "url": "https://www.gob.pe/es/90158-ministerio-de-educacion-programas-curriculares-de-la-educacion-basica-regular"
+    }
+  ]
+}

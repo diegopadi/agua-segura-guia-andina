@@ -119,6 +119,10 @@ export default function Acelerador5() {
               setSituation(sd.situation as A5SituationPurposeData);
             }
 
+            if (sd.comp) {
+              setComp(sd.comp as A5CompetenciesData);
+            }
+
             if (sd.ua_vars) {
               setUaVars(sd.ua_vars as Record<string, string>);
             }
@@ -178,6 +182,24 @@ export default function Acelerador5() {
     };
   }, [situation, sessionId, user?.id, hydrated]);
 
+  // Debounced autosave for Step 4 competencies
+  useEffect(() => {
+    if (!hydrated) return;
+
+    if (!user || !sessionId) return;
+
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(async () => {
+      const newData = { ...sessionData, comp };
+      setSessionData(newData);
+      await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', sessionId);
+    }, 700);
+
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, [comp, sessionId, user?.id, hydrated]);
+
   const updateStep = (newStep: number) => {
     const clamped = Math.min(Math.max(newStep, 1), steps.length);
     setCurrent(clamped);
@@ -208,7 +230,7 @@ export default function Acelerador5() {
       case 3:
         return <Step3SituationPurpose data={situation} onChange={setSituation} onPrev={prev} onNext={next} info={info} a4={a4Inputs} sessionId={sessionId} sessionData={sessionData} setSessionData={setSessionData} />;
       case 4:
-        return <Step4Competencies data={comp} onChange={setComp} onPrev={prev} onNext={next} />;
+        return <Step4Competencies data={comp} onChange={setComp} onPrev={prev} onNext={next} info={info} />;
       case 5:
         return <Step5SessionsStructure data={sessions} onChange={setSessions} onPrev={prev} onNext={next} />;
       case 6:
