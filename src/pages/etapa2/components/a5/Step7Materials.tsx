@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Plus, Sparkles, RotateCcw } from "lucide-react";
+import { Trash2, Plus, Sparkles, Save } from "lucide-react";
 import { A5MaterialsData, A5MaterialItem } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,6 +29,7 @@ export default function Step7Materials({ data, onChange, onNext, onPrev }: Props
   const [feedbackData, setFeedbackData] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load data from previous steps
@@ -81,16 +82,34 @@ export default function Step7Materials({ data, onChange, onNext, onPrev }: Props
     }
   }, [user?.id]);
 
-  // Autosave functionality
-  const saveToSupabase = async (materialsData: A5MaterialsData) => {
+  // Save functionality
+  const saveToSupabase = async (materialsData: A5MaterialsData, showToast = false) => {
     if (!user?.id) return;
 
     try {
       setIsSaving(true);
+      setSaveStatus('saving');
+      
+      // First get current session data
+      const { data: sessionData, error: fetchError } = await supabase
+        .from('acelerador_sessions')
+        .select('session_data')
+        .eq('user_id', user.id)
+        .eq('acelerador_number', 5)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      const currentSessionData = sessionData?.session_data as any || {};
+      const updatedSessionData = {
+        ...currentSessionData,
+        materials: materialsData
+      };
+
       const { error } = await supabase
         .from('acelerador_sessions')
         .update({ 
-          ua_materiales: materialsData,
+          session_data: updatedSessionData,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
@@ -98,29 +117,49 @@ export default function Step7Materials({ data, onChange, onNext, onPrev }: Props
 
       if (error) throw error;
       
-      console.log('Materials autosaved successfully');
+      setSaveStatus('saved');
+      console.log('Materials saved successfully');
+      
+      if (showToast) {
+        toast({
+          title: "Guardado",
+          description: "Los materiales se han guardado correctamente",
+        });
+      }
+      
+      // Reset status after 2 seconds
+      setTimeout(() => setSaveStatus('idle'), 2000);
+      
     } catch (error) {
-      console.error('Error autosaving materials:', error);
+      console.error('Error saving materials:', error);
+      setSaveStatus('error');
       toast({
         title: "Error",
-        description: "No se pudieron guardar los materiales automáticamente",
+        description: "No se pudieron guardar los materiales",
         variant: "destructive",
       });
+      
+      // Reset error status after 3 seconds
+      setTimeout(() => setSaveStatus('idle'), 3000);
     } finally {
       setIsSaving(false);
     }
   };
 
+  // Manual save function
+  const handleManualSave = () => {
+    saveToSupabase(data, true);
+  };
+
   // Debounced autosave
   useEffect(() => {
-    if (data.materiales.length === 0) return;
-
+    // Allow autosave even with empty list
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
     }
 
     saveTimerRef.current = setTimeout(() => {
-      saveToSupabase(data);
+      saveToSupabase(data, false);
     }, 800); // 800ms debounce
 
     return () => {
@@ -202,8 +241,14 @@ export default function Step7Materials({ data, onChange, onNext, onPrev }: Props
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Paso 7: Materiales básicos a utilizar
-          {isSaving && (
+          {saveStatus === 'saving' && (
             <span className="text-sm text-muted-foreground">Guardando...</span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="text-sm text-green-600">✓ Guardado</span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="text-sm text-red-600">Error al guardar</span>
           )}
         </CardTitle>
         <CardDescription>
@@ -245,6 +290,16 @@ export default function Step7Materials({ data, onChange, onNext, onPrev }: Props
           <Button variant="outline" onClick={addMaterial} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Agregar material
+          </Button>
+          
+          <Button 
+            variant="secondary" 
+            onClick={handleManualSave}
+            disabled={isSaving}
+            className="flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            Guardar
           </Button>
         </div>
 
