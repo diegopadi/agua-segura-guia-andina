@@ -1,9 +1,13 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Trash2, Plus, Sparkles, RotateCcw } from "lucide-react";
 import { A5MaterialsData, A5MaterialItem } from "./types";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   data: A5MaterialsData;
@@ -12,68 +16,231 @@ interface Props {
   onPrev: () => void;
 }
 
-const demoList: A5MaterialItem[] = [
-  { nombre: "Cartulinas", descripcion: "Para mapas conceptuales y afiches." },
-  { nombre: "Marcadores", descripcion: "Colores básicos para trabajo grupal." },
-  { nombre: "Botellas recicladas", descripcion: "Para prototipos relacionados al agua." },
-];
-
 export default function Step7Materials({ data, onChange, onNext, onPrev }: Props) {
-  const add = () => onChange({ materiales: [...data.materiales, { nombre: "", descripcion: "" }] });
-  const remove = (idx: number) => onChange({ materiales: data.materiales.filter((_, i) => i !== idx) });
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [infoData, setInfoData] = useState<any>(null);
+  const [situationData, setSituationData] = useState<any>(null);
+  const [competenciesData, setCompetenciesData] = useState<any>(null);
+  const [sessionsData, setSessionsData] = useState<any>(null);
+  const [feedbackData, setFeedbackData] = useState<any>(null);
+  const [loadingData, setLoadingData] = useState(true);
 
-  const generate = () => {
-    onChange({ materiales: demoList });
-    toast({ title: "Lista generada (demo)", description: "Materiales ficticios agregados." });
+  // Load data from previous steps
+  useEffect(() => {
+    const loadPreviousStepsData = async () => {
+      if (!user?.id) return;
+
+      try {
+        setLoadingData(true);
+        const { data: sessionData, error } = await supabase
+          .from('acelerador_sessions')
+          .select('session_data')
+          .eq('user_id', user.id)
+          .eq('acelerador_number', 5)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const sessionInfo = sessionData?.session_data as any || {};
+        console.log('Loaded session data for materials:', sessionInfo);
+        
+        setInfoData(sessionInfo.info || null);
+        setSituationData(sessionInfo.situation || null);
+        setCompetenciesData(sessionInfo.comp || null);
+        setSessionsData(sessionInfo.sessions || null);
+        setFeedbackData(sessionInfo.feedback || null);
+        
+        console.log('Data loaded for materials:', {
+          info: !!sessionInfo.info,
+          situation: !!sessionInfo.situation,
+          comp: !!sessionInfo.comp,
+          sessions: !!sessionInfo.sessions,
+          feedback: !!sessionInfo.feedback
+        });
+        
+      } catch (error) {
+        console.error('Error loading previous steps data:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los datos de pasos anteriores",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    if (user?.id) {
+      loadPreviousStepsData();
+    }
+  }, [user?.id]);
+
+  const generate = async () => {
+    if (!canGenerate) return;
+
+    setIsGenerating(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke('generate-materials-ac5', {
+        body: {
+          infoData,
+          situationData,
+          competenciesData,
+          sessionsData,
+          feedbackData
+        }
+      });
+
+      if (error) throw error;
+
+      if (result?.materials && Array.isArray(result.materials)) {
+        onChange({ materiales: result.materials });
+        toast({
+          title: "¡Éxito!",
+          description: "Lista de materiales generada correctamente",
+        });
+      } else {
+        throw new Error('Respuesta inválida del servidor');
+      }
+    } catch (error) {
+      console.error('Error generating materials:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo generar la lista de materiales. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
-  const save = () => toast({ title: "Guardado", description: "Se almacenará más adelante." });
+
+  const addMaterial = () => {
+    onChange({
+      materiales: [...data.materiales, { nombre: "", descripcion: "" }]
+    });
+  };
+
+  const updateMaterial = (index: number, field: keyof A5MaterialItem, value: string) => {
+    const updated = [...data.materiales];
+    updated[index] = { ...updated[index], [field]: value };
+    onChange({ materiales: updated });
+  };
+
+  const removeMaterial = (index: number) => {
+    onChange({
+      materiales: data.materiales.filter((_, i) => i !== index)
+    });
+  };
+
+  const canGenerate = !loadingData && infoData && situationData && competenciesData && sessionsData;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Lista de materiales</CardTitle>
-        <CardDescription>La IA analizará tu Unidad de Aprendizaje y sugerirá materiales adaptados a la realidad de tu IE.</CardDescription>
+        <CardTitle>Paso 7: Materiales básicos a utilizar</CardTitle>
+        <CardDescription>
+          Lista de materiales y recursos necesarios para implementar la unidad de aprendizaje
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-3">
-          {data.materiales.map((m, idx) => (
-            <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
-              <div className="md:col-span-2">
-                <Label>Nombre</Label>
-                <Input value={m.nombre} onChange={(e) => {
-                  const materiales = data.materiales.map((it, i) => i === idx ? { ...it, nombre: e.target.value } : it)
-                  onChange({ materiales })
-                }} />
-              </div>
-              <div className="md:col-span-3">
-                <Label>Descripción</Label>
-                <Input value={m.descripcion} onChange={(e) => {
-                  const materiales = data.materiales.map((it, i) => i === idx ? { ...it, descripcion: e.target.value } : it)
-                  onChange({ materiales })
-                }} />
-              </div>
-              <div className="flex md:justify-end">
-                <Button variant="ghost" onClick={() => remove(idx)}>Quitar</Button>
-              </div>
-            </div>
-          ))}
-          {data.materiales.length === 0 && (
-            <p className="text-sm text-muted-foreground">Aún no hay materiales añadidos.</p>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-2 pt-2">
-          <Button variant="secondary" onClick={add}>Agregar material</Button>
-          <Button variant="secondary" onClick={generate}>Generar con IA</Button>
-          <Button variant="secondary" onClick={generate}>Re-generar</Button>
-        </div>
-
-        <div className="flex justify-between gap-2">
-          <Button variant="outline" onClick={onPrev}>Atrás</Button>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={save}>Guardar</Button>
-            <Button onClick={onNext}>Siguiente</Button>
+      <CardContent className="space-y-6">
+        {loadingData && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+            <p className="text-sm text-blue-800">
+              Cargando datos de pasos anteriores...
+            </p>
           </div>
+        )}
+        
+        {!loadingData && !canGenerate && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+            <p className="text-sm text-yellow-800">
+              <strong>Nota:</strong> Necesitas completar los pasos anteriores para generar materiales personalizados.
+            </p>
+            <div className="mt-2 text-xs text-yellow-700">
+              Estado: Info={infoData ? '✓' : '✗'}, Situación={situationData ? '✓' : '✗'}, 
+              Competencias={competenciesData ? '✓' : '✗'}, Sesiones={sessionsData ? '✓' : '✗'}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            onClick={generate}
+            disabled={!canGenerate || isGenerating}
+            className="flex items-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            {data.materiales.length === 0 ? 'Generar con IA' : 'Re-generar'}
+            {isGenerating && '...'}
+          </Button>
+          
+          <Button variant="outline" onClick={addMaterial} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Agregar material
+          </Button>
+        </div>
+
+        {data.materiales.length > 0 && (
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[30%]">Material</TableHead>
+                  <TableHead className="w-[60%]">Descripción</TableHead>
+                  <TableHead className="w-[10%]">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.materiales.map((material, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Input
+                        value={material.nombre}
+                        onChange={(e) => updateMaterial(index, 'nombre', e.target.value)}
+                        placeholder="Nombre del material"
+                        className="border-0 bg-transparent p-1"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        value={material.descripcion}
+                        onChange={(e) => updateMaterial(index, 'descripcion', e.target.value)}
+                        placeholder="Descripción y uso pedagógico"
+                        className="border-0 bg-transparent p-1"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeMaterial(index)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {data.materiales.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No hay materiales agregados. Usa "Generar con IA" o "Agregar material" para comenzar.</p>
+          </div>
+        )}
+
+        <div className="flex justify-between pt-6">
+          <Button variant="outline" onClick={onPrev}>
+            Atrás
+          </Button>
+          <Button onClick={onNext}>
+            Siguiente
+          </Button>
         </div>
       </CardContent>
     </Card>
