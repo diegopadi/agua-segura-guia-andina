@@ -10,10 +10,44 @@ interface Props {
   onChange: (data: A5InfoData) => void;
   onNext: () => void;
   onPrev: () => void;
+  onSaveVars?: (vars: Record<string, string>) => void;
 }
 
-export default function Step2Info({ data, onChange, onNext, onPrev }: Props) {
-  const save = () => toast({ title: "Datos guardados", description: "Se guardará más adelante en la base de datos." });
+export default function Step2Info({ data, onChange, onNext, onPrev, onSaveVars }: Props) {
+  const isComplete = (d: A5InfoData) =>
+    d.institucion && d.distrito && d.provincia && d.region && d.director && d.profesor && d.area && d.grado && d.duracion && d.periodo && d.anio;
+
+  const buildVars = (d: A5InfoData): Record<string, string> => ({
+    ua_institucion: d.institucion.trim(),
+    ua_distrito: d.distrito.trim(),
+    ua_provincia: d.provincia.trim(),
+    ua_region: d.region.trim(),
+    ua_director: d.director.trim(),
+    ua_profesor: d.profesor.trim(),
+    ua_area: d.area.trim(),
+    ua_grado: d.grado.trim(),
+    ua_duracion: d.duracion.trim(),
+    ua_periodo: d.periodo.trim(),
+    ua_anio: d.anio.trim(),
+  });
+
+  const handleSave = () => {
+    if (!isComplete(data)) {
+      toast({ title: "Campos incompletos", description: "Por favor completa todos los campos para guardar.", variant: "destructive" });
+      return;
+    }
+    onSaveVars?.(buildVars(data));
+    toast({ title: "Datos guardados", description: "Se insertarán en el documento final (Numeral I)." });
+  };
+
+  const handleNext = () => {
+    if (!isComplete(data)) {
+      toast({ title: "Datos requeridos", description: "Por favor completa todos los campos para continuar.", variant: "destructive" });
+      return;
+    }
+    onSaveVars?.(buildVars(data)); // Autoguardado al avanzar
+    onNext();
+  };
 
   return (
     <Card>
@@ -72,8 +106,8 @@ export default function Step2Info({ data, onChange, onNext, onPrev }: Props) {
         <div className="flex justify-between gap-2 pt-2">
           <Button variant="outline" onClick={onPrev}>Atrás</Button>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={save}>Guardar</Button>
-            <Button onClick={onNext}>Siguiente</Button>
+            <Button variant="secondary" onClick={handleSave}>Guardar</Button>
+            <Button onClick={handleNext}>Siguiente</Button>
           </div>
         </div>
       </CardContent>

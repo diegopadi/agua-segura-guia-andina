@@ -48,22 +48,25 @@ export default function Acelerador5() {
     numSesiones: 4, horasPorSesion: 2, numEstudiantes: 30, estructura: [],
   });
 
-const [feedback, setFeedback] = useState<A5FeedbackData>({ feedback: "" });
+  const [feedback, setFeedback] = useState<A5FeedbackData>({ feedback: "" });
 
-const [materials, setMaterials] = useState<A5MaterialsData>({ materiales: [] });
+  const [materials, setMaterials] = useState<A5MaterialsData>({ materiales: [] });
 
-// A4 recovered inputs for A5 usage
-const [a4Inputs, setA4Inputs] = useState<A4Inputs | null>(null);
+  // A4 recovered inputs for A5 usage
+  const [a4Inputs, setA4Inputs] = useState<A4Inputs | null>(null);
 
-const next = () => setCurrent((c) => Math.min(c + 1, steps.length));
-const prev = () => setCurrent((c) => Math.max(c - 1, 1));
+  // Numeral I variables mapping for final assembly
+  const [uaVars, setUaVars] = useState<Record<string, string>>({});
+
+  const next = () => setCurrent((c) => Math.min(c + 1, steps.length));
+  const prev = () => setCurrent((c) => Math.max(c - 1, 1));
 
   const render = () => {
     switch (current) {
       case 1:
         return <Step1Welcome onNext={next} onValidated={(inputs: A4Inputs) => { setA4Inputs(inputs); next(); }} />;
       case 2:
-        return <Step2Info data={info} onChange={setInfo} onPrev={prev} onNext={next} />;
+        return <Step2Info data={info} onChange={setInfo} onPrev={prev} onNext={next} onSaveVars={setUaVars} />;
       case 3:
         return <Step3SituationPurpose data={situation} onChange={setSituation} onPrev={prev} onNext={next} />;
       case 4:
