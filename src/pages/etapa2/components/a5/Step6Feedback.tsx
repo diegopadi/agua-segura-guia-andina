@@ -21,6 +21,7 @@ export default function Step6Feedback({ data, onChange, onNext, onPrev }: Props)
   const [situationData, setSituationData] = useState<any>(null);
   const [competenciesData, setCompetenciesData] = useState<any>(null);
   const [sessionsData, setSessionsData] = useState<any>(null);
+  const [loadingData, setLoadingData] = useState(true);
 
   // Cargar datos de pasos anteriores
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function Step6Feedback({ data, onChange, onNext, onPrev }: Props)
       if (!user?.id) return;
 
       try {
+        setLoadingData(true);
         const { data: sessionData, error } = await supabase
           .from('acelerador_sessions')
           .select('session_data')
@@ -38,10 +40,20 @@ export default function Step6Feedback({ data, onChange, onNext, onPrev }: Props)
         if (error) throw error;
 
         const sessionInfo = sessionData?.session_data as any || {};
+        console.log('Loaded session data for feedback:', sessionInfo);
+        
         setInfoData(sessionInfo.info || null);
         setSituationData(sessionInfo.situation || null);
         setCompetenciesData(sessionInfo.comp || null);
         setSessionsData(sessionInfo.sessions || null);
+        
+        console.log('Data loaded:', {
+          info: !!sessionInfo.info,
+          situation: !!sessionInfo.situation,
+          comp: !!sessionInfo.comp,
+          sessions: !!sessionInfo.sessions
+        });
+        
       } catch (error) {
         console.error('Error loading previous steps data:', error);
         toast({
@@ -49,10 +61,14 @@ export default function Step6Feedback({ data, onChange, onNext, onPrev }: Props)
           description: "No se pudieron cargar los datos de pasos anteriores",
           variant: "destructive",
         });
+      } finally {
+        setLoadingData(false);
       }
     };
 
-    loadPreviousStepsData();
+    if (user?.id) {
+      loadPreviousStepsData();
+    }
   }, [user?.id]);
 
   const generate = async () => {
@@ -105,7 +121,7 @@ export default function Step6Feedback({ data, onChange, onNext, onPrev }: Props)
   };
 
   // Verificar si tenemos todos los datos necesarios
-  const canGenerate = infoData && situationData && competenciesData && sessionsData;
+  const canGenerate = !loadingData && infoData && situationData && competenciesData && sessionsData;
 
   return (
     <Card>
@@ -116,11 +132,23 @@ export default function Step6Feedback({ data, onChange, onNext, onPrev }: Props)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!canGenerate && (
+        {loadingData && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+            <p className="text-sm text-blue-800">
+              Cargando datos de pasos anteriores...
+            </p>
+          </div>
+        )}
+        
+        {!loadingData && !canGenerate && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
             <p className="text-sm text-yellow-800">
               <strong>Nota:</strong> Necesitas completar los pasos anteriores (2, 3, 4 y 5) para generar retroalimentación personalizada.
             </p>
+            <div className="mt-2 text-xs text-yellow-700">
+              Estado: Info={infoData ? '✓' : '✗'}, Situación={situationData ? '✓' : '✗'}, 
+              Competencias={competenciesData ? '✓' : '✗'}, Sesiones={sessionsData ? '✓' : '✗'}
+            </div>
           </div>
         )}
         

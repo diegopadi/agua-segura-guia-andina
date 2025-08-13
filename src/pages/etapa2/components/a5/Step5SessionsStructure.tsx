@@ -61,8 +61,10 @@ export default function Step5SessionsStructure({
       }
     };
 
-    loadPreviousStepsData();
-  }, [sessionId, user]);
+    if (sessionId && user?.id) {
+      loadPreviousStepsData();
+    }
+  }, [sessionId, user?.id]); // Fixed dependency array
 
   // Debounced save function
   const debouncedSave = useCallback((updatedData: A5SessionsStructureData) => {
