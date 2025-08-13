@@ -63,11 +63,11 @@ const steps = [
   },
   {
     number: 3,
-    title: "Generación y Revisión de Estrategias",
-    description: "Genera estrategias metodológicas y permite refinarlas mediante chat",
-    icon: Wand2,
+    title: "Selección de estrategias",
+    description: "Selecciona 2 estrategias por cada momento (inicio, desarrollo y cierre) del repositorio EEPE",
+    icon: CheckCircle,
     type: "strategies_viewer",
-    uses_ai: true,
+    uses_ai: false,
     template_id: "plantilla6_estrategias_ac4",
     ui_component: "StrategiesViewerStep",
     prev_step: 2,
@@ -379,16 +379,16 @@ const Acelerador4 = () => {
                   Bienvenido al Acelerador 4: Selección de Estrategias Metodológicas
                 </CardTitle>
                 <CardDescription>
-                  Este acelerador te guiará para generar y ajustar un catálogo de estrategias pedagógicas activas basadas en normativa MINEDU.
+                  Este acelerador te guiará para seleccionar 6 estrategias (2 por momento) adaptadas del libro EEPE: Enseñanza de Ecología en el Patio de la Escuela.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h4 className="font-medium text-blue-900 mb-2">¿Qué lograrás?</h4>
                   <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• Catálogo de 6 estrategias pedagógicas adaptadas a tu contexto</li>
-                    <li>• Estrategias alineadas con normativa MINEDU y seguridad hídrica</li>
-                    <li>• Informe justificativo con citas normativas</li>
+                    <li>• Selección de 6 estrategias pedagógicas alineadas a tu contexto</li>
+                    <li>• Estrategias basadas en el libro EEPE y seguridad hídrica</li>
+                    <li>• Informe justificativo listo para descargar</li>
                     <li>• Insumos preparados para diseño de unidades didácticas</li>
                   </ul>
                 </div>

@@ -174,7 +174,7 @@ export const WelcomeWithPrioritiesStep = ({
             Bienvenido al Acelerador 4: Selección de Estrategias Metodológicas
           </CardTitle>
           <CardDescription>
-            Este acelerador te guiará para generar y ajustar un catálogo de estrategias pedagógicas activas basadas en normativa MINEDU.
+            Este acelerador te guiará para seleccionar 6 estrategias metodológicas adaptadas del libro EEPE (Enseñanza de Ecología en el Patio de la Escuela).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

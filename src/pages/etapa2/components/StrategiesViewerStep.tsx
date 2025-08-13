@@ -1,36 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Loader2, 
-  Wand2, 
-  MessageCircle, 
-  Download, 
-  Copy, 
-  Printer, 
-  Send,
-  User,
-  Bot,
-  CheckCircle,
-  ArrowLeft,
-  ArrowRight,
-  RefreshCw,
-  PlayCircle,
-  Clock,
-  CheckSquare,
-  Sparkles,
-  Edit3
-} from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { CheckCircle, ArrowLeft, ArrowRight } from "lucide-react";
 
 interface StrategiesViewerStepProps {
   sessionId: string;
@@ -46,711 +22,210 @@ interface StrategiesViewerStepProps {
   };
 }
 
-interface Message {
+interface RepoItem {
   id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
+  nombre?: string;
+  descripcion?: string;
+  momento_sugerido?: "inicio" | "desarrollo" | "cierre" | string;
+  etiquetas?: string[];
+  recursos?: string[];
+  referencia?: string;
 }
 
-export const StrategiesViewerStep = ({ 
-  sessionId, 
-  onNext, 
-  onPrev, 
-  sessionData, 
-  onUpdateSessionData, 
-  step 
-}: StrategiesViewerStepProps) => {
+export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
+  onNext,
+  onPrev,
+  sessionData,
+  onUpdateSessionData,
+  step,
+}) => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(sessionData?.strategies_result || null);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Single refinement token control
-  const [hasBeenRefined, setHasBeenRefined] = useState(
-    sessionData?.refinement_used || false
-  );
-  
-  // Chat functionality
-  const [chatMessages, setChatMessages] = useState<Message[]>(
-    sessionData?.chat_history || []
-  );
-  const [userInput, setUserInput] = useState('');
-  const [chatLoading, setChatLoading] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const repoItems: RepoItem[] = sessionData?.app_config?.estrategias_repo?.items || [];
 
-  // Selección manual de estrategias del repositorio (máx. 2)
-  const repoItems: any[] = sessionData?.app_config?.estrategias_repo?.items || [];
-  const [selectedIds, setSelectedIds] = useState<string[]>(
-    Array.isArray(sessionData?.strategies_selected) ? sessionData.strategies_selected.map((s: any) => s.id) : []
-  );
-  const toggleSelect = (id: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      if (checked) {
-        if (prev.includes(id)) return prev;
-        if (prev.length >= 2) {
-          toast({ title: 'Máximo alcanzado', description: 'Solo puedes seleccionar hasta 2 estrategias', variant: 'destructive' });
-          return prev;
-        }
-        return [...prev, id];
-      } else {
-        return prev.filter((x) => x !== id);
+  const grouped = useMemo(() => {
+    const by: Record<"inicio" | "desarrollo" | "cierre", RepoItem[]> = {
+      inicio: [],
+      desarrollo: [],
+      cierre: [],
+    };
+    for (const it of repoItems) {
+      const m = (it.momento_sugerido || "").toLowerCase();
+      if (m === "inicio" || m === "desarrollo" || m === "cierre") {
+        by[m].push(it);
       }
+    }
+    return by;
+  }, [repoItems]);
+
+  type Moment = "inicio" | "desarrollo" | "cierre";
+  const moments: Moment[] = ["inicio", "desarrollo", "cierre"];
+
+  const initialSelectedByMoment = useMemo(() => {
+    const saved = sessionData?.strategies_selected_by_moment || {};
+    const toSet = (arr?: RepoItem[]) => new Set<string>((arr || []).map((s) => s.id));
+    return {
+      inicio: toSet(saved.inicio),
+      desarrollo: toSet(saved.desarrollo),
+      cierre: toSet(saved.cierre),
+    } as Record<Moment, Set<string>>;
+  }, [sessionData?.strategies_selected_by_moment]);
+
+  const [selectedByMoment, setSelectedByMoment] = useState<Record<Moment, Set<string>>>(
+    initialSelectedByMoment
+  );
+
+  const toggle = (moment: Moment, id: string, checked: boolean) => {
+    setSelectedByMoment((prev) => {
+      const next = { ...prev, [moment]: new Set(prev[moment]) } as Record<Moment, Set<string>>;
+      if (checked) {
+        if (next[moment].has(id)) return next;
+        if (next[moment].size >= 2) {
+          toast({
+            title: "Máximo alcanzado",
+            description: "Selecciona solo 2 estrategias por momento",
+            variant: "destructive",
+          });
+          return next;
+        }
+        next[moment].add(id);
+      } else {
+        next[moment].delete(id);
+      }
+      return next;
     });
   };
-  const autoSelectSuggested = () => {
-    const payload = sessionData?.suggestion_payload || { prioridades: sessionData?.priorities || [], contexto: sessionData?.contexto };
-    const scored = (repoItems || []).map((it) => ({ it, s: scoreItem(it, payload) }))
-      .sort((a, b) => b.s - a.s)
-      .slice(0, 2)
-      .map((x) => x.it.id);
-    setSelectedIds(scored);
-  };
-  const proceedNext = () => {
-    if (selectedIds.length > 0) {
-      const selected = repoItems.filter((it) => selectedIds.includes(it.id));
-      const updated = { ...sessionData, strategies_selected: selected, strategies_result: { source: 'selected', strategies: selected } };
-      onUpdateSessionData(updated);
+
+  const canContinue = moments.every((m) => selectedByMoment[m].size === 2);
+
+  const handleContinue = () => {
+    if (!canContinue) {
+      toast({
+        title: "Selección incompleta",
+        description: "Debes seleccionar 2 estrategias en Inicio, Desarrollo y Cierre",
+        variant: "destructive",
+      });
+      return;
     }
+
+    const pick = (m: Moment) =>
+      Array.from(selectedByMoment[m]).map((id) =>
+        repoItems.find((x) => x.id === id)
+      ).filter(Boolean) as RepoItem[];
+
+    const selected_by_moment = {
+      inicio: pick("inicio"),
+      desarrollo: pick("desarrollo"),
+      cierre: pick("cierre"),
+    };
+    const flat = [
+      ...selected_by_moment.inicio,
+      ...selected_by_moment.desarrollo,
+      ...selected_by_moment.cierre,
+    ];
+
+    const updated = {
+      ...sessionData,
+      strategies_selected_by_moment: selected_by_moment,
+      strategies_selected: flat,
+      strategies_result: { source: "manual", strategies: flat },
+    };
+    onUpdateSessionData(updated);
     onNext();
   };
 
-  useEffect(() => {
-    if (!result) {
-      handleAnalysis();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (chatMessages.length > 0) {
-      onUpdateSessionData({
-        ...sessionData,
-        chat_history: chatMessages
-      });
-    }
-  }, [chatMessages]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
-
-  // Select 6 strategies from repo based on priorities and recursos_tic
-  const scoreItem = (item: any, payload: any) => {
-    const priors = (payload?.prioridades || []).map((p: any) => (p.title || '').toLowerCase());
-    const tic = (payload?.contexto?.recursos_tic || '').toLowerCase();
-    let score = 0;
-    const name = (item.title || item.nombre || '');
-    const desc = (item.description || item.descripcion || '');
-    const tags = Array.isArray(item.tags) ? item.tags : (Array.isArray(item.etiquetas) ? item.etiquetas : []);
-    const recursos = Array.isArray(item.recursos_tic) ? item.recursos_tic : (Array.isArray(item.recursos) ? item.recursos : []);
-    const haystack = `${name}. ${desc}. ${tags.join(' ')} ${recursos.join(' ')}`.toLowerCase();
-    priors.forEach((t: string) => { if (t && haystack.includes(t)) score += 2; });
-    if (tic) {
-      recursos.forEach((r: string) => { if ((r || '') && tic.includes((r || '').toLowerCase())) score += 1; });
-      if (haystack.includes('tic') || haystack.includes('digital')) {
-        score += 1;
-      }
-    }
-    return score;
-  };
-
-  const getRepoStrategies = (payload: any, diversify = false) => {
-    const repoItems: any[] = sessionData?.app_config?.estrategias_repo?.items || [];
-    if (!repoItems.length) return [];
-    const scored = repoItems
-      .map((it, idx) => ({ item: it, idx, s: scoreItem(it, payload) + (diversify ? (Math.random()*0.5) : 0) }))
-      .sort((a,b) => b.s - a.s)
-      .map(x => x.item);
-    const pick = scored.slice(0, 6);
-    // Ensure exactly 6
-    while (pick.length < 6 && scored[pick.length]) pick.push(scored[pick.length]);
-    return pick.slice(0,6);
-  };
-
-  const handleAnalysis = async () => {
-    try {
-      console.log('[A4] handleAnalysis: selecting from repo (sin IA)');
-      setLoading(true);
-      setError(null);
-      const payload = sessionData?.suggestion_payload || { prioridades: sessionData?.priorities || [], contexto: sessionData?.contexto };
-      const selected = getRepoStrategies(payload);
-      if (!selected.length) {
-        setError('Repositorio vacío. Configura estrategias en APP_CONFIG_A4 (admin).');
-        toast({ title: 'Repositorio vacío', description: 'Configura APP_CONFIG_A4 para continuar. Usando modo demo.' });
-      }
-      if (selected.length < 6) {
-        toast({ title: 'Repositorio con menos de 6 ítems', description: `Se seleccionaron ${selected.length} estrategias disponibles.` });
-      }
-      const resultObj = { source: 'repo', strategies: selected };
-      setResult(resultObj);
-      onUpdateSessionData({ ...sessionData, strategies_result: resultObj });
-      toast({ title: 'Listo', description: 'Estrategias seleccionadas desde el repositorio.' });
-    } catch (e) {
-      console.error(e);
-      setError('Error al seleccionar estrategias del repositorio');
-      toast({ title: 'Error', description: 'No fue posible seleccionar estrategias', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendMessage = async (customMessage?: string) => {
-    const messageContent = customMessage || userInput.trim();
-    if (!messageContent || chatLoading) return;
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: messageContent,
-      timestamp: Date.now()
-    };
-
-    setChatMessages(prev => [...prev, newMessage]);
-    if (!customMessage) setUserInput('');
-    setChatLoading(true);
-
-    try {
-      let assistantText = '';
-      if (!hasBeenRefined) {
-        const payload = sessionData?.suggestion_payload || { prioridades: sessionData?.priorities || [], contexto: sessionData?.contexto };
-        const reselected = getRepoStrategies(payload, true);
-        console.log('[A4] Chat refinement: reselección desde repo (sin IA) — reselected = getRepoStrategies(...)');
-        const refined = { source: 'repo', strategies: reselected };
-        setResult(refined);
-        setHasBeenRefined(true);
-        const updatedSessionData = { ...sessionData, strategies_result: refined, refinement_used: true, chat_history: [...chatMessages, newMessage] };
-        onUpdateSessionData(updatedSessionData);
-        assistantText = 'He reajustado el orden/conjunto de estrategias desde el repositorio según tu indicación. Recuerda que solo se permite un refinamiento.';
-      } else {
-        console.log('[A4] Chat refinement: token ya usado; sin cambios.');
-        assistantText = 'Ya usaste tu refinamiento único. Puedes continuar o ajustar manualmente.';
-      }
-      const assistantMessage: Message = { id: (Date.now()+1).toString(), role: 'assistant', content: assistantText, timestamp: Date.now() };
-      setChatMessages(prev => [...prev, assistantMessage]);
-    } catch (e) {
-      console.error('Error in local refinement:', e);
-      toast({ title: 'Error', description: 'No fue posible refinar', variant: 'destructive' });
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const parseStrategies = (htmlContent: string) => {
-    if (!htmlContent) return { inicio: [], desarrollo: [], cierre: [] };
-    
-    const strategies = { inicio: [], desarrollo: [], cierre: [] };
-    
-    try {
-      // Extract strategies by searching for patterns in the HTML
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlContent, 'text/html');
-      
-      // Look for sections containing strategy information
-      const sections = doc.querySelectorAll('h2, h3, p, li, div');
-      let currentMoment = '';
-      
-      sections.forEach(element => {
-        const text = element.textContent?.toLowerCase() || '';
-        
-        // Identify pedagogical moments
-        if (text.includes('inicio') || text.includes('apertura') || text.includes('motivación')) {
-          currentMoment = 'inicio';
-        } else if (text.includes('desarrollo') || text.includes('construcción') || text.includes('proceso')) {
-          currentMoment = 'desarrollo';
-        } else if (text.includes('cierre') || text.includes('consolidación') || text.includes('evaluación')) {
-          currentMoment = 'cierre';
-        }
-        
-        // Extract strategy if it contains relevant keywords
-        if (currentMoment && (text.includes('estrategia') || text.includes('actividad') || text.includes('técnica'))) {
-          const strategyText = element.textContent || '';
-          if (strategyText.length > 20 && strategyText.length < 500) {
-            const strategy = {
-              title: strategyText.split('.')[0] || strategyText.substring(0, 50),
-              description: strategyText,
-              reference: 'EEPE - Enseñanza de Ecología en el Patio de la Escuela'
-            };
-            
-            if (currentMoment === 'inicio') strategies.inicio.push(strategy);
-            else if (currentMoment === 'desarrollo') strategies.desarrollo.push(strategy);
-            else if (currentMoment === 'cierre') strategies.cierre.push(strategy);
-          }
-        }
-      });
-      
-      // Fallback: if no strategies found, create sample structure
-      if (strategies.inicio.length === 0 && strategies.desarrollo.length === 0 && strategies.cierre.length === 0) {
-        return {
-          inicio: [
-            { title: "Estrategia de Motivación", description: "Actividad para captar la atención y motivar el aprendizaje", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" },
-            { title: "Exploración de Saberes Previos", description: "Técnica para activar conocimientos anteriores", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" }
-          ],
-          desarrollo: [
-            { title: "Construcción de Aprendizajes", description: "Metodología para la construcción activa del conocimiento", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" },
-            { title: "Trabajo Colaborativo", description: "Estrategia de aprendizaje en equipo", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" }
-          ],
-          cierre: [
-            { title: "Consolidación de Aprendizajes", description: "Actividad para fijar los conocimientos adquiridos", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" },
-            { title: "Evaluación Formativa", description: "Técnica de evaluación del proceso de aprendizaje", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" }
-          ]
-        };
-      }
-      
-    } catch (error) {
-      console.error('Error parsing strategies:', error);
-    }
-    
-    return strategies;
-  };
-
-  const copyToClipboard = () => {
-    if (result?.markdown_content) {
-      navigator.clipboard.writeText(result.markdown_content);
-      toast({
-        title: "Copiado",
-        description: "Contenido copiado al portapapeles",
-      });
-    }
-  };
-
-  const downloadTxtFile = () => {
-    if (result?.markdown_content) {
-      const blob = new Blob([result.markdown_content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'estrategias-metodologicas.txt';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-  };
-
-  const handlePrint = () => {
-    if (result?.html_content) {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Estrategias Metodológicas - Acelerador 4</title>
-              <style>
-                body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-                h1, h2, h3 { color: #2563eb; }
-                .print-header { border-bottom: 2px solid #2563eb; margin-bottom: 20px; padding-bottom: 10px; }
-                .strategy { margin-bottom: 20px; padding: 15px; border: 1px solid #e5e5e5; }
-                @media print { .no-print { display: none; } }
-              </style>
-            </head>
-            <body>
-              <div class="print-header">
-                <h1>Estrategias Metodológicas</h1>
-                <p>Acelerador 4 - Fecha: ${new Date().toLocaleDateString()}</p>
-              </div>
-              ${result.html_content}
-              <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc;">
-                <p><strong>Nombre:</strong> _____________________ <strong>Firma:</strong> _____________________</p>
-                <p><strong>Fecha:</strong> _____________________ <strong>Institución:</strong> _____________________</p>
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-      }
-    }
-  };
-
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            {step.title}
-          </CardTitle>
-          <CardDescription>{step.description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Generando estrategias metodológicas...</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Esto puede tomar unos momentos mientras se seleccionan estrategias del repositorio según tu contexto.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error && !result) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <Bot className="w-5 h-5" />
-            Error en el análisis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-          <div className="flex gap-2">
-            <Button onClick={handleAnalysis} variant="outline">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Reintentar
-            </Button>
-            <Button onClick={onPrev} variant="ghost">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Anterior
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const momentTitle = {
+    inicio: "Inicio",
+    desarrollo: "Desarrollo",
+    cierre: "Cierre",
+  } as Record<Moment, string>;
 
   return (
     <div className="space-y-6">
-      {/* Results Display */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                {step.title}
-              </CardTitle>
-              <CardDescription>{step.description}</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {result?.strategies?.length || 0} estrategias
-              </Badge>
-              <Badge variant={hasBeenRefined ? "default" : "outline"}>
-                {hasBeenRefined ? "Refinado" : "Original"}
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <Button onClick={copyToClipboard} variant="outline" size="sm">
-              <Copy className="w-4 h-4 mr-2" />
-              Copiar
-            </Button>
-            <Button onClick={downloadTxtFile} variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Descargar
-            </Button>
-            <Button onClick={handlePrint} variant="outline" size="sm">
-              <Printer className="w-4 h-4 mr-2" />
-              Imprimir
-            </Button>
-            <Button onClick={handleAnalysis} variant="outline" size="sm">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              {result ? 'Regenerar' : 'Sugerir estrategias'}
-            </Button>
-          </div>
-
-          {/* Selección manual desde repositorio (EEPE) */}
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between">
-              <h4 className="font-medium">Selecciona hasta 2 estrategias del repositorio (EEPE)</h4>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={autoSelectSuggested}>Seleccionar sugeridas (2)</Button>
-                <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>Limpiar selección</Button>
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground">Todas las estrategias están adaptadas del libro "Enseñanza de Ecología en el Patio de la Escuela (EEPE)".</p>
-            {(() => {
-              const grouped: any = { inicio: [], desarrollo: [], cierre: [] };
-              (repoItems || []).forEach((s: any, i: number) => {
-                const ms = Array.isArray(s.momento_sugerido) ? s.momento_sugerido[0] : s.momento;
-                const m = (ms || (i<2?'inicio': i<4?'desarrollo':'cierre')).toString().toLowerCase();
-                const entry = { id: s.id, title: s.title || s.nombre || `Estrategia ${i+1}`, description: s.description || s.descripcion || '', reference: s.reference || s.referencia || 'EEPE - Enseñanza de Ecología en el Patio de la Escuela' };
-                if (m.includes('inicio')) grouped.inicio.push(entry);
-                else if (m.includes('desarrollo')) grouped.desarrollo.push(entry);
-                else grouped.cierre.push(entry);
-              });
-              const MomentSection = ({keyName, title}: any) => (
-                <div className="border rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Badge variant="secondary">{title}</Badge>
-                  </div>
-                  <div className="space-y-3">
-                    {grouped[keyName].map((st: any) => (
-                      <div key={st.id} className={`flex items-start gap-3 p-3 rounded-md border ${selectedIds.includes(st.id) ? 'border-primary bg-primary/5' : 'border-muted'}`}>
-                        <Checkbox checked={selectedIds.includes(st.id)} onCheckedChange={(ck) => toggleSelect(st.id, Boolean(ck))} />
-                        <div className="flex-1">
-                          <div className="font-medium">{st.title}</div>
-                          <div className="text-sm text-muted-foreground">{st.description}</div>
-                          <Badge variant="outline" className="mt-2 text-xs">{st.reference}</Badge>
-                        </div>
-                      </div>
-                    ))}
-                    {grouped[keyName].length === 0 && (
-                      <div className="text-sm text-muted-foreground">No hay estrategias en este momento</div>
-                    )}
-                  </div>
-                </div>
-              );
-              return (
-                <div className="grid gap-4 md:grid-cols-3">
-                  <MomentSection keyName="inicio" title="Momento de Inicio" />
-                  <MomentSection keyName="desarrollo" title="Momento de Desarrollo" />
-                  <MomentSection keyName="cierre" title="Momento de Cierre" />
-                </div>
-              );
-            })()}
-            <div className="text-sm text-muted-foreground">Seleccionadas: {selectedIds.length} de 2</div>
-          </div>
-
-          {/* Vista previa de estrategias seleccionadas o sugeridas */}
-          <div className="space-y-4">
-            {result?.strategies ? (
-              <StrategiesAccordion 
-                strategies={(function(){
-                  const list = (selectedIds.length > 0 ? repoItems.filter((it:any)=> selectedIds.includes(it.id)) : result.strategies) as any[];
-                  const byMoment = { inicio: [], desarrollo: [], cierre: [] } as any;
-                  if (list && list.length) {
-                    list.forEach((s, i) => {
-                      const ms = Array.isArray(s.momento_sugerido) ? s.momento_sugerido[0] : s.momento;
-                      const m = (ms || (i<2?'inicio': i<4?'desarrollo':'cierre')).toString().toLowerCase();
-                      const entry = { title: s.title || s.nombre || `Estrategia ${i+1}`, description: s.description || s.descripcion || '', reference: s.reference || s.referencia || 'EEPE - Enseñanza de Ecología en el Patio de la Escuela' };
-                      if (m.includes('inicio')) byMoment.inicio.push(entry);
-                      else if (m.includes('desarrollo')) byMoment.desarrollo.push(entry);
-                      else byMoment.cierre.push(entry);
-                    });
-                  }
-                  return byMoment;
-                })()}
-              />
-            ) : result?.html_content ? (
-              <StrategiesAccordion 
-                strategies={parseStrategies(result.html_content)}
-              />
-            ) : (
-              <div className="text-muted-foreground text-center py-8">
-                No hay contenido disponible
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Chat for Refinement */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5" />
-            Revisión y Ajuste de Estrategias
-            {hasBeenRefined && (
-              <Badge variant="secondary" className="ml-2">
-                Token usado
-              </Badge>
-            )}
+            <CheckCircle className="w-5 h-5 text-primary" />
+            {step.title || "Selección de estrategias"}
           </CardTitle>
           <CardDescription>
-            {hasBeenRefined 
-              ? "Ya has usado tu refinamiento único. Las estrategias mostradas arriba son las finales."
-              : "Usa el chat para solicitar un refinamiento (sin IA, 1 vez). Reordenaremos o sustituiremos desde el repositorio."
-            }
+            Selecciona 2 estrategias por cada momento (Inicio, Desarrollo y Cierre). Todas provienen del libro EEPE: "Enseñanza de Ecología en el Patio de la Escuela".
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {/* Chat History */}
-            <ScrollArea className="h-64 border rounded-lg p-4">
-              <div className="space-y-4">
-                {chatMessages.length === 0 && (
-                  <div className="text-center text-muted-foreground py-8">
-                    <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>Inicia una conversación para refinar las estrategias</p>
-                    <p className="text-sm mt-1">
-                      Puedes preguntar sobre modificaciones, aclaraciones o ajustes específicos
+          <div className="grid gap-6 md:grid-cols-3">
+            {moments.map((m) => (
+              <div key={m} className="rounded-lg border">
+                <div className="p-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">{momentTitle[m]}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Selecciona 2 ({selectedByMoment[m].size}/2)
                     </p>
                   </div>
-                )}
-                
-                {chatMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    <div
-                      className={`flex gap-2 max-w-[80%] ${
-                        message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-                      }`}
-                    >
-                      <div className="flex-shrink-0">
-                        {message.role === 'user' ? (
-                          <User className="w-6 h-6 text-primary" />
-                        ) : (
-                          <Bot className="w-6 h-6 text-green-600" />
-                        )}
-                      </div>
-                      <div
-                        className={`p-3 rounded-lg ${
-                          message.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                    </div>
+                  <Badge variant={selectedByMoment[m].size === 2 ? "default" : "secondary"}>
+                    {selectedByMoment[m].size === 2 ? "Listo" : "Pendiente"}
+                  </Badge>
+                </div>
+                <Separator />
+                <ScrollArea className="h-[360px]">
+                  <div className="p-3 space-y-3">
+                    {(grouped[m] || []).map((it) => {
+                      const checked = selectedByMoment[m].has(it.id);
+                      const disabled = !checked && selectedByMoment[m].size >= 2;
+                      return (
+                        <div key={it.id} className={`p-3 rounded-md border transition-colors ${checked ? "border-primary bg-primary/5" : "hover:border-muted-foreground/40"}`}>
+                          <div className="flex items-start gap-3">
+                            <Checkbox
+                              id={`${m}-${it.id}`}
+                              checked={checked}
+                              disabled={disabled}
+                              onCheckedChange={(c) => toggle(m, it.id, Boolean(c))}
+                            />
+                            <div className="flex-1">
+                              <label htmlFor={`${m}-${it.id}`} className="font-medium cursor-pointer">
+                                {it.nombre || "Estrategia"}
+                              </label>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {it.descripcion || ""}
+                              </p>
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {(it.etiquetas || []).slice(0, 4).map((tag) => (
+                                  <Badge key={tag} variant="outline" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                {it.referencia || "EEPE - Enseñanza de Ecología en el Patio de la Escuela"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {grouped[m]?.length === 0 && (
+                      <p className="text-sm text-muted-foreground p-3">
+                        No hay estrategias configuradas para este momento.
+                      </p>
+                    )}
                   </div>
-                ))}
-                
-                {chatLoading && (
-                  <div className="flex gap-3 justify-start">
-                    <Bot className="w-6 h-6 text-green-600" />
-                    <div className="bg-muted p-3 rounded-lg">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    </div>
-                  </div>
-                )}
+                </ScrollArea>
               </div>
-              <div ref={chatEndRef} />
-            </ScrollArea>
+            ))}
+          </div>
 
-            {/* Chat Input */}
-            <div className="flex gap-2">
-              <Textarea
-                placeholder={hasBeenRefined 
-                  ? "Puedes hacer preguntas sobre las estrategias refinadas..."
-                  : "Escribe tu mensaje para refinar las estrategias (solo 1 refinamiento permitido)..."
-                }
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="min-h-[60px]"
-                disabled={chatLoading}
-              />
-              <Button 
-                onClick={() => sendMessage()} 
-                disabled={!userInput.trim() || chatLoading}
-                className="self-end"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
+          <div className="flex justify-between mt-6">
+            <Button variant="outline" onClick={onPrev}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Anterior
+            </Button>
+            <Button onClick={handleContinue} disabled={!canContinue}>
+              Continuar
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
           </div>
         </CardContent>
       </Card>
-
-      {/* Navigation */}
-      <div className="flex justify-between">
-        <Button onClick={onPrev} variant="outline">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Anterior
-        </Button>
-        <Button onClick={proceedNext} disabled={selectedIds.length === 0}>
-          Continuar
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
-      </div>
     </div>
-  );
-};
-
-// Accordion Component for Strategies Display
-interface StrategiesAccordionProps {
-  strategies: {
-    inicio: Array<{ title: string; description: string; reference: string }>;
-    desarrollo: Array<{ title: string; description: string; reference: string }>;
-    cierre: Array<{ title: string; description: string; reference: string }>;
-  };
-}
-
-const StrategiesAccordion = ({ strategies }: StrategiesAccordionProps) => {
-  const moments = [
-    {
-      key: 'inicio',
-      title: 'Momento de Inicio',
-      icon: PlayCircle,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      strategies: strategies.inicio
-    },
-    {
-      key: 'desarrollo',
-      title: 'Momento de Desarrollo',
-      icon: Clock,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      strategies: strategies.desarrollo
-    },
-    {
-      key: 'cierre',
-      title: 'Momento de Cierre',
-      icon: CheckSquare,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      strategies: strategies.cierre
-    }
-  ];
-
-  return (
-    <Accordion type="multiple" defaultValue={['inicio', 'desarrollo', 'cierre']} className="w-full">
-      {moments.map((moment) => (
-        <AccordionItem key={moment.key} value={moment.key} className="border rounded-lg mb-2">
-          <AccordionTrigger className={`px-4 py-3 hover:no-underline ${moment.bgColor}`}>
-            <div className="flex items-center gap-3">
-              <moment.icon className={`w-5 h-5 ${moment.color}`} />
-              <span className="font-semibold">{moment.title}</span>
-              <Badge variant="secondary" className="ml-auto mr-2">
-                {moment.strategies.length} estrategias
-              </Badge>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-4 py-3">
-            <div className="space-y-3">
-              {moment.strategies.map((strategy, index) => (
-                <Card key={index} className="border-l-4 border-l-primary/20">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-primary" />
-                          {strategy.title}
-                        </h4>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          {strategy.description}
-                        </p>
-                        <Badge variant="outline" className="text-xs">
-                          {strategy.reference}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {moment.strategies.length === 0 && (
-                <div className="text-center py-6 text-muted-foreground">
-                  <span className="text-sm">No hay estrategias para este momento</span>
-                </div>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      ))}
-    </Accordion>
   );
 };

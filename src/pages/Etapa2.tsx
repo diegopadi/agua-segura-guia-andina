@@ -11,7 +11,7 @@ const accelerators = [
   {
     id: 4,
     title: "Selección de Estrategias Metodológicas",
-    description: "Genera y ajusta un catálogo de estrategias pedagógicas activas basadas en normativa MINEDU",
+    description: "Selecciona 6 estrategias (2 por momento) adaptadas del libro EEPE",
     icon: Settings,
     color: "bg-green-500",
     estimatedTime: "45-60 min",

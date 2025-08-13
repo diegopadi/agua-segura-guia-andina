@@ -80,7 +80,7 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
           const n = parseInt(t.split('_')[1], 10);
           if (!isNaN(n) && n >= 1 && n <= 6 && strategies[n-1]) {
             const s = strategies[n-1];
-            return `<article><h3>${n}. ${s.title || s.nombre || 'Estrategia'}</h3><p>${s.description || s.descripcion || ''}</p><p><small>${s.reference || s.referencia || 'MINEDU - Currículo Nacional'}</small></p></article>`;
+            return `<article><h3>${n}. ${s.title || s.nombre || 'Estrategia'}</h3><p>${s.description || s.descripcion || ''}</p><p><small>${s.reference || s.referencia || 'EEPE - Enseñanza de Ecología en el Patio de la Escuela'}</small></p></article>`;
           }
         }
         return '';
