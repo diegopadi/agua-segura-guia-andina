@@ -234,6 +234,7 @@ const Acelerador4 = () => {
       const cfg = await getAppConfig<any>("APP_CONFIG_A4");
       if (!cfg || !cfg.data?.estrategias_repo?.items?.length || !cfg.data?.plantilla_informe_ac4) {
         await upsertAppConfig("APP_CONFIG_A4", APP_CONFIG_A4_DEFAULT);
+        console.log('[A4] upsert APP_CONFIG_A4 (refresh): OK');
       }
       const updatedCfg = await getAppConfig<any>("APP_CONFIG_A4");
       const newAppConfig = updatedCfg?.data ?? APP_CONFIG_A4_DEFAULT;
@@ -243,6 +244,7 @@ const Acelerador4 = () => {
         session_data: { ...(session.session_data || {}), app_config: newAppConfig }
       };
       await updateSession(updatedSession);
+      console.log('[A4] refresh: session_data.app_config reloaded');
       toast({ title: "Configuración recargada" });
     } catch (e) {
       console.error("Error refreshing APP_CONFIG_A4", e);
@@ -257,6 +259,7 @@ const Acelerador4 = () => {
     try {
       setRefreshing(true);
       await upsertAppConfig("APP_CONFIG_A4", APP_CONFIG_A4_DEFAULT);
+      console.log('[A4] upsert APP_CONFIG_A4 (replace): OK');
       const updatedCfg = await getAppConfig<any>("APP_CONFIG_A4");
       const newAppConfig = updatedCfg?.data ?? APP_CONFIG_A4_DEFAULT;
       const updatedSession = {
@@ -264,6 +267,7 @@ const Acelerador4 = () => {
         session_data: { ...(session.session_data || {}), app_config: newAppConfig }
       };
       await updateSession(updatedSession);
+      console.log('[A4] replace: session_data.app_config reloaded');
       toast({ title: "Configuración reemplazada" });
     } catch (e) {
       console.error("Error replacing APP_CONFIG_A4", e);
