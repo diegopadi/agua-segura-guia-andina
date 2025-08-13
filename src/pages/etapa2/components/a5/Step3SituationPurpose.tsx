@@ -15,9 +15,12 @@ interface Props {
   onPrev: () => void;
   info: A5InfoData;
   a4: A4Inputs | null;
+  sessionId: string | null;
+  sessionData: any;
+  setSessionData: (data: any) => void;
 }
 
-export default function Step3SituationPurpose({ data, onChange, onNext, onPrev, info, a4 }: Props) {
+export default function Step3SituationPurpose({ data, onChange, onNext, onPrev, info, a4, sessionId, sessionData, setSessionData }: Props) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
@@ -79,14 +82,23 @@ export default function Step3SituationPurpose({ data, onChange, onNext, onPrev, 
         throw new Error('La IA no devolvió contenido. Vuelve a intentar.');
       }
 
-      onChange({
+      const newSituationData = {
         situacion: resp.situacion || data.situacion,
         proposito: resp.proposito || data.proposito,
         reto: resp.reto || data.reto,
         producto: resp.producto || data.producto,
-      });
+      };
 
-      toast({ title: "Generado con IA", description: "Contenido actualizado con insumos del A3 y A4." });
+      onChange(newSituationData);
+
+      // Auto-save after generation
+      if (user && sessionId) {
+        const newData = { ...sessionData, situation: newSituationData };
+        setSessionData(newData);
+        await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', sessionId);
+      }
+
+      toast({ title: "Generado con IA", description: "Contenido generado y guardado automáticamente." });
     } catch (e: any) {
       console.error('[A5][Step3] generate error', e);
       toast({ title: "Error", description: e.message || 'No se pudo generar el contenido', variant: 'destructive' });
@@ -95,7 +107,22 @@ export default function Step3SituationPurpose({ data, onChange, onNext, onPrev, 
     }
   };
 
-  const save = () => toast({ title: "Guardado", description: "Se almacenará más adelante." });
+  const save = async () => {
+    if (!user || !sessionId) {
+      toast({ title: "Guardado localmente", description: "Los datos se guardarán al iniciar sesión." });
+      return;
+    }
+
+    try {
+      const newData = { ...sessionData, situation: data };
+      setSessionData(newData);
+      await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', sessionId);
+      toast({ title: "Guardado", description: "Situación y propósitos guardados correctamente." });
+    } catch (error) {
+      console.error('Error saving situation data:', error);
+      toast({ title: "Error", description: "No se pudo guardar. Inténtalo de nuevo.", variant: "destructive" });
+    }
+  };
 
   return (
     <Card>
