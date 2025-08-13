@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Loader2, 
   Wand2, 
@@ -77,6 +78,42 @@ export const StrategiesViewerStep = ({
   const [userInput, setUserInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Selección manual de estrategias del repositorio (máx. 2)
+  const repoItems: any[] = sessionData?.app_config?.estrategias_repo?.items || [];
+  const [selectedIds, setSelectedIds] = useState<string[]>(
+    Array.isArray(sessionData?.strategies_selected) ? sessionData.strategies_selected.map((s: any) => s.id) : []
+  );
+  const toggleSelect = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      if (checked) {
+        if (prev.includes(id)) return prev;
+        if (prev.length >= 2) {
+          toast({ title: 'Máximo alcanzado', description: 'Solo puedes seleccionar hasta 2 estrategias', variant: 'destructive' });
+          return prev;
+        }
+        return [...prev, id];
+      } else {
+        return prev.filter((x) => x !== id);
+      }
+    });
+  };
+  const autoSelectSuggested = () => {
+    const payload = sessionData?.suggestion_payload || { prioridades: sessionData?.priorities || [], contexto: sessionData?.contexto };
+    const scored = (repoItems || []).map((it) => ({ it, s: scoreItem(it, payload) }))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 2)
+      .map((x) => x.it.id);
+    setSelectedIds(scored);
+  };
+  const proceedNext = () => {
+    if (selectedIds.length > 0) {
+      const selected = repoItems.filter((it) => selectedIds.includes(it.id));
+      const updated = { ...sessionData, strategies_selected: selected, strategies_result: { source: 'selected', strategies: selected } };
+      onUpdateSessionData(updated);
+    }
+    onNext();
+  };
 
   useEffect(() => {
     if (!result) {
@@ -239,7 +276,7 @@ export const StrategiesViewerStep = ({
             const strategy = {
               title: strategyText.split('.')[0] || strategyText.substring(0, 50),
               description: strategyText,
-              reference: 'MINEDU - Currículo Nacional'
+              reference: 'EEPE - Enseñanza de Ecología en el Patio de la Escuela'
             };
             
             if (currentMoment === 'inicio') strategies.inicio.push(strategy);
@@ -253,16 +290,16 @@ export const StrategiesViewerStep = ({
       if (strategies.inicio.length === 0 && strategies.desarrollo.length === 0 && strategies.cierre.length === 0) {
         return {
           inicio: [
-            { title: "Estrategia de Motivación", description: "Actividad para captar la atención y motivar el aprendizaje", reference: "MINEDU - Currículo Nacional" },
-            { title: "Exploración de Saberes Previos", description: "Técnica para activar conocimientos anteriores", reference: "MINEDU - Currículo Nacional" }
+            { title: "Estrategia de Motivación", description: "Actividad para captar la atención y motivar el aprendizaje", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" },
+            { title: "Exploración de Saberes Previos", description: "Técnica para activar conocimientos anteriores", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" }
           ],
           desarrollo: [
-            { title: "Construcción de Aprendizajes", description: "Metodología para la construcción activa del conocimiento", reference: "MINEDU - Currículo Nacional" },
-            { title: "Trabajo Colaborativo", description: "Estrategia de aprendizaje en equipo", reference: "MINEDU - Currículo Nacional" }
+            { title: "Construcción de Aprendizajes", description: "Metodología para la construcción activa del conocimiento", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" },
+            { title: "Trabajo Colaborativo", description: "Estrategia de aprendizaje en equipo", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" }
           ],
           cierre: [
-            { title: "Consolidación de Aprendizajes", description: "Actividad para fijar los conocimientos adquiridos", reference: "MINEDU - Currículo Nacional" },
-            { title: "Evaluación Formativa", description: "Técnica de evaluación del proceso de aprendizaje", reference: "MINEDU - Currículo Nacional" }
+            { title: "Consolidación de Aprendizajes", description: "Actividad para fijar los conocimientos adquiridos", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" },
+            { title: "Evaluación Formativa", description: "Técnica de evaluación del proceso de aprendizaje", reference: "EEPE - Enseñanza de Ecología en el Patio de la Escuela" }
           ]
         };
       }
@@ -429,18 +466,71 @@ export const StrategiesViewerStep = ({
             </Button>
           </div>
 
-          {/* Interactive Strategies Display */}
+          {/* Selección manual desde repositorio (EEPE) */}
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium">Selecciona hasta 2 estrategias del repositorio (EEPE)</h4>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={autoSelectSuggested}>Seleccionar sugeridas (2)</Button>
+                <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>Limpiar selección</Button>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">Todas las estrategias están adaptadas del libro "Enseñanza de Ecología en el Patio de la Escuela (EEPE)".</p>
+            {(() => {
+              const grouped: any = { inicio: [], desarrollo: [], cierre: [] };
+              (repoItems || []).forEach((s: any, i: number) => {
+                const ms = Array.isArray(s.momento_sugerido) ? s.momento_sugerido[0] : s.momento;
+                const m = (ms || (i<2?'inicio': i<4?'desarrollo':'cierre')).toString().toLowerCase();
+                const entry = { id: s.id, title: s.title || s.nombre || `Estrategia ${i+1}`, description: s.description || s.descripcion || '', reference: s.reference || s.referencia || 'EEPE - Enseñanza de Ecología en el Patio de la Escuela' };
+                if (m.includes('inicio')) grouped.inicio.push(entry);
+                else if (m.includes('desarrollo')) grouped.desarrollo.push(entry);
+                else grouped.cierre.push(entry);
+              });
+              const MomentSection = ({keyName, title}: any) => (
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge variant="secondary">{title}</Badge>
+                  </div>
+                  <div className="space-y-3">
+                    {grouped[keyName].map((st: any) => (
+                      <div key={st.id} className={`flex items-start gap-3 p-3 rounded-md border ${selectedIds.includes(st.id) ? 'border-primary bg-primary/5' : 'border-muted'}`}>
+                        <Checkbox checked={selectedIds.includes(st.id)} onCheckedChange={(ck) => toggleSelect(st.id, Boolean(ck))} />
+                        <div className="flex-1">
+                          <div className="font-medium">{st.title}</div>
+                          <div className="text-sm text-muted-foreground">{st.description}</div>
+                          <Badge variant="outline" className="mt-2 text-xs">{st.reference}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                    {grouped[keyName].length === 0 && (
+                      <div className="text-sm text-muted-foreground">No hay estrategias en este momento</div>
+                    )}
+                  </div>
+                </div>
+              );
+              return (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <MomentSection keyName="inicio" title="Momento de Inicio" />
+                  <MomentSection keyName="desarrollo" title="Momento de Desarrollo" />
+                  <MomentSection keyName="cierre" title="Momento de Cierre" />
+                </div>
+              );
+            })()}
+            <div className="text-sm text-muted-foreground">Seleccionadas: {selectedIds.length} de 2</div>
+          </div>
+
+          {/* Vista previa de estrategias seleccionadas o sugeridas */}
           <div className="space-y-4">
             {result?.strategies ? (
               <StrategiesAccordion 
                 strategies={(function(){
-                  const list = result.strategies as any[];
+                  const list = (selectedIds.length > 0 ? repoItems.filter((it:any)=> selectedIds.includes(it.id)) : result.strategies) as any[];
                   const byMoment = { inicio: [], desarrollo: [], cierre: [] } as any;
                   if (list && list.length) {
                     list.forEach((s, i) => {
                       const ms = Array.isArray(s.momento_sugerido) ? s.momento_sugerido[0] : s.momento;
                       const m = (ms || (i<2?'inicio': i<4?'desarrollo':'cierre')).toString().toLowerCase();
-                      const entry = { title: s.title || s.nombre || `Estrategia ${i+1}`, description: s.description || s.descripcion || '', reference: s.reference || s.referencia || 'MINEDU - Currículo Nacional' };
+                      const entry = { title: s.title || s.nombre || `Estrategia ${i+1}`, description: s.description || s.descripcion || '', reference: s.reference || s.referencia || 'EEPE - Enseñanza de Ecología en el Patio de la Escuela' };
                       if (m.includes('inicio')) byMoment.inicio.push(entry);
                       else if (m.includes('desarrollo')) byMoment.desarrollo.push(entry);
                       else byMoment.cierre.push(entry);
@@ -571,7 +661,7 @@ export const StrategiesViewerStep = ({
           <ArrowLeft className="w-4 h-4 mr-2" />
           Anterior
         </Button>
-        <Button onClick={onNext} disabled={!result}>
+        <Button onClick={proceedNext} disabled={selectedIds.length === 0}>
           Continuar
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
