@@ -11,6 +11,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Recorrido breve por patio/entorno para identificar puntos de agua, escurrimientos, zonas húmedas, vegetación indicadora y señales de contaminación. Registro en bitácora con croquis y checklist; puesta en común de hallazgos e hipótesis iniciales sobre riesgos y usos del agua en la IE.',
         momento_sugerido: ['inicio'],
         etiquetas: ['indagacion','trabajo-de-campo','diagnostico'],
+        tipo_estrategia: 'indagacion_diagnostico',
         recursos: ['bitacoras','cinta para delimitar','celulares para fotos'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -20,6 +21,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Activación con tarjetas de preguntas gatillo (¿Cómo sabemos si el agua es segura? ¿Qué la contamina? ¿Cómo se potabiliza en la IE?). Priorización rápida de dudas para orientar la indagación.',
         momento_sugerido: ['inicio'],
         etiquetas: ['preguntas-guiadas','activacion','pensamiento-critico'],
+        tipo_estrategia: 'indagacion_diagnostico',
         recursos: ['tarjetas','pizarron','marcadores'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -29,6 +31,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Lluvia de ideas y checklist sobre hábitos de uso del agua (lavado de manos, cierre de caños, reportes de fugas). Se construye una línea base de prácticas en la IE.',
         momento_sugerido: ['inicio'],
         etiquetas: ['diagnostico','participacion','cultura-del-agua'],
+        tipo_estrategia: 'indagacion_diagnostico',
         recursos: ['checklist','post-its','pizarron'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -38,6 +41,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Análisis guiado de imágenes/videos cortos sobre problemas y soluciones locales de agua segura; identificación de causas, efectos y posibles respuestas en la IE.',
         momento_sugerido: ['inicio'],
         etiquetas: ['estudio-de-caso','visual','pensamiento-sistemico'],
+        tipo_estrategia: 'indagacion_diagnostico',
         recursos: ['proyector o impresiones','fichas de análisis'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -47,6 +51,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Construcción colaborativa de una línea de tiempo sobre acceso, calidad y gestión del agua en la localidad (cambios, hitos y actores).',
         momento_sugerido: ['inicio'],
         etiquetas: ['contextualizacion','historia-local','colaborativo'],
+        tipo_estrategia: 'indagacion_diagnostico',
         recursos: ['papelografo','marcadores','stickers de hitos'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -56,6 +61,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Identificación participativa de problemas (fugas, encharcamientos, falta de cloro) y oportunidades (reuso, captación de lluvia) para enfocar el ciclo de mejora.',
         momento_sugerido: ['inicio'],
         etiquetas: ['activacion','ABP','priorizacion'],
+        tipo_estrategia: 'indagacion_diagnostico',
         recursos: ['post-its','matriz prioridad/impacto'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -66,6 +72,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Construcción de filtros caseros (arena, grava, carbón, tela) para comparar tiempos y turbidez relativa. Discusión sobre límites y uso seguro en contexto escolar.',
         momento_sugerido: ['desarrollo'],
         etiquetas: ['experimento','C y T','manos-a-la-obra'],
+        tipo_estrategia: 'experimentos_demostraciones',
         recursos: ['botellas PET','arena','grava','carbon activado','tela','cronometro'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -75,6 +82,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Rotación por estaciones: medición de pH, cloro libre con tiras reactivas, observación de sólidos, lectura de infografías de potabilización. Registro por equipo.',
         momento_sugerido: ['desarrollo'],
         etiquetas: ['estaciones','indagacion','colaborativo'],
+        tipo_estrategia: 'experimentos_demostraciones',
         recursos: ['tiras reactivas de pH/cloro','vasos transparentes','fichas de registro'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -84,6 +92,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Trazado del recorrido del agua (ingreso, almacenamiento, distribución, desagüe). Identificación de puntos críticos de desperdicio y mejoras de bajo costo.',
         momento_sugerido: ['desarrollo'],
         etiquetas: ['proyecto','estudio-de-caso-local','gestion-escolar'],
+        tipo_estrategia: 'proyectos_rutas_aplicadas',
         recursos: ['croquis o plano simple','checklist','cámara'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -93,6 +102,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Medición sencilla de consumos (observación de tiempos de uso, conteo de descargas, estimaciones por caudal) y reporte con propuestas de ahorro y mantenimiento.',
         momento_sugerido: ['desarrollo'],
         etiquetas: ['ABP','datos','mejora-continua'],
+        tipo_estrategia: 'experimentos_demostraciones',
         recursos: ['cronometro','fichas de conteo','tabla de caudales estimados'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -102,6 +112,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Uso de tiras reactivas seguras (pH, cloro libre) y observación de parámetros visibles (olor/color). Discusión sobre límites de estas pruebas y protocolos de seguridad.',
         momento_sugerido: ['desarrollo'],
         etiquetas: ['indagacion','C y T','seguridad'],
+        tipo_estrategia: 'experimentos_demostraciones',
         recursos: ['tiras reactivas','vasos','guantes desechables'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -111,6 +122,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Diseño e implementación de una acción concreta (señalética de cierre de caños, kit de reporte de fugas, rutina de lavado de manos eficiente) con la comunidad educativa.',
         momento_sugerido: ['desarrollo'],
         etiquetas: ['ApS','ciudadania','interdisciplinar'],
+        tipo_estrategia: 'proyectos_rutas_aplicadas',
         recursos: ['materiales de señalizacion','plantillas','rubrica de servicio'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -121,6 +133,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Mensajes, afiches y micro-demostraciones para promover uso responsable (lavado de manos eficiente, cierre de caños, reporte de fugas). Roles y cronograma.',
         momento_sugerido: ['cierre'],
         etiquetas: ['comunicacion','participacion-estudiantil','ciudadania'],
+        tipo_estrategia: 'comunicacion_movilizacion',
         recursos: ['plantillas de afiches','mural o impresión','rubrica de impacto'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -130,6 +143,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Exposición de productos (afiches, prototipos, reportes) y demostraciones breves a otras aulas/familias. Recogida de retroalimentación mediante tarjetas.',
         momento_sugerido: ['cierre'],
         etiquetas: ['difusion','portafolio','vinculo-comunidad'],
+        tipo_estrategia: 'reflexion_evaluacion_cierre',
         recursos: ['mesas de exhibicion','carteles','tarjetas de feedback'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -139,6 +153,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Debate guiado sobre priorización de acciones (reparar fuga vs. comprar dispensadores, etc.), considerando impacto, costo y viabilidad.',
         momento_sugerido: ['cierre'],
         etiquetas: ['debate','pensamiento-critico','toma-de-decisiones'],
+        tipo_estrategia: 'comunicacion_movilizacion',
         recursos: ['guion de roles','matriz de decisiones','cronometro'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -148,6 +163,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Síntesis escrita o audiovisual de aprendizajes, dificultades superadas y próximos pasos; relación con compromisos personales y del aula.',
         momento_sugerido: ['cierre'],
         etiquetas: ['metacognicion','evaluacion-formativa','autorregulacion'],
+        tipo_estrategia: 'reflexion_evaluacion_cierre',
         recursos: ['formatos de bitacora','galeria de evidencias'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
@@ -157,6 +173,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Definición de acciones concretas por estudiante/equipo, responsables y fechas. Tablero visible de seguimiento y recordatorios.',
         momento_sugerido: ['cierre'],
         etiquetas: ['plan-de-accion','gestion-del-cambio','seguimiento'],
+        tipo_estrategia: 'reflexion_evaluacion_cierre',
         recursos: ['tablero','formato de compromisos','calendario'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       },
