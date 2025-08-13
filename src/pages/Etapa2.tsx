@@ -11,19 +11,17 @@ const accelerators = [
   {
     id: 4,
     title: "Selección de Estrategias Metodológicas",
-    description: "Selecciona hasta 5 estrategias (agrupadas por tipo) adaptadas del libro EEPE",
+    description: "Selecciona estrategias metodológicas adaptadas del libro EEPE según las prioridades identificadas",
     icon: Settings,
     color: "bg-green-500",
-    estimatedTime: "45-60 min",
     path: "/etapa2/acelerador4"
   },
   {
     id: 5,
-    title: "Planificación y Preparación de Unidades",
-    description: "Diseña la unidad didáctica completa a partir de estrategias priorizadas, CNEB y PCI",
+    title: "Diseño de Unidad de Aprendizaje",
+    description: "Proceso completo de 8 pasos para crear una unidad didáctica detallada con sesiones, competencias y materiales",
     icon: FileText,
     color: "bg-blue-500",
-    estimatedTime: "60-90 min",
     path: "/etapa2/acelerador5"
   }
 ];
@@ -113,9 +111,6 @@ const Etapa2 = () => {
                         </CardDescription>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {accelerator.estimatedTime}
-                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
