@@ -5,16 +5,21 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import type { A4Inputs, A4PriorityData, A4StrategyData } from "./types";
 import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 
 interface Props {
   onNext: () => void;
   onValidated?: (inputs: A4Inputs) => void;
+  sessionId: string | null;
+  sessionData: any;
+  setSessionData: (data: any) => void;
 }
 
-export default function Step1Welcome({ onNext, onValidated }: Props) {
+export default function Step1Welcome({ onNext, onValidated, sessionId, sessionData, setSessionData }: Props) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<A4PriorityData[]>([]);
@@ -87,8 +92,28 @@ export default function Step1Welcome({ onNext, onValidated }: Props) {
     source: strategies.length > 0 ? 'adapted' : 'unknown',
   }), [priorities, strategies]);
 
-  const handleValidate = () => {
+  const handleValidate = async () => {
     setValidated(true);
+    
+    // Guardar la validación y los inputs de A4 en la sesión
+    if (user && sessionId) {
+      try {
+        const newData = { 
+          ...sessionData, 
+          a4_inputs: inputs,
+          step1_validated: true,
+          validation_date: new Date().toISOString()
+        };
+        setSessionData(newData);
+        await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', sessionId);
+        toast({ title: "Validado", description: "Datos validados y guardados correctamente." });
+      } catch (error) {
+        console.error('Error saving validation:', error);
+        toast({ title: "Error", description: "No se pudo guardar la validación.", variant: "destructive" });
+      }
+    } else {
+      toast({ title: "Validado", description: "Datos validados localmente." });
+    }
   };
 
   const handleContinue = () => {

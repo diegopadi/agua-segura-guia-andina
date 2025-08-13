@@ -202,7 +202,7 @@ export default function Acelerador5() {
   const render = () => {
     switch (current) {
       case 1:
-        return <Step1Welcome onNext={next} onValidated={(inputs: A4Inputs) => { setA4Inputs(inputs); next(); }} />;
+        return <Step1Welcome onNext={next} onValidated={(inputs: A4Inputs) => { setA4Inputs(inputs); next(); }} sessionId={sessionId} sessionData={sessionData} setSessionData={setSessionData} />;
       case 2:
         return <Step2Info data={info} onChange={setInfo} onPrev={prev} onNext={next} onSaveVars={handleSaveVars} />;
       case 3:
