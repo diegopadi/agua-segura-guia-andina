@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2, Plus, Sparkles, RotateCcw } from "lucide-react";
 import { A5MaterialsData, A5MaterialItem } from "./types";
@@ -27,6 +28,8 @@ export default function Step7Materials({ data, onChange, onNext, onPrev }: Props
   const [sessionsData, setSessionsData] = useState<any>(null);
   const [feedbackData, setFeedbackData] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load data from previous steps
   useEffect(() => {
@@ -77,6 +80,64 @@ export default function Step7Materials({ data, onChange, onNext, onPrev }: Props
       loadPreviousStepsData();
     }
   }, [user?.id]);
+
+  // Autosave functionality
+  const saveToSupabase = async (materialsData: A5MaterialsData) => {
+    if (!user?.id) return;
+
+    try {
+      setIsSaving(true);
+      const { error } = await supabase
+        .from('acelerador_sessions')
+        .update({ 
+          ua_materiales: materialsData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('acelerador_number', 5);
+
+      if (error) throw error;
+      
+      console.log('Materials autosaved successfully');
+    } catch (error) {
+      console.error('Error autosaving materials:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron guardar los materiales automáticamente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Debounced autosave
+  useEffect(() => {
+    if (data.materiales.length === 0) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
+      saveToSupabase(data);
+    }, 800); // 800ms debounce
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [data, user?.id]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
 
   const generate = async () => {
     if (!canGenerate) return;
@@ -139,7 +200,12 @@ export default function Step7Materials({ data, onChange, onNext, onPrev }: Props
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Paso 7: Materiales básicos a utilizar</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          Paso 7: Materiales básicos a utilizar
+          {isSaving && (
+            <span className="text-sm text-muted-foreground">Guardando...</span>
+          )}
+        </CardTitle>
         <CardDescription>
           Lista de materiales y recursos necesarios para implementar la unidad de aprendizaje
         </CardDescription>
@@ -195,22 +261,35 @@ export default function Step7Materials({ data, onChange, onNext, onPrev }: Props
               <TableBody>
                 {data.materiales.map((material, index) => (
                   <TableRow key={index}>
-                    <TableCell>
-                      <Input
-                        value={material.nombre}
-                        onChange={(e) => updateMaterial(index, 'nombre', e.target.value)}
-                        placeholder="Nombre del material"
-                        className="border-0 bg-transparent p-1"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        value={material.descripcion}
-                        onChange={(e) => updateMaterial(index, 'descripcion', e.target.value)}
-                        placeholder="Descripción y uso pedagógico"
-                        className="border-0 bg-transparent p-1"
-                      />
-                    </TableCell>
+                     <TableCell>
+                       <Input
+                         value={material.nombre}
+                         onChange={(e) => updateMaterial(index, 'nombre', e.target.value)}
+                         placeholder="Nombre del material"
+                         className="border-0 bg-transparent p-1 focus:bg-background focus:border-input"
+                         maxLength={50}
+                       />
+                     </TableCell>
+                     <TableCell>
+                       {material.descripcion.length > 60 ? (
+                         <Textarea
+                           value={material.descripcion}
+                           onChange={(e) => updateMaterial(index, 'descripcion', e.target.value)}
+                           placeholder="Descripción y uso pedagógico"
+                           className="border-0 bg-transparent p-1 focus:bg-background focus:border-input min-h-[60px] resize-none"
+                           rows={2}
+                           maxLength={200}
+                         />
+                       ) : (
+                         <Input
+                           value={material.descripcion}
+                           onChange={(e) => updateMaterial(index, 'descripcion', e.target.value)}
+                           placeholder="Descripción y uso pedagógico"
+                           className="border-0 bg-transparent p-1 focus:bg-background focus:border-input"
+                           maxLength={200}
+                         />
+                       )}
+                     </TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
