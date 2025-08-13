@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Loader2, MessageSquare, CheckCircle, RefreshCw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+
 import { toast } from 'sonner';
 
 interface Question {
@@ -263,42 +263,6 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
           Anterior
         </Button>
         <div className="flex gap-2">
-          <Button 
-            variant="secondary"
-            onClick={async () => {
-              try {
-                setLoading(true);
-                const usedAdapted = Array.isArray(sessionData?.strategies_adapted?.strategies) && sessionData.strategies_adapted.strategies.length > 0;
-                const baseStrategies = usedAdapted ? sessionData.strategies_adapted.strategies : (sessionData?.strategies_result?.strategies || []);
-                const payloadSummary = {
-                  strategies: baseStrategies.length,
-                  responses_global: Object.keys(sessionData?.profundization_global || {}).length,
-                  contexto: Object.keys(sessionData?.contexto || {}).length,
-                };
-                console.log('[A4][Profundization] Adapt payload:', payloadSummary);
-                const { data, error } = await supabase.functions.invoke('adapt-ac4-strategies', {
-                  body: {
-                    session_id: sessionId,
-                    strategies: baseStrategies,
-                    responses: sessionData?.profundization_global || {},
-                    contexto: sessionData?.contexto,
-                  }
-                });
-                if (error) throw error;
-                const adapted = { source: 'adapted', strategies: data?.strategies || baseStrategies };
-                onUpdateSession({ ...sessionData, strategies_adapted: adapted });
-                toast.success('Estrategias adaptadas con tus respuestas');
-              } catch (e: any) {
-                console.error(e);
-                toast.error('No se pudo adaptar las estrategias');
-              } finally {
-                setLoading(false);
-              }
-            }}
-            disabled={!canProceed()}
-          >
-            Adaptar estrategias
-          </Button>
           <Button 
             onClick={onNext}
             disabled={!canProceed()}
