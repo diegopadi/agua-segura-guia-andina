@@ -16,7 +16,7 @@ interface Props {
 
 function buildPlainText(props: Props): string {
   const { info, situation, comp, sessions, feedback, materials } = props;
-  const sesiones = sessions.estructura.map((r) => `Sesión ${r.sesion}: ${r.objetivo} | ${r.actividades}`).join("\n");
+  const sesiones = sessions.estructura.map((r) => `Sesión ${r.numero}: ${r.titulo} | Inicio: ${r.actividades.inicio} | Desarrollo: ${r.actividades.desarrollo} | Cierre: ${r.actividades.cierre}`).join("\n");
   const mats = materials.materiales.map((m) => `- ${m.nombre}: ${m.descripcion}`).join("\n");
   return `UNIDAD DE APRENDIZAJE\n\nI. Datos informativos\nInstitución: ${info.institucion}\nDistrito: ${info.distrito}\nProvincia: ${info.provincia}\nRegión: ${info.region}\nDirector(a): ${info.director}\nProfesor(a): ${info.profesor}\nÁrea: ${info.area}\nGrado: ${info.grado}\nDuración: ${info.duracion}\nPeriodo: ${info.periodo}\nAño: ${info.anio}\n\nII-III. Situación, propósito, reto, producto\nSituación: ${situation.situacion}\nPropósito: ${situation.proposito}\nReto: ${situation.reto}\nProducto: ${situation.producto}\n\nIV. Competencias y enfoques\nCompetencias: ${comp.competencias.join(", ")}\nEnfoques: ${comp.enfoques.join(", ")}\n\nV. Estructura de sesiones\n${sesiones || "(sin contenido)"}\n\nVI. Retroalimentación\n${feedback.feedback}\n\nVII. Materiales\n${mats || "(sin contenido)"}`;
 }
@@ -109,10 +109,16 @@ export default function Step8FinalPreview(props: Props) {
                     </thead>
                     <tbody>
                       {sessions.estructura.map((row) => (
-                        <tr key={row.sesion}>
-                          <td>{row.sesion}</td>
-                          <td>{row.objetivo}</td>
-                          <td>{row.actividades}</td>
+                        <tr key={row.numero}>
+                          <td>{row.numero}</td>
+                          <td>{row.titulo}</td>
+                          <td>
+                            <div>
+                              <strong>Inicio:</strong> {row.actividades.inicio}<br/>
+                              <strong>Desarrollo:</strong> {row.actividades.desarrollo}<br/>
+                              <strong>Cierre:</strong> {row.actividades.cierre}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

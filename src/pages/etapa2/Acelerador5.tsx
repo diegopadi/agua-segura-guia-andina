@@ -232,7 +232,7 @@ export default function Acelerador5() {
       case 4:
         return <Step4Competencies data={comp} onChange={setComp} onPrev={prev} onNext={next} info={info} onSaveVars={handleSaveVars} />;
       case 5:
-        return <Step5SessionsStructure data={sessions} onChange={setSessions} onPrev={prev} onNext={next} />;
+        return <Step5SessionsStructure data={sessions} onChange={setSessions} onPrev={prev} onNext={next} onSaveVars={handleSaveVars} sessionId={sessionId} />;
       case 6:
         return <Step6Feedback data={feedback} onChange={setFeedback} onPrev={prev} onNext={next} />;
       case 7:

@@ -25,15 +25,26 @@ export interface A5CompetenciesData {
 }
 
 export interface A5SessionRow {
-  sesion: number;
-  objetivo: string;
-  actividades: string;
+  numero: number;
+  titulo: string;
+  competencias: string[];
+  capacidades: string[];
+  proposito: string;
+  actividades: {
+    inicio: string;
+    desarrollo: string;
+    cierre: string;
+  };
+  recursos: string;
+  evidencias: string;
+  enfoques: string[];
 }
 
 export interface A5SessionsStructureData {
   numSesiones: number;
   horasPorSesion: number;
   numEstudiantes: number;
+  observaciones?: string;
   estructura: A5SessionRow[];
 }
 
