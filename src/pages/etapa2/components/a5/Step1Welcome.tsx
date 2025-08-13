@@ -33,6 +33,8 @@ export default function Step1Welcome({ onNext, onValidated, sessionId, sessionDa
         setError(null);
         if (!user?.id) throw new Error("Usuario no autenticado");
 
+        console.log('[A5][Step1] Loading data from Acelerador 4 for user:', user.id);
+
         const { data, error } = await supabase
           .from('acelerador_sessions')
           .select('session_data')
@@ -40,11 +42,46 @@ export default function Step1Welcome({ onNext, onValidated, sessionId, sessionDa
           .eq('acelerador_number', 4)
           .single();
 
-        if (error) throw error;
-        const sd: any = data?.session_data || {};
+        if (error) {
+          console.error('[A5][Step1] Error fetching A4 session:', error);
+          throw error;
+        }
 
-        // Prioridades seleccionadas en A4 (vienen del A3)
-        const rawPriorities = Array.isArray(sd?.priorities) ? sd.priorities : [];
+        const sd: any = data?.session_data || {};
+        console.log('[A5][Step1] Session data from A4:', sd);
+
+        // Prioridades seleccionadas en A4 - buscar en múltiples campos por compatibilidad
+        let rawPriorities = [];
+        if (Array.isArray(sd?.priorities)) {
+          rawPriorities = sd.priorities;
+          console.log('[A5][Step1] Found priorities in sd.priorities:', rawPriorities.length);
+        } else if (Array.isArray(sd?.selected_priorities)) {
+          // Fallback: si hay selected_priorities, buscar las prioridades completas en accelerator3_data
+          const selectedIds = sd.selected_priorities;
+          const a3Data = sd?.accelerator3_data;
+          if (a3Data && Array.isArray(a3Data.priorities)) {
+            rawPriorities = a3Data.priorities.filter((p: any) => selectedIds.includes(p.id));
+            console.log('[A5][Step1] Found priorities via selected_priorities fallback:', rawPriorities.length);
+          }
+        }
+
+        // Si no hay prioridades en A4, intentar cargar desde A3 directamente
+        if (rawPriorities.length === 0) {
+          console.log('[A5][Step1] No priorities found in A4, trying to load from A3...');
+          try {
+            const { data: a3Response, error: a3Error } = await supabase.functions.invoke('get-accelerator3-results', {
+              body: { session_id: sessionId }
+            });
+
+            if (!a3Error && a3Response?.success && a3Response?.priorities) {
+              rawPriorities = a3Response.priorities.slice(0, 2); // Tomar las primeras 2
+              console.log('[A5][Step1] Loaded priorities from A3 as fallback:', rawPriorities.length);
+            }
+          } catch (a3Error) {
+            console.error('[A5][Step1] Error loading from A3:', a3Error);
+          }
+        }
+
         const pr: A4PriorityData[] = rawPriorities.slice(0, 2).map((p: any) => ({
           id: String(p.id || crypto.randomUUID()),
           title: p.title || p.nombre || 'Prioridad',
@@ -63,6 +100,9 @@ export default function Step1Welcome({ onNext, onValidated, sessionId, sessionDa
             ? result
             : (Array.isArray(selected) ? selected : []);
 
+        console.log('[A5][Step1] Strategies found:', base.length, 'from source:', 
+          adapted.length > 0 ? 'adapted' : result.length > 0 ? 'result' : 'selected');
+
         const st: A4StrategyData[] = base.slice(0, 5).map((s: any) => ({
           id: String(s.id || crypto.randomUUID()),
           title: s.title || s.nombre || 'Estrategia',
@@ -72,8 +112,14 @@ export default function Step1Welcome({ onNext, onValidated, sessionId, sessionDa
         setPriorities(pr);
         setStrategies(st);
 
+        console.log('[A5][Step1] Final data loaded - Priorities:', pr.length, 'Strategies:', st.length);
+
         if (pr.length === 0 && st.length === 0) {
           setError("No se han encontrado insumos del Acelerador 4. Por favor, complete el Acelerador 4 antes de continuar con el Acelerador 5.");
+        } else if (pr.length === 0) {
+          setError("No se encontraron prioridades del Acelerador 4. Verifique que haya completado el proceso de selección de prioridades.");
+        } else if (st.length === 0) {
+          setError("No se encontraron estrategias del Acelerador 4. Verifique que haya completado el proceso de selección de estrategias.");
         }
       } catch (e: any) {
         console.error('[A5][Step1] loadFromA4 error', e);
@@ -84,7 +130,7 @@ export default function Step1Welcome({ onNext, onValidated, sessionId, sessionDa
     };
 
     loadFromA4();
-  }, [user?.id]);
+  }, [user?.id, sessionId]);
 
   const inputs: A4Inputs = useMemo(() => ({
     priorities,
