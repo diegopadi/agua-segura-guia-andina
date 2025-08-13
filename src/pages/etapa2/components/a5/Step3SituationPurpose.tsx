@@ -2,27 +2,80 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { A5SituationPurposeData } from "./types";
+import { A5SituationPurposeData, A5InfoData, A4Inputs } from "./types";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 interface Props {
   data: A5SituationPurposeData;
   onChange: (data: A5SituationPurposeData) => void;
   onNext: () => void;
   onPrev: () => void;
+  info: A5InfoData;
+  a4: A4Inputs | null;
 }
 
-const demo = {
-  situacion: "Situación significativa ficticia de ejemplo relacionada con seguridad hídrica.",
-  proposito: "Propósito preliminar para orientar el aprendizaje durante la unidad.",
-  reto: "Reto planteado para que los estudiantes apliquen lo aprendido en su contexto.",
-  producto: "Producto esperado: informe, prototipo o presentación.",
-};
+export default function Step3SituationPurpose({ data, onChange, onNext, onPrev, info, a4 }: Props) {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
 
-export default function Step3SituationPurpose({ data, onChange, onNext, onPrev }: Props) {
-  const generate = () => {
-    onChange({ ...demo, producto: demo.producto + " (versión " + new Date().toLocaleTimeString() + ")" });
-    toast({ title: "Generado con IA (demo)", description: "Contenido ficticio actualizado." });
+  const getA3Context = async (): Promise<string> => {
+    try {
+      if (!user?.id) return '';
+      const { data, error } = await supabase
+        .from('acelerador_sessions')
+        .select('session_data')
+        .eq('user_id', user.id)
+        .eq('acelerador_number', 3)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (error) throw error;
+      const sd: any = data?.session_data || {};
+      const html: string = sd?.priority_report?.html_content || '';
+      // Fallbacks
+      const textAlt: string = sd?.priority_report?.text_content || sd?.priority_report?.summary || '';
+      return html || textAlt || '';
+    } catch (e) {
+      console.warn('[A5][Step3] No se pudo recuperar contexto del A3:', e);
+      return '';
+    }
   };
+
+  const generate = async () => {
+    try {
+      setLoading(true);
+      const a3Context = await getA3Context();
+
+      const { data: resp, error } = await supabase.functions.invoke('generate-situation-purpose-ac5', {
+        body: {
+          info,
+          a4_inputs: a4 || { priorities: [], strategies: [], source: 'unknown' },
+          a3_context: a3Context,
+        }
+      });
+
+      if (error) throw error;
+      if (!resp?.success) throw new Error(resp?.error || 'No se pudo generar el contenido');
+
+      onChange({
+        situacion: resp.situacion || data.situacion,
+        proposito: resp.proposito || data.proposito,
+        reto: resp.reto || data.reto,
+        producto: resp.producto || data.producto,
+      });
+
+      toast({ title: "Generado con IA", description: "Contenido actualizado con insumos del A3 y A4." });
+    } catch (e: any) {
+      console.error('[A5][Step3] generate error', e);
+      toast({ title: "Error", description: e.message || 'No se pudo generar el contenido', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const save = () => toast({ title: "Guardado", description: "Se almacenará más adelante." });
 
   return (
@@ -54,10 +107,14 @@ export default function Step3SituationPurpose({ data, onChange, onNext, onPrev }
         <div className="flex justify-between gap-2 pt-2">
           <Button variant="outline" onClick={onPrev}>Atrás</Button>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={generate}>Generar con IA</Button>
-            <Button variant="secondary" onClick={generate}>Re-generar</Button>
-            <Button variant="secondary" onClick={save}>Guardar</Button>
-            <Button onClick={onNext}>Siguiente</Button>
+            <Button variant="secondary" onClick={generate} disabled={loading}>
+              {loading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generando...</>) : 'Generar con IA'}
+            </Button>
+            <Button variant="secondary" onClick={generate} disabled={loading}>
+              {loading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generando...</>) : 'Re-generar'}
+            </Button>
+            <Button variant="secondary" onClick={save} disabled={loading}>Guardar</Button>
+            <Button onClick={onNext} disabled={loading}>Siguiente</Button>
           </div>
         </div>
       </CardContent>

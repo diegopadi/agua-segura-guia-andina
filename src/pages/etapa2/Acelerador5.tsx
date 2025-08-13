@@ -68,7 +68,7 @@ export default function Acelerador5() {
       case 2:
         return <Step2Info data={info} onChange={setInfo} onPrev={prev} onNext={next} onSaveVars={setUaVars} />;
       case 3:
-        return <Step3SituationPurpose data={situation} onChange={setSituation} onPrev={prev} onNext={next} />;
+        return <Step3SituationPurpose data={situation} onChange={setSituation} onPrev={prev} onNext={next} info={info} a4={a4Inputs} />;
       case 4:
         return <Step4Competencies data={comp} onChange={setComp} onPrev={prev} onNext={next} />;
       case 5:
