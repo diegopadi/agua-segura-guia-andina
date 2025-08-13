@@ -97,6 +97,7 @@ export default function Step2Info({ data, onChange, onNext, onPrev, onSaveVars }
           <div>
             <Label>Periodo de ejecución</Label>
             <Input value={data.periodo} onChange={(e) => onChange({ ...data, periodo: e.target.value })} />
+            <p className="text-sm text-muted-foreground mt-1">Indicar el número de semanas de esta Unidad</p>
           </div>
           <div>
             <Label>Año académico</Label>
