@@ -10,22 +10,47 @@ import { ChevronDown, Info } from "lucide-react";
 import { A5CompetenciesData, A5InfoData } from "./types";
 import cnebCatalogo from "@/data/cneb_secundaria_catalogo.json";
 
+type Competencia = {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  capacidades: string[];
+  desempenos_por_grado: Record<string, any[]>;
+  source: string;
+};
+
 interface Props {
   data: A5CompetenciesData;
   onChange: (data: A5CompetenciesData) => void;
   onNext: () => void;
   onPrev: () => void;
   info?: A5InfoData;
+  onSaveVars?: (vars: Record<string, string>) => void;
 }
 
-export default function Step4Competencies({ data, onChange, onNext, onPrev, info }: Props) {
-  const [selectedCompetencies, setSelectedCompetencies] = useState<any[]>([]);
+export default function Step4Competencies({ data, onChange, onNext, onPrev, info, onSaveVars }: Props) {
   const [openCapacidades, setOpenCapacidades] = useState<string[]>([]);
 
-  // Filter competencias by area from info
+  // Normalize area for matching (handle tildes and variations)
+  const normalizeArea = (area: string = '') => 
+    area.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+
+  // Filter competencias by area from info with normalization fallback
   const competenciasDisponibles = useMemo(() => {
     const area = info?.area || "";
-    return cnebCatalogo.competencias[area] || [];
+    
+    // First try exact match
+    if (cnebCatalogo.competencias[area]) {
+      return cnebCatalogo.competencias[area] as Competencia[];
+    }
+    
+    // Fallback: try normalized matching
+    const normalizedInputArea = normalizeArea(area);
+    const matchingKey = Object.keys(cnebCatalogo.competencias).find(
+      key => normalizeArea(key) === normalizedInputArea
+    );
+    
+    return matchingKey ? cnebCatalogo.competencias[matchingKey] as Competencia[] : [];
   }, [info?.area]);
 
   const enfoquesDisponibles = cnebCatalogo.enfoques_transversales;
@@ -55,9 +80,33 @@ export default function Step4Competencies({ data, onChange, onNext, onPrev, info
   };
 
   const save = () => {
+    if (data.competencias.length === 0) {
+      toast({ 
+        title: "Selecciona al menos una competencia", 
+        description: "Debes elegir mínimo una competencia para continuar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Build vars for saving
+    const selectedCompetenciasData = competenciasDisponibles
+      .filter(c => data.competencias.includes(c.id))
+      .map(c => ({ id: c.id, nombre: c.nombre, capacidades: c.capacidades }));
+    
+    const selectedEnfoquesData = enfoquesDisponibles
+      .filter(e => data.enfoques.includes(e.id))
+      .map(e => ({ id: e.id, nombre: e.nombre }));
+
+    const vars = {
+      ua_competencias: JSON.stringify(selectedCompetenciasData),
+      ua_enfoques: JSON.stringify(selectedEnfoquesData)
+    };
+
+    onSaveVars?.(vars);
     toast({ 
       title: "Competencias y enfoques guardados", 
-      description: "Se integrarán al documento final de la Unidad de Aprendizaje." 
+      description: `${data.competencias.length} competencias y ${data.enfoques.length} enfoques seleccionados.`
     });
   };
 
@@ -183,7 +232,21 @@ export default function Step4Competencies({ data, onChange, onNext, onPrev, info
           <Button variant="outline" onClick={onPrev}>Atrás</Button>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={save}>Guardar</Button>
-            <Button onClick={onNext} disabled={data.competencias.length === 0}>
+            <Button 
+              onClick={() => {
+                if (data.competencias.length === 0) {
+                  toast({ 
+                    title: "Selecciona al menos una competencia", 
+                    description: "Debes elegir mínimo una competencia para continuar.",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                save(); // Auto-save before proceeding
+                onNext();
+              }} 
+              disabled={data.competencias.length === 0}
+            >
               Siguiente
             </Button>
           </div>

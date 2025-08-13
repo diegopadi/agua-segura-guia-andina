@@ -230,7 +230,7 @@ export default function Acelerador5() {
       case 3:
         return <Step3SituationPurpose data={situation} onChange={setSituation} onPrev={prev} onNext={next} info={info} a4={a4Inputs} sessionId={sessionId} sessionData={sessionData} setSessionData={setSessionData} />;
       case 4:
-        return <Step4Competencies data={comp} onChange={setComp} onPrev={prev} onNext={next} info={info} />;
+        return <Step4Competencies data={comp} onChange={setComp} onPrev={prev} onNext={next} info={info} onSaveVars={handleSaveVars} />;
       case 5:
         return <Step5SessionsStructure data={sessions} onChange={setSessions} onPrev={prev} onNext={next} />;
       case 6:

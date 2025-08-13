@@ -2,8 +2,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { A5InfoData } from "./types";
+import cnebCatalogo from "@/data/cneb_secundaria_catalogo.json";
 
 interface Props {
   data: A5InfoData;
@@ -14,6 +16,9 @@ interface Props {
 }
 
 export default function Step2Info({ data, onChange, onNext, onPrev, onSaveVars }: Props) {
+  const areasDisponibles = Object.keys(cnebCatalogo.competencias);
+  const gradosDisponibles = ["1", "2", "3", "4", "5"];
+
   const isComplete = (d: A5InfoData) =>
     d.institucion && d.distrito && d.provincia && d.region && d.director && d.profesor && d.area && d.grado && d.duracion && d.periodo && d.anio;
 
@@ -83,11 +88,29 @@ export default function Step2Info({ data, onChange, onNext, onPrev, onSaveVars }
           </div>
           <div>
             <Label>Área</Label>
-            <Input value={data.area} onChange={(e) => onChange({ ...data, area: e.target.value })} />
+            <Select value={data.area} onValueChange={(value) => onChange({ ...data, area: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar área curricular" />
+              </SelectTrigger>
+              <SelectContent>
+                {areasDisponibles.map((area) => (
+                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Grado</Label>
-            <Input value={data.grado} onChange={(e) => onChange({ ...data, grado: e.target.value })} />
+            <Select value={data.grado} onValueChange={(value) => onChange({ ...data, grado: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar grado" />
+              </SelectTrigger>
+              <SelectContent>
+                {gradosDisponibles.map((grado) => (
+                  <SelectItem key={grado} value={grado}>{grado}° Secundaria</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Duración</Label>
