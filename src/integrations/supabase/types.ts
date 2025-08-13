@@ -454,6 +454,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_public_survey_data: {
+        Args: { token_param: string }
+        Returns: {
+          survey_id: string
+          title: string
+          description: string
+          status: string
+        }[]
+      }
       get_survey_participants_count: {
         Args: { survey_id_param: string }
         Returns: number

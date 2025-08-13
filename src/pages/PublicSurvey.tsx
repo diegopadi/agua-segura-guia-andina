@@ -79,44 +79,44 @@ export default function PublicSurvey() {
         
         // Still need to load survey and questions
         const { data: surveyData, error: surveyError } = await supabase
-          .from('surveys')
-          .select('id, title, description, status')
-          .eq('participant_token', surveyToken)
-          .eq('status', 'active')
-          .single()
+          .rpc('get_public_survey_data', { token_param: surveyToken })
+          .maybeSingle()
 
-        if (surveyError) {
+        if (surveyError || !surveyData) {
           throw new Error('Encuesta no encontrada o no está disponible')
         }
 
-        setSurvey(surveyData)
-        await loadQuestions(surveyData.id)
+        setSurvey({
+          id: surveyData.survey_id,
+          title: surveyData.title,
+          description: surveyData.description,
+          status: surveyData.status
+        })
+        await loadQuestions(surveyData.survey_id)
         return
       }
 
       // First time access - find survey by global token
       const { data: surveyData, error: surveyError } = await supabase
-        .from('surveys')
-        .select('id, title, description, status')
-        .eq('participant_token', surveyToken)
-        .eq('status', 'active')
-        .single()
+        .rpc('get_public_survey_data', { token_param: surveyToken })
+        .maybeSingle()
 
-      if (surveyError) {
-        if (surveyError.code === 'PGRST116') {
-          setError('Enlace de encuesta no válido o encuesta no disponible')
-        } else {
-          setError('Error al cargar la encuesta')
-        }
+      if (surveyError || !surveyData) {
+        setError('Enlace de encuesta no válido o encuesta no disponible')
         return
       }
 
-      setSurvey(surveyData)
+      setSurvey({
+        id: surveyData.survey_id,
+        title: surveyData.title,
+        description: surveyData.description,
+        status: surveyData.status
+      })
 
       // Create new participant automatically
       const { data: participantData, error: participantError } = await supabase
         .from('survey_participants')
-        .insert({ survey_id: surveyData.id })
+        .insert({ survey_id: surveyData.survey_id })
         .select('id, participant_token')
         .single()
 
@@ -139,7 +139,7 @@ export default function PublicSurvey() {
       setParticipantToken(newParticipantToken)
 
       // Load questions
-      await loadQuestions(surveyData.id)
+      await loadQuestions(surveyData.survey_id)
       
     } catch (error) {
       console.error('Error loading survey:', error)
