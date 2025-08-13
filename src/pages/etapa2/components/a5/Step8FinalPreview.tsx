@@ -1,158 +1,525 @@
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "@/hooks/use-toast";
+import { ArrowLeft, Download, Copy, Printer, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { A5InfoData, A5SituationPurposeData, A5CompetenciesData, A5SessionsStructureData, A5FeedbackData, A5MaterialsData } from "./types";
 
 interface Props {
-  info: A5InfoData;
-  situation: A5SituationPurposeData;
-  comp: A5CompetenciesData;
-  sessions: A5SessionsStructureData;
-  feedback: A5FeedbackData;
-  materials: A5MaterialsData;
   onPrev: () => void;
 }
 
-function buildPlainText(props: Props): string {
-  const { info, situation, comp, sessions, feedback, materials } = props;
-  const sesiones = sessions.estructura.map((r) => `Sesión ${r.numero}: ${r.titulo} | Inicio: ${r.actividades.inicio} | Desarrollo: ${r.actividades.desarrollo} | Cierre: ${r.actividades.cierre}`).join("\n");
-  const mats = materials.materiales.map((m) => `- ${m.nombre}: ${m.descripcion}`).join("\n");
-  return `UNIDAD DE APRENDIZAJE\n\nI. Datos informativos\nInstitución: ${info.institucion}\nDistrito: ${info.distrito}\nProvincia: ${info.provincia}\nRegión: ${info.region}\nDirector(a): ${info.director}\nProfesor(a): ${info.profesor}\nÁrea: ${info.area}\nGrado: ${info.grado}\nDuración: ${info.duracion}\nPeriodo: ${info.periodo}\nAño: ${info.anio}\n\nII-III. Situación, propósito, reto, producto\nSituación: ${situation.situacion}\nPropósito: ${situation.proposito}\nReto: ${situation.reto}\nProducto: ${situation.producto}\n\nIV. Competencias y enfoques\nCompetencias: ${comp.competencias.join(", ")}\nEnfoques: ${comp.enfoques.join(", ")}\n\nV. Estructura de sesiones\n${sesiones || "(sin contenido)"}\n\nVI. Retroalimentación\n${feedback.feedback}\n\nVII. Materiales\n${mats || "(sin contenido)"}`;
+interface UADocumento {
+  meta: {
+    version: string;
+    generado_en: string;
+    origen: string;
+  };
+  datos_informativos: A5InfoData;
+  situacion_significativa: string;
+  propositos: {
+    proposito: string;
+    reto: string;
+    producto: string;
+  };
+  competencias: Array<{
+    id: string;
+    nombre: string;
+    capacidades: string[];
+  }>;
+  enfoques: Array<{
+    id: string;
+    nombre: string;
+  }>;
+  estructura_sesiones: A5SessionsStructureData;
+  retroalimentacion: string;
+  materiales: A5MaterialsData['materiales'];
+  aprobacion: {
+    firmas: {
+      director: string;
+      docente: string;
+    };
+  };
 }
 
-export default function Step8FinalPreview(props: Props) {
-  const copy = async () => {
-    await navigator.clipboard.writeText(buildPlainText(props));
-    toast({ title: "Copiado", description: "El contenido fue copiado como texto." });
+// Helper function to build plain text document
+function buildPlainText(documento: UADocumento): string {
+  const { datos_informativos, situacion_significativa, propositos, competencias, enfoques, estructura_sesiones, retroalimentacion, materiales } = documento;
+  
+  const sesiones = estructura_sesiones.estructura?.map((r) => 
+    `Sesión ${r.numero}: ${r.titulo}\n` +
+    `  Propósito: ${r.proposito}\n` +
+    `  Inicio: ${r.actividades.inicio}\n` +
+    `  Desarrollo: ${r.actividades.desarrollo}\n` +
+    `  Cierre: ${r.actividades.cierre}\n` +
+    `  Recursos: ${r.recursos}\n` +
+    `  Evidencias: ${r.evidencias}`
+  ).join("\n\n") || "(Sin sesiones registradas)";
+  
+  const mats = materiales?.map((m) => `- ${m.nombre}: ${m.descripcion}`).join("\n") || "(Sin materiales registrados)";
+  
+  const comps = competencias?.map((c) => `- ${c.nombre}${c.capacidades?.length ? ` (Capacidades: ${c.capacidades.join(", ")})` : ""}`).join("\n") || "(Sin competencias registradas)";
+  
+  const enfs = enfoques?.map((e) => `- ${e.nombre}`).join("\n") || "(Sin enfoques registrados)";
+
+  return `UNIDAD DE APRENDIZAJE
+
+I. DATOS INFORMATIVOS
+Institución educativa: ${datos_informativos.institucion || "—"}
+Distrito: ${datos_informativos.distrito || "—"}
+Provincia: ${datos_informativos.provincia || "—"}
+Región: ${datos_informativos.region || "—"}
+Director(a): ${datos_informativos.director || "—"}
+Profesor(a): ${datos_informativos.profesor || "—"}
+Área: ${datos_informativos.area || "—"}
+Grado: ${datos_informativos.grado || "—"}
+Duración: ${datos_informativos.duracion || "—"}
+Periodo de ejecución: ${datos_informativos.periodo || "—"}
+Año académico: ${datos_informativos.anio || "—"}
+
+II. SITUACIÓN SIGNIFICATIVA
+${situacion_significativa || "(Sin información registrada)"}
+
+III. PROPÓSITOS DE APRENDIZAJE Y EVALUACIÓN
+Propósito: ${propositos.proposito || "(Sin información registrada)"}
+Reto: ${propositos.reto || "(Sin información registrada)"}
+Producto: ${propositos.producto || "(Sin información registrada)"}
+
+IV. ESTÁNDAR, COMPETENCIAS, CAPACIDADES Y DESEMPEÑOS
+${comps}
+
+Nota: El estándar y los desempeños completos deben trasladarse del CNEB según área y grado.
+
+V. ENFOQUES TRANSVERSALES
+${enfs}
+
+VI. ESTRUCTURA DE SESIONES
+${sesiones}
+
+VII. RETROALIMENTACIÓN
+${retroalimentacion || "(Sin información registrada)"}
+
+VIII. MATERIALES BÁSICOS A UTILIZAR
+${mats}
+
+IX. APROBACIÓN
+Firma del Director: _______________________
+Firma del Docente: _______________________`;
+}
+
+export default function Step8FinalPreview({ onPrev }: Props) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [documento, setDocumento] = useState<UADocumento | null>(null);
+  const [missingData, setMissingData] = useState<string[]>([]);
+
+  // Load all data from previous steps
+  useEffect(() => {
+    const loadAllData = async () => {
+      if (!user?.id) return;
+
+      try {
+        setLoading(true);
+        
+        // Load session data from Supabase
+        const { data: session, error } = await supabase
+          .from('acelerador_sessions')
+          .select('session_data')
+          .eq('user_id', user.id)
+          .eq('acelerador_number', 5)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const sessionData = session?.session_data as any || {};
+        const missing: string[] = [];
+
+        // Extract data from each step
+        const info: A5InfoData = sessionData.info || {};
+        const situation: A5SituationPurposeData = sessionData.situation || {};
+        const comp: A5CompetenciesData = sessionData.comp || {};
+        const sessions: A5SessionsStructureData = sessionData.sessions || { numSesiones: 0, horasPorSesion: 0, numEstudiantes: 0, estructura: [] };
+        const feedback: A5FeedbackData = sessionData.feedback || {};
+        const materials: A5MaterialsData = sessionData.materials || { materiales: [] };
+
+        // Check for missing critical data
+        if (!info.institucion || !info.area || !info.grado) {
+          missing.push("Datos informativos (Paso 2)");
+        }
+        if (!situation.situacion || !situation.proposito) {
+          missing.push("Situación significativa y propósito (Paso 3)");
+        }
+        if (!comp.competencias?.length) {
+          missing.push("Competencias (Paso 4)");
+        }
+        if (!sessions.estructura?.length) {
+          missing.push("Estructura de sesiones (Paso 5)");
+        }
+
+        setMissingData(missing);
+
+        // Build master JSON document
+        const masterDoc: UADocumento = {
+          meta: {
+            version: "1.0",
+            generado_en: new Date().toISOString(),
+            origen: "Acelerador 5"
+          },
+          datos_informativos: info,
+          situacion_significativa: situation.situacion || "",
+          propositos: {
+            proposito: situation.proposito || "",
+            reto: situation.reto || "",
+            producto: situation.producto || ""
+          },
+          competencias: comp.competencias?.map((nombre, index) => ({
+            id: `COMP${index + 1}`,
+            nombre,
+            capacidades: [] // Could be expanded if we stored detailed competency data
+          })) || [],
+          enfoques: comp.enfoques?.map((nombre, index) => ({
+            id: `ENF${index + 1}`,
+            nombre
+          })) || [],
+          estructura_sesiones: sessions,
+          retroalimentacion: feedback.feedback || "",
+          materiales: materials.materiales || [],
+          aprobacion: {
+            firmas: {
+              director: "_______________________",
+              docente: "_______________________"
+            }
+          }
+        };
+
+        setDocumento(masterDoc);
+
+      } catch (error) {
+        console.error('Error loading document data:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los datos del documento",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAllData();
+  }, [user?.id, toast]);
+
+  const copyDocument = async () => {
+    if (!documento) return;
+    
+    try {
+      await navigator.clipboard.writeText(buildPlainText(documento));
+      toast({ 
+        title: "Copiado", 
+        description: "El documento ha sido copiado al portapapeles" 
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo copiar el documento",
+        variant: "destructive",
+      });
+    }
   };
 
-  const download = () => {
-    const blob = new Blob([buildPlainText(props)], { type: "text/plain;charset=utf-8" });
+  const downloadTxt = () => {
+    if (!documento) return;
+
+    const { datos_informativos } = documento;
+    const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const filename = `UA_${datos_informativos.institucion?.replace(/[^a-zA-Z0-9]/g, '') || 'IE'}_${datos_informativos.area?.replace(/[^a-zA-Z0-9]/g, '') || 'Area'}_${datos_informativos.grado?.replace(/[^a-zA-Z0-9]/g, '') || 'Grado'}_${today}.txt`;
+    
+    const blob = new Blob([buildPlainText(documento)], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "unidad-aprendizaje.txt";
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const printDoc = () => {
-    const w = window.open("", "_blank");
-    if (!w) return;
-    const html = document.getElementById("a5-final-html")?.innerHTML || "";
-    w.document.write(`<!DOCTYPE html><html><head><meta charset='utf-8'><title>Unidad de Aprendizaje</title><style>body{font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial; color:#000;} h1,h2{margin:0.5rem 0;} .section{margin:1rem 0;} table{width:100%; border-collapse:collapse;} th,td{border:1px solid #ddd; padding:8px;}</style></head><body>${html}</body></html>`);
-    w.document.close();
-    w.focus();
-    w.print();
-    w.close();
+  const printDocument = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const htmlContent = document.getElementById("ua-document-preview")?.innerHTML || "";
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Unidad de Aprendizaje</title>
+          <style>
+            body { font-family: system-ui, Arial, sans-serif; font-size: 12px; color: #111; margin: 20mm 18mm; }
+            h1 { font-size: 22px; margin: 0 0 8px; }
+            h2 { font-size: 16px; margin: 18px 0 8px; }
+            table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+            table.info td { border: 1px solid #ddd; padding: 6px; }
+            table.sesiones th, table.sesiones td,
+            table.materiales th, table.materiales td { border: 1px solid #ddd; padding: 6px; vertical-align: top; }
+            .nota { font-size: 12px; color: #555; }
+            .section { margin: 16px 0; }
+            @page { margin: 20mm 18mm; }
+          </style>
+        </head>
+        <body>
+          ${htmlContent}
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
-  const { info, situation, comp, sessions, feedback, materials } = props;
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">Cargando documento...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!documento) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-muted-foreground">
+            No se pudieron cargar los datos del documento
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Documento final</CardTitle>
-        <CardDescription>Aquí verás tu Unidad de Aprendizaje completa, lista para exportar.</CardDescription>
+        <CardTitle className="flex items-center gap-2">
+          <ArrowLeft className="w-5 h-5" />
+          Paso 8: Documento final ensamblado
+        </CardTitle>
+        <CardDescription>
+          Aquí está tu Unidad de Aprendizaje completa, lista para descargar e imprimir.
+        </CardDescription>
       </CardHeader>
+      
       <CardContent className="space-y-4">
+        {/* Missing data warning */}
+        {missingData.length > 0 && (
+          <div className="flex items-start gap-2 p-4 bg-orange-50 border border-orange-200 rounded-md">
+            <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-orange-800">Información incompleta</p>
+              <p className="text-sm text-orange-700">
+                Faltan datos en: {missingData.join(", ")}. 
+                El documento se generará con la información disponible.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Action buttons */}
         <div className="flex flex-wrap gap-2 justify-end">
-          <Button variant="secondary" onClick={copy}>Copiar</Button>
-          <Button variant="secondary" onClick={download}>Descargar .txt</Button>
-          <Button onClick={printDoc}>Imprimir</Button>
+          <Button variant="outline" onClick={copyDocument} className="flex items-center gap-2">
+            <Copy className="w-4 h-4" />
+            Copiar
+          </Button>
+          <Button variant="outline" onClick={downloadTxt} className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            Descargar TXT
+          </Button>
+          <Button onClick={printDocument} className="flex items-center gap-2">
+            <Printer className="w-4 h-4" />
+            Imprimir
+          </Button>
         </div>
-        <div id="a5-final-html" className="border rounded-md">
-          <ScrollArea className="h-[60vh] p-6">
-            <article className="prose prose-neutral max-w-none">
-              <h1>Unidad de Aprendizaje</h1>
 
-              <section className="section">
-                <h2>I. Datos informativos</h2>
-                <p><strong>Institución:</strong> {info.institucion || "—"}</p>
-                <p><strong>Distrito:</strong> {info.distrito || "—"}</p>
-                <p><strong>Provincia:</strong> {info.provincia || "—"}</p>
-                <p><strong>Región:</strong> {info.region || "—"}</p>
-                <p><strong>Director(a):</strong> {info.director || "—"}</p>
-                <p><strong>Profesor(a):</strong> {info.profesor || "—"}</p>
-                <p><strong>Área:</strong> {info.area || "—"}</p>
-                <p><strong>Grado:</strong> {info.grado || "—"}</p>
-                <p><strong>Duración:</strong> {info.duracion || "—"}</p>
-                <p><strong>Periodo:</strong> {info.periodo || "—"}</p>
-                <p><strong>Año:</strong> {info.anio || "—"}</p>
-              </section>
+        {/* Document preview */}
+        <div className="border rounded-md">
+          <ScrollArea className="h-[70vh]">
+            <div id="ua-document-preview" className="p-6">
+              <div className="doc">
+                <h1>Unidad de Aprendizaje</h1>
 
-              <section className="section">
-                <h2>II-III. Situación significativa, propósito, reto y producto</h2>
-                <p><strong>Situación significativa:</strong> {situation.situacion || "—"}</p>
-                <p><strong>Propósito:</strong> {situation.proposito || "—"}</p>
-                <p><strong>Reto:</strong> {situation.reto || "—"}</p>
-                <p><strong>Producto:</strong> {situation.producto || "—"}</p>
-              </section>
-
-              <section className="section">
-                <h2>IV. Competencias y enfoques transversales</h2>
-                <p><strong>Competencias:</strong> {comp.competencias.length ? comp.competencias.join(", ") : "—"}</p>
-                <p><strong>Enfoques:</strong> {comp.enfoques.length ? comp.enfoques.join(", ") : "—"}</p>
-              </section>
-
-              <section className="section">
-                <h2>V. Estructura de sesiones</h2>
-                {sessions.estructura.length ? (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Sesión</th>
-                        <th>Objetivo</th>
-                        <th>Actividades</th>
-                      </tr>
-                    </thead>
+                <section className="section">
+                  <h2>I. Datos informativos</h2>
+                  <table className="info">
                     <tbody>
-                      {sessions.estructura.map((row) => (
-                        <tr key={row.numero}>
-                          <td>{row.numero}</td>
-                          <td>{row.titulo}</td>
-                          <td>
-                            <div>
-                              <strong>Inicio:</strong> {row.actividades.inicio}<br/>
-                              <strong>Desarrollo:</strong> {row.actividades.desarrollo}<br/>
-                              <strong>Cierre:</strong> {row.actividades.cierre}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      <tr><td><strong>Institución educativa</strong></td><td>{documento.datos_informativos.institucion || "(Sin información registrada)"}</td></tr>
+                      <tr><td><strong>Distrito</strong></td><td>{documento.datos_informativos.distrito || "(Sin información registrada)"}</td></tr>
+                      <tr><td><strong>Provincia</strong></td><td>{documento.datos_informativos.provincia || "(Sin información registrada)"}</td></tr>
+                      <tr><td><strong>Región</strong></td><td>{documento.datos_informativos.region || "(Sin información registrada)"}</td></tr>
+                      <tr><td><strong>Director(a)</strong></td><td>{documento.datos_informativos.director || "(Sin información registrada)"}</td></tr>
+                      <tr><td><strong>Profesor(a)</strong></td><td>{documento.datos_informativos.profesor || "(Sin información registrada)"}</td></tr>
+                      <tr><td><strong>Área</strong></td><td>{documento.datos_informativos.area || "(Sin información registrada)"}</td></tr>
+                      <tr><td><strong>Grado</strong></td><td>{documento.datos_informativos.grado || "(Sin información registrada)"}</td></tr>
+                      <tr><td><strong>Duración</strong></td><td>{documento.datos_informativos.duracion || "(Sin información registrada)"}</td></tr>
+                      <tr><td><strong>Periodo de ejecución</strong></td><td>{documento.datos_informativos.periodo || "(Sin información registrada)"}</td></tr>
+                      <tr><td><strong>Año académico</strong></td><td>{documento.datos_informativos.anio || "(Sin información registrada)"}</td></tr>
                     </tbody>
                   </table>
-                ) : (
-                  <p className="text-muted-foreground">(sin contenido)</p>
-                )}
-              </section>
+                </section>
 
-              <section className="section">
-                <h2>VI. Retroalimentación</h2>
-                <p>{feedback.feedback || "—"}</p>
-              </section>
+                <section className="section">
+                  <h2>II. Situación significativa</h2>
+                  <p>{documento.situacion_significativa || "(Sin información registrada)"}</p>
+                </section>
 
-              <section className="section">
-                <h2>VII. Materiales</h2>
-                {materials.materiales.length ? (
-                  <ul>
-                    {materials.materiales.map((m, i) => (
-                      <li key={i}><strong>{m.nombre}:</strong> {m.descripcion}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground">(sin contenido)</p>
-                )}
-              </section>
-            </article>
+                <section className="section">
+                  <h2>III. Propósitos de aprendizaje y evaluación</h2>
+                  <p><strong>Propósito:</strong> {documento.propositos.proposito || "(Sin información registrada)"}</p>
+                  <p><strong>Reto:</strong> {documento.propositos.reto || "(Sin información registrada)"}</p>
+                  <p><strong>Producto:</strong> {documento.propositos.producto || "(Sin información registrada)"}</p>
+                </section>
+
+                <section className="section">
+                  <h2>IV. Estándar, competencias, capacidades y desempeños</h2>
+                  {documento.competencias.length > 0 ? (
+                    <ul>
+                      {documento.competencias.map((comp) => (
+                        <li key={comp.id}>
+                          <strong>{comp.nombre}</strong>
+                          {comp.capacidades?.length > 0 && (
+                            <div><em>Capacidades:</em> {comp.capacidades.join(", ")}</div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>(Sin competencias registradas)</p>
+                  )}
+                  <p className="nota">
+                    Nota: El estándar y los desempeños completos deben trasladarse del CNEB según área y grado.
+                  </p>
+                </section>
+
+                <section className="section">
+                  <h2>V. Enfoques transversales</h2>
+                  {documento.enfoques.length > 0 ? (
+                    <ul>
+                      {documento.enfoques.map((enfoque) => (
+                        <li key={enfoque.id}>{enfoque.nombre}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>(Sin enfoques registrados)</p>
+                  )}
+                </section>
+
+                <section className="section">
+                  <h2>VI. Estructura de sesiones</h2>
+                  {documento.estructura_sesiones.estructura?.length > 0 ? (
+                    <table className="sesiones">
+                      <thead>
+                        <tr>
+                          <th>N°</th>
+                          <th>Título</th>
+                          <th>Propósito</th>
+                          <th>Actividades (inicio / desarrollo / cierre)</th>
+                          <th>Competencias</th>
+                          <th>Capacidades</th>
+                          <th>Recursos</th>
+                          <th>Evidencias</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {documento.estructura_sesiones.estructura.map((sesion) => (
+                          <tr key={sesion.numero}>
+                            <td>{sesion.numero}</td>
+                            <td>{sesion.titulo}</td>
+                            <td>{sesion.proposito}</td>
+                            <td>
+                              <div>
+                                <strong>Inicio:</strong> {sesion.actividades.inicio}<br/>
+                                <strong>Desarrollo:</strong> {sesion.actividades.desarrollo}<br/>
+                                <strong>Cierre:</strong> {sesion.actividades.cierre}
+                              </div>
+                            </td>
+                            <td>{sesion.competencias?.join(", ") || "—"}</td>
+                            <td>{sesion.capacidades?.join(", ") || "—"}</td>
+                            <td>{sesion.recursos || "—"}</td>
+                            <td>{sesion.evidencias || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="flex items-center gap-2 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <AlertCircle className="w-5 h-5 text-yellow-600" />
+                      <p>Sin estructura de sesiones. <strong>Debes completar el Paso 5</strong> antes de exportar el documento.</p>
+                    </div>
+                  )}
+                </section>
+
+                <section className="section">
+                  <h2>VII. Retroalimentación</h2>
+                  <p>{documento.retroalimentacion || "(Sin información registrada)"}</p>
+                </section>
+
+                <section className="section">
+                  <h2>VIII. Materiales básicos a utilizar</h2>
+                  {documento.materiales.length > 0 ? (
+                    <table className="materiales">
+                      <thead>
+                        <tr>
+                          <th>Material</th>
+                          <th>Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {documento.materiales.map((material, index) => (
+                          <tr key={index}>
+                            <td>{material.nombre}</td>
+                            <td>{material.descripcion}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p>(Sin materiales registrados)</p>
+                  )}
+                </section>
+
+                <section className="section">
+                  <h2>IX. Aprobación</h2>
+                  <p>Firma del Director: _______________________</p>
+                  <p>Firma del Docente: _______________________</p>
+                </section>
+              </div>
+            </div>
           </ScrollArea>
         </div>
 
+        {/* Navigation */}
         <div className="flex justify-between gap-2">
-          <Button variant="outline" onClick={props.onPrev}>Atrás</Button>
+          <Button variant="outline" onClick={onPrev} className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Volver a editar
+          </Button>
           <div className="flex gap-2">
-            <Button onClick={printDoc}>Imprimir</Button>
+            <Button variant="outline" onClick={downloadTxt} className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Descargar TXT
+            </Button>
+            <Button onClick={printDocument} className="flex items-center gap-2">
+              <Printer className="w-4 h-4" />
+              Imprimir PDF
+            </Button>
           </div>
         </div>
       </CardContent>

@@ -306,12 +306,6 @@ export default function Acelerador5() {
       case 8:
         return (
           <Step8FinalPreview
-            info={info}
-            situation={situation}
-            comp={comp}
-            sessions={sessions}
-            feedback={feedback}
-            materials={materials}
             onPrev={prev}
           />
         );
