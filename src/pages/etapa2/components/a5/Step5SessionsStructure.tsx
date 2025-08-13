@@ -93,12 +93,24 @@ export default function Step5SessionsStructure({
   }, [data, debouncedSave]);
 
   const canGenerate = useMemo(() => {
-    return data.numSesiones > 0 && 
+    console.log('Debugging canGenerate:');
+    console.log('- numSesiones:', data.numSesiones);
+    console.log('- horasPorSesion:', data.horasPorSesion);
+    console.log('- numEstudiantes:', data.numEstudiantes);
+    console.log('- infoData:', infoData);
+    console.log('- situationData:', situationData);
+    console.log('- competenciesData:', competenciesData);
+    console.log('- competencias length:', competenciesData?.competencias?.length);
+    
+    const result = data.numSesiones > 0 && 
            data.horasPorSesion > 0 && 
            data.numEstudiantes > 0 &&
            infoData &&
            situationData &&
            competenciesData?.competencias?.length > 0;
+    
+    console.log('canGenerate result:', result);
+    return result;
   }, [data, infoData, situationData, competenciesData]);
 
   const generateStructure = async () => {
@@ -292,9 +304,23 @@ export default function Step5SessionsStructure({
           )}
         </div>
 
+        {/* Debug info */}
+        <div className="bg-muted/50 p-3 rounded text-xs space-y-1">
+          <div><strong>Estado de validación:</strong></div>
+          <div>• Sesiones: {data.numSesiones > 0 ? '✅' : '❌'} ({data.numSesiones})</div>
+          <div>• Horas: {data.horasPorSesion > 0 ? '✅' : '❌'} ({data.horasPorSesion})</div>
+          <div>• Estudiantes: {data.numEstudiantes > 0 ? '✅' : '❌'} ({data.numEstudiantes})</div>
+          <div>• Info paso 2: {infoData ? '✅' : '❌'}</div>
+          <div>• Situación paso 3: {situationData ? '✅' : '❌'}</div>
+          <div>• Competencias paso 4: {competenciesData?.competencias?.length > 0 ? '✅' : '❌'} ({competenciesData?.competencias?.length || 0})</div>
+        </div>
+
         {!canGenerate && (
-          <div className="text-sm text-muted-foreground">
-            Para generar la estructura necesita completar los parámetros y haber finalizado los pasos anteriores.
+          <div className="text-sm text-muted-foreground bg-orange-50 border border-orange-200 p-3 rounded">
+            <strong>Para habilitar la generación necesita:</strong><br/>
+            • Completar todos los parámetros numéricos<br/>
+            • Haber completado los pasos 2, 3 y 4 anteriores<br/>
+            • Tener al menos una competencia seleccionada
           </div>
         )}
 
