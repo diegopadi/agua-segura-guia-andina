@@ -147,6 +147,26 @@ export default function Step8FinalPreview({ onPrev }: Props) {
         const feedback: A5FeedbackData = sessionData.feedback || {};
         const materials: A5MaterialsData = sessionData.materials || { materiales: [] };
 
+        // Load saved competencias and enfoques data with full information
+        let savedCompetencias: any[] = [];
+        let savedEnfoques: any[] = [];
+        
+        try {
+          if (sessionData.ua_competencias) {
+            savedCompetencias = JSON.parse(sessionData.ua_competencias);
+          }
+        } catch {
+          console.warn('Could not parse ua_competencias');
+        }
+        
+        try {
+          if (sessionData.ua_enfoques) {
+            savedEnfoques = JSON.parse(sessionData.ua_enfoques);
+          }
+        } catch {
+          console.warn('Could not parse ua_enfoques');
+        }
+
         // Load competency index for name resolution
         let competencyIndex: CompetencyIndex = {};
         const compIndexString = sessionData.ua_competencias_index;
@@ -198,20 +218,39 @@ export default function Step8FinalPreview({ onPrev }: Props) {
         setMissingData(missing);
 
         // Process competencies with resolved names
-        const processedCompetencias = comp.competencias?.map((compId, index) => {
-          const compData = competencyIndex[compId];
-          return {
-            id: compId,
-            nombre: compData?.nombre || compId,
-            capacidades: compData?.capacidades || []
-          };
-        }) || [];
+        const processedCompetencias = savedCompetencias.length > 0 
+          ? savedCompetencias.map((comp) => ({
+              id: comp.id,
+              nombre: comp.nombre || comp.id,
+              capacidades: comp.capacidades || []
+            }))
+          : comp.competencias?.map((compId) => {
+              const compData = competencyIndex[compId];
+              return {
+                id: compId,
+                nombre: compData?.nombre || compId,
+                capacidades: compData?.capacidades || []
+              };
+            }) || [];
 
-        // Decorate sessions with resolved competency names
+        // Create enfoques index for name resolution
+        const enfoquesIndex: Record<string, string> = {};
+        savedEnfoques.forEach((enfoque) => {
+          if (enfoque.id && enfoque.nombre) {
+            enfoquesIndex[enfoque.id] = enfoque.nombre;
+          } else if (typeof enfoque === 'string') {
+            enfoquesIndex[enfoque] = enfoque;
+          }
+        });
+
+        // Decorate sessions with resolved competency and enfoques names
         const sesionesDecoradas = sessions.estructura?.map((sesion) => ({
           ...sesion,
           competencias_string: resolveCompetenceNames(sesion.competencias, competencyIndex).join(", "),
-          capacidades_string: sesion.capacidades?.join(", ") || ""
+          capacidades_string: sesion.capacidades?.join(", ") || "",
+          enfoques_string: sesion.enfoques?.map((enfoqueId) => 
+            enfoquesIndex[enfoqueId] || enfoqueId
+          ).join(", ") || ""
         })) || [];
 
         // Build master JSON document
@@ -229,10 +268,15 @@ export default function Step8FinalPreview({ onPrev }: Props) {
             producto: situation.producto || ""
           },
           competencias: processedCompetencias,
-          enfoques: comp.enfoques?.map((nombre, index) => ({
-            id: `ENF${index + 1}`,
-            nombre
-          })) || [],
+          enfoques: savedEnfoques.length > 0 
+            ? savedEnfoques.map((enfoque) => ({
+                id: enfoque.id || `ENF${Math.random()}`,
+                nombre: enfoque.nombre || enfoque
+              }))
+            : comp.enfoques?.map((nombre, index) => ({
+                id: `ENF${index + 1}`,
+                nombre
+              })) || [],
           estructura_sesiones: {
             ...sessions,
             estructura: sesionesDecoradas
