@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import Step7Materials from "./components/a5/Step7Materials";
 import Step8FinalPreview from "./components/a5/Step8FinalPreview";
 import { A5InfoData, A5SituationPurposeData, A5CompetenciesData, A5SessionsStructureData, A5FeedbackData, A5MaterialsData } from "./components/a5/types";
 import type { A4Inputs } from "./components/a5/types";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const steps = [
   { number: 1, title: "Bienvenida", description: "Introducción al flujo" },
@@ -32,6 +34,8 @@ export default function Acelerador5() {
   }, []);
 
   const [current, setCurrent] = useState(1);
+
+  const { user } = useAuth();
 
   const [info, setInfo] = useState<A5InfoData>({
     institucion: "", distrito: "", provincia: "", region: "", director: "", profesor: "",
@@ -58,15 +62,127 @@ export default function Acelerador5() {
   // Numeral I variables mapping for final assembly
   const [uaVars, setUaVars] = useState<Record<string, string>>({});
 
-  const next = () => setCurrent((c) => Math.min(c + 1, steps.length));
-  const prev = () => setCurrent((c) => Math.max(c - 1, 1));
+  // Persistence helpers
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionData, setSessionData] = useState<any>({});
+  const [hydrated, setHydrated] = useState(false);
+  const saveTimer = useRef<number | null>(null);
+  const getDraftKey = () => `a5_info_draft_${user?.id ?? 'anon'}`;
+
+  // Load or create session and hydrate state
+  useEffect(() => {
+    let isMounted = true;
+    const hydrate = async () => {
+      try {
+        if (user) {
+          const { data, error } = await supabase
+            .from('acelerador_sessions')
+            .select('id, current_step, session_data')
+            .eq('user_id', user.id)
+            .eq('acelerador_number', 5)
+            .maybeSingle();
+
+          if (error) console.warn('acelerador_sessions fetch error', error);
+
+          let row = data as any | null;
+          if (!row) {
+            const { data: created, error: createErr } = await supabase
+              .from('acelerador_sessions')
+              .insert({ user_id: user.id, acelerador_number: 5 })
+              .select('id, current_step, session_data')
+              .single();
+            if (createErr) {
+              console.warn('acelerador_sessions create error', createErr);
+            }
+            row = created as any | null;
+          }
+
+          if (isMounted && row) {
+            setSessionId(row.id);
+            const sd = (row.session_data ?? {}) as any;
+            setSessionData(sd);
+
+            if (typeof row.current_step === 'number' && row.current_step >= 1 && row.current_step <= steps.length) {
+              setCurrent(row.current_step);
+            }
+
+            if (sd.info) {
+              setInfo(sd.info as A5InfoData);
+            } else {
+              const draft = localStorage.getItem(getDraftKey());
+              if (draft) {
+                try { setInfo(JSON.parse(draft)); } catch {}
+              }
+            }
+
+            if (sd.ua_vars) {
+              setUaVars(sd.ua_vars as Record<string, string>);
+            }
+          }
+        } else {
+          // Not logged in: use local draft only
+          const draft = localStorage.getItem(getDraftKey());
+          if (draft) {
+            try { setInfo(JSON.parse(draft)); } catch {}
+          }
+        }
+      } finally {
+        if (isMounted) setHydrated(true);
+      }
+    };
+
+    hydrate();
+    return () => { isMounted = false; };
+  }, [user?.id]);
+
+  // Debounced autosave for Step 2 info
+  useEffect(() => {
+    if (!hydrated) return;
+
+    // Always keep a local draft as backup
+    try { localStorage.setItem(getDraftKey(), JSON.stringify(info)); } catch {}
+
+    if (!user || !sessionId) return;
+
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(async () => {
+      const newData = { ...sessionData, info };
+      setSessionData(newData);
+      await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', sessionId);
+    }, 700);
+
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, [info, sessionId, user?.id, hydrated]);
+
+  const updateStep = (newStep: number) => {
+    const clamped = Math.min(Math.max(newStep, 1), steps.length);
+    setCurrent(clamped);
+    if (user && sessionId) {
+      supabase.from('acelerador_sessions').update({ current_step: clamped }).eq('id', sessionId);
+    }
+  };
+
+  const next = () => updateStep(current + 1);
+  const prev = () => updateStep(current - 1);
+
+  const handleSaveVars = async (vars: Record<string, string>) => {
+    setUaVars(vars);
+    const newData = { ...sessionData, ua_vars: vars, info };
+    setSessionData(newData);
+    try { localStorage.setItem(getDraftKey(), JSON.stringify(info)); } catch {}
+    if (user && sessionId) {
+      await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', sessionId);
+    }
+  };
 
   const render = () => {
     switch (current) {
       case 1:
         return <Step1Welcome onNext={next} onValidated={(inputs: A4Inputs) => { setA4Inputs(inputs); next(); }} />;
       case 2:
-        return <Step2Info data={info} onChange={setInfo} onPrev={prev} onNext={next} onSaveVars={setUaVars} />;
+        return <Step2Info data={info} onChange={setInfo} onPrev={prev} onNext={next} onSaveVars={handleSaveVars} />;
       case 3:
         return <Step3SituationPurpose data={situation} onChange={setSituation} onPrev={prev} onNext={next} info={info} a4={a4Inputs} />;
       case 4:
