@@ -47,18 +47,37 @@ export default function Step3SituationPurpose({ data, onChange, onNext, onPrev, 
   const generate = async () => {
     try {
       setLoading(true);
+
+      // Validaciones mínimas
+      const required = [info?.institucion, info?.area, info?.grado];
+      if (required.some((v) => !v || !String(v).trim())) {
+        toast({ title: "Completa los datos", description: "Llena institución, área y grado en el Paso 2.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      if (!a4 || ((a4.priorities?.length ?? 0) === 0 && (a4.strategies?.length ?? 0) === 0)) {
+        toast({ title: "Faltan insumos", description: "Selecciona prioridades y estrategias del Acelerador 4.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
       const a3Context = await getA3Context();
 
       const { data: resp, error } = await supabase.functions.invoke('generate-situation-purpose-ac5', {
         body: {
           info,
-          a4_inputs: a4 || { priorities: [], strategies: [], source: 'unknown' },
+          a4_inputs: a4,
           a3_context: a3Context,
         }
       });
 
       if (error) throw error;
       if (!resp?.success) throw new Error(resp?.error || 'No se pudo generar el contenido');
+
+      const allEmpty = !resp.situacion && !resp.proposito && !resp.reto && !resp.producto;
+      if (allEmpty) {
+        throw new Error('La IA no devolvió contenido. Vuelve a intentar.');
+      }
 
       onChange({
         situacion: resp.situacion || data.situacion,

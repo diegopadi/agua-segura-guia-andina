@@ -98,17 +98,47 @@ Año: ${infoData.anio}
     const data = await response.json();
     const content: string = data.choices?.[0]?.message?.content || '';
 
-    // Parse the model output
-    const parseSection = (label: string) => {
-      const regex = new RegExp(`${label}:\\s*([\\s\\S]*?)(?=\\n[^\n]*?:|$)`, 'i');
-      const match = content.match(regex);
-      return match ? match[1].trim() : '';
+    // Try JSON-first parsing
+    const stripCodeFences = (t: string) => t.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+    const tryParseJSON = (t: string): any | null => {
+      try {
+        const cleaned = stripCodeFences(t);
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        if (!match) return JSON.parse(cleaned);
+        return JSON.parse(match[0]);
+      } catch (_) {
+        return null;
+      }
     };
 
-    const situacion = parseSection('Situación significativa');
-    const proposito = parseSection('Propósito');
-    const reto = parseSection('Reto');
-    const producto = parseSection('Producto');
+    const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+
+    let situacion = '';
+    let proposito = '';
+    let reto = '';
+    let producto = '';
+
+    const asJson = tryParseJSON(content);
+    if (asJson) {
+      situacion = (asJson.situacion ?? '').toString().trim();
+      proposito = (asJson.proposito ?? '').toString().trim();
+      reto = (asJson.reto ?? '').toString().trim();
+      producto = (asJson.producto ?? '').toString().trim();
+    }
+
+    // Fallback: label-based parsing (diacritics and case-insensitive)
+    if (!situacion && !proposito && !reto && !producto) {
+      const contentN = normalize(content);
+      const parseSection = (label: string) => {
+        const regex = new RegExp(`${label}:\\s*([\\s\\S]*?)(?=\\n[^\\n]*?:|$)`, 'i');
+        const match = contentN.match(regex);
+        return match ? match[1].trim() : '';
+      };
+      situacion = parseSection('Situacion significativa');
+      proposito = parseSection('Proposito');
+      reto = parseSection('Reto');
+      producto = parseSection('Producto');
+    }
 
     const result = { situacion, proposito, reto, producto, raw: content };
 
