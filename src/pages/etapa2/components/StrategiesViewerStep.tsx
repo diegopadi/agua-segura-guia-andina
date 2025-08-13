@@ -6,7 +6,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { CheckCircle, ArrowLeft, ArrowRight } from "lucide-react";
+import { CheckCircle, ArrowLeft, ArrowRight, RefreshCcw } from "lucide-react";
+import { APP_CONFIG_A4_DEFAULT } from "@/integrations/supabase/appConfigDefaults";
 
 interface StrategiesViewerStepProps {
   sessionId: string;
@@ -147,14 +148,36 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
     cierre: "Cierre",
   } as Record<Moment, string>;
 
+  const handleReloadRepo = () => {
+    const defaults = APP_CONFIG_A4_DEFAULT?.estrategias_repo?.items || [];
+    const newData = {
+      ...sessionData,
+      app_config: {
+        ...(sessionData?.app_config || {}),
+        estrategias_repo: { items: defaults },
+      },
+    };
+    onUpdateSessionData(newData);
+    toast({
+      title: "Repositorio recargado",
+      description: `Se cargaron ${defaults.length} estrategias (6 por momento).`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-primary" />
-            {step.title || "Selección de estrategias"}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-primary" />
+              {step.title || "Selección de estrategias"}
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={handleReloadRepo}>
+              <RefreshCcw className="w-4 h-4 mr-2" />
+              Recargar repo EEPE (18)
+            </Button>
+          </div>
           <CardDescription>
             Selecciona 2 estrategias por cada momento (Inicio, Desarrollo y Cierre). Todas provienen del libro EEPE: "Enseñanza de Ecología en el Patio de la Escuela".
           </CardDescription>

@@ -145,9 +145,26 @@ const Acelerador4 = () => {
         existingSession = newSession;
       }
 
-      // Cache APP_CONFIG_A4 into session_data.app_config (once)
+      // Cache y reparar APP_CONFIG_A4 dentro de session_data.app_config (una vez y autocorrección)
       try {
         let appConfig = (existingSession as any).session_data?.app_config;
+
+        // Helper para verificar distribución de 6 por momento y total 18
+        const isCompleteRepo = (cfg: any) => {
+          const items = cfg?.estrategias_repo?.items ?? [];
+          const dist = { inicio: 0, desarrollo: 0, cierre: 0 } as Record<string, number>;
+          for (const it of items) {
+            const raw = (it as any)?.momento_sugerido;
+            const list = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+            for (const entry of list) {
+              const m = String(entry).toLowerCase().trim();
+              if (m in dist) dist[m]!++;
+            }
+          }
+          return items.length >= 18 && dist.inicio >= 6 && dist.desarrollo >= 6 && dist.cierre >= 6;
+        };
+
+        // Cargar desde app_configs si no está en sesión
         if (!appConfig) {
           const cfg = await getAppConfig<any>("APP_CONFIG_A4");
           if (!cfg) {
@@ -157,9 +174,28 @@ const Acelerador4 = () => {
           } else {
             appConfig = cfg.data;
           }
+        }
+
+        // Reparación automática si el repo está incompleto
+        let repaired = false;
+        if (!isCompleteRepo(appConfig)) {
+          await upsertAppConfig("APP_CONFIG_A4", APP_CONFIG_A4_DEFAULT);
+          appConfig = {
+            ...APP_CONFIG_A4_DEFAULT,
+            // Preserva plantilla existente si está presente, si no usa la por defecto
+            plantilla_informe_ac4: appConfig?.plantilla_informe_ac4 ?? APP_CONFIG_A4_DEFAULT.plantilla_informe_ac4,
+          };
+          repaired = true;
+        }
+
+        // Guardar en la sesión si no existía o si fue reparado
+        if (!(existingSession as any).session_data?.app_config || repaired) {
           const newData = { ...((existingSession as any).session_data || {}), app_config: appConfig };
           await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', (existingSession as any).id);
           (existingSession as any).session_data = newData;
+          if (repaired) {
+            toast({ title: "Repositorio actualizado", description: "Se restauraron 18 estrategias (6 por momento)." });
+          }
         }
       } catch (e) {
         console.error('Error caching APP_CONFIG_A4:', e);
