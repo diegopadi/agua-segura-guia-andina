@@ -11,7 +11,7 @@ const accelerators = [
   {
     id: 4,
     title: "Selección de Estrategias Metodológicas",
-    description: "Selecciona 6 estrategias (2 por momento) adaptadas del libro EEPE",
+    description: "Selecciona hasta 5 estrategias (agrupadas por tipo) adaptadas del libro EEPE",
     icon: Settings,
     color: "bg-green-500",
     estimatedTime: "45-60 min",

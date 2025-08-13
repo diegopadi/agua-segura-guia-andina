@@ -413,7 +413,7 @@ const Acelerador4 = () => {
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h4 className="font-medium text-blue-900 mb-2">¿Qué lograrás?</h4>
                   <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• Selección de 6 estrategias pedagógicas alineadas a tu contexto</li>
+                    <li>• Selección de hasta 5 estrategias pedagógicas alineadas a tu contexto</li>
                     <li>• Estrategias basadas en el libro EEPE y seguridad hídrica</li>
                     <li>• Informe justificativo listo para descargar</li>
                     <li>• Insumos preparados para diseño de unidades didácticas</li>

@@ -183,6 +183,7 @@ export const APP_CONFIG_A4_DEFAULT = {
         descripcion: 'Curaduría de fotos, croquis y métricas simples (p. ej., reducción de tiempos de uso) para evidenciar cambios logrados y retos pendientes.',
         momento_sugerido: ['cierre'],
         etiquetas: ['evidencias','comunicacion','mejora-continua'],
+        tipo_estrategia: 'reflexion_evaluacion_cierre',
         recursos: ['impresiones/fotos','marcos o panel','etiquetas'],
         referencia: "Basado en la 'Guía metodológica para la enseñanza de ecología en el patio de la escuela'."
       }
