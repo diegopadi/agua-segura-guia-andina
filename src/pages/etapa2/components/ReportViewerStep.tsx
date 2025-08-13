@@ -328,9 +328,9 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
                   
                   {report.strategies_count && (
                     <div className="flex items-center gap-4 text-sm">
-                      <span>📋 {report.strategies_count} estrategias documentadas</span>
-                      <span>📚 {report.citations_count || 0} citas normativas</span>
-                      <span>📄 {Math.ceil((report.word_count || 0) / 250)} páginas aprox.</span>
+                      <span>Estrategias documentadas: {report.strategies_count}</span>
+                      <span>Citas normativas: {report.citations_count || 0}</span>
+                      <span>Páginas aprox.: {Math.ceil((report.word_count || 0) / 250)}</span>
                     </div>
                   )}
                 </div>
@@ -361,9 +361,9 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[60vh] w-full">
+                  <ScrollArea className="h-[80vh] w-full">
                     <div
-                      className="prose prose-sm max-w-none p-4"
+                      className="prose max-w-none p-6"
                       dangerouslySetInnerHTML={{ __html: report.html_content }}
                     />
                   </ScrollArea>

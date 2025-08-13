@@ -154,6 +154,10 @@ serve(async (req) => {
       .replace('{{respuestas_profundizacion}}', respuestasProfundizacion)
       .replace('{{prioridades_ac3}}', prioridadesAc3);
 
+    // Enforce clean, neutral formatting (no emojis, no colors, no boxes)
+    userPrompt += `\n\nFORMATO ESTRICTO DEL INFORME (NO USAR EMOJIS NI ESTILOS):\n- Redacta en lenguaje técnico y claro.\n- No incluyas emojis, íconos, bullets decorativos ni caracteres especiales.\n- No uses estilos inline, colores, cajas, bordes ni fondos.\n- Usa solo estructura simple: Título (H1), subtítulos (H2/H3), párrafos, listas con guiones o numeradas y tablas sencillas.\n- No incluyas bloques de código ni backticks.\n- No agregues cabeceras o pies de página; el sistema los añade.\n- Entrega el contenido directo, listo para ser impreso en formato tipo documento.`;
+
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -178,6 +182,9 @@ serve(async (req) => {
 
     const reportContent = data.choices[0].message.content;
 
+    // Remove common emoji ranges to keep output clean
+    const cleanContent = reportContent.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}]/gu, '');
+
     // Generate HTML version
     const htmlContent = `
 <!DOCTYPE html>
@@ -187,30 +194,37 @@ serve(async (req) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Informe de Estrategias Metodológicas - Acelerador 4</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 40px; }
-        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
-        h2 { color: #34495e; margin-top: 30px; }
-        h3 { color: #7f8c8d; }
-        .strategy { background: #f8f9fa; padding: 15px; margin: 10px 0; border-left: 4px solid #3498db; }
-        .context-box { background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        .citation { font-style: italic; color: #666; background: #f0f0f0; padding: 10px; margin: 10px 0; }
+        /* Estilo neutro y limpio tipo documento */
+        html, body { background: #fff; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; line-height: 1.6; color: #000; margin: 40px; }
+        h1, h2, h3 { margin: 1.2em 0 0.6em; font-weight: 700; color: #000; }
+        h1 { font-size: 1.8rem; }
+        h2 { font-size: 1.4rem; }
+        h3 { font-size: 1.15rem; }
+        p { margin: 0 0 1em; }
+        ul, ol { margin: 0 0 1em 1.2em; }
+        table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+        th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }
+        th { font-weight: 600; background: #f5f5f5; }
+        hr { border: none; border-top: 1px solid #ddd; margin: 2em 0; }
+        @media print { body { margin: 20px; } }
     </style>
 </head>
 <body>
-    <h1>📋 Informe de Estrategias Metodológicas</h1>
+    <h1>Informe de Estrategias Metodológicas</h1>
     <p><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-ES')}</p>
     <p><strong>Acelerador:</strong> 4 - Selección de Estrategias Metodológicas</p>
     
-    <div class="context-box">
-        <h3>📍 Contexto Educativo</h3>
+    <section>
+        <h2>Contexto Educativo</h2>
         <ul>
             <li><strong>Tipo de aula:</strong> ${contexto.tipo_aula}</li>
             <li><strong>Modalidad:</strong> ${contexto.modalidad}</li>
             <li><strong>Recursos TIC:</strong> ${contexto.recursos_tic}</li>
         </ul>
-    </div>
+    </section>
 
-    ${reportContent.replace(/\n/g, '<br>').replace(/##\s(.+)/g, '<h2>$1</h2>').replace(/###\s(.+)/g, '<h3>$1</h3>')}
+    ${cleanContent.replace(/###\s(.+)/g, '<h3>$1</h3>').replace(/##\s(.+)/g, '<h2>$1</h2>').replace(/\n/g, '<br>')}
     
     <hr>
     <p><em>Este informe ha sido generado automáticamente por el sistema de IA pedagógica y está listo para ser utilizado como insumo en el Acelerador 5: Planificación y Preparación de Unidades.</em></p>
@@ -218,9 +232,9 @@ serve(async (req) => {
 </html>`;
 
     // Calculate report metrics
-    const wordCount = reportContent.split(' ').length;
+    const wordCount = cleanContent.split(' ').length;
     const strategiesCount = strategiesNormalized.length;
-    const citationsCount = (reportContent.match(/MINEDU|Ministerio de Educación|CNEB/gi) || []).length;
+    const citationsCount = (cleanContent.match(/MINEDU|Ministerio de Educación|CNEB/gi) || []).length;
 
     console.log('Generated strategies report successfully');
 
