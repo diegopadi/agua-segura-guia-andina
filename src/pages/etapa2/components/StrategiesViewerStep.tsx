@@ -138,10 +138,22 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
       strategies_selected: flat,
       strategies_result: { source: "manual", strategies: flat },
     };
+
+    // Debug trace to verify click and payload
+    console.log('[A4][StrategiesViewer] Continuar click', {
+      counts: {
+        inicio: selected_by_moment.inicio.length,
+        desarrollo: selected_by_moment.desarrollo.length,
+        cierre: selected_by_moment.cierre.length,
+      },
+      flatCount: flat.length,
+    });
+
+    toast({ title: "Selección guardada", description: "Avanzando al siguiente paso" });
+
     onUpdateSessionData(updated);
     onNext();
   };
-
   const momentTitle = {
     inicio: "Inicio",
     desarrollo: "Desarrollo",
@@ -250,7 +262,7 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
               <ArrowLeft className="w-4 h-4 mr-2" />
               Anterior
             </Button>
-            <Button onClick={handleContinue} disabled={!canContinue}>
+            <Button type="button" onClick={handleContinue} disabled={!canContinue}>
               Continuar
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
