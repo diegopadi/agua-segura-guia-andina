@@ -61,7 +61,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
   const buildFixedQuestions = (strategies: any[]): Question[] => {
     const qs: Question[] = [];
     let idCounter = 1;
-    strategies.slice(0,6).forEach((_s, idx) => {
+    strategies.forEach((_s, idx) => {
       qs.push({ id: idCounter++, enfoque: 'pertinencia', pregunta: `E${idx+1}. ¿Cómo asegurar pertinencia cultural/contextual para esta estrategia?` });
       qs.push({ id: idCounter++, enfoque: 'viabilidad', pregunta: `E${idx+1}. ¿Qué recursos (TIC y no TIC) concretos usarás y cómo los garantizarás?` });
       qs.push({ id: idCounter++, enfoque: 'complejidad', pregunta: `E${idx+1}. ¿Qué ajustes harás para el nivel de complejidad y andamiajes?` });
@@ -215,7 +215,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
                 const baseStrategies = sessionData?.strategies_adapted?.strategies || sessionData?.strategies_result?.strategies || [];
                 return (
                   <div className="space-y-8">
-                    {baseStrategies.slice(0,6).map((s: any, sIdx: number) => {
+                    {baseStrategies.map((s: any, sIdx: number) => {
                       const startId = sIdx * 3 + 1;
                       const groupQs = [startId, startId + 1, startId + 2]
                         .map((id) => questions.find((q) => q.id === id))
@@ -288,11 +288,12 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
             onClick={async () => {
               try {
                 setLoading(true);
-                const baseStrategies = sessionData?.strategies_result?.strategies || [];
+                const usedAdapted = Array.isArray(sessionData?.strategies_adapted?.strategies) && sessionData.strategies_adapted.strategies.length > 0;
+                const baseStrategies = usedAdapted ? sessionData.strategies_adapted.strategies : (sessionData?.strategies_result?.strategies || []);
                 const payloadSummary = {
                   strategies: baseStrategies.length,
-                  responses: Object.keys(sessionData?.profundization_responses || {}),
-                  contexto: Object.keys(sessionData?.contexto || {}),
+                  responses: Object.keys(sessionData?.profundization_responses || {}).length,
+                  contexto: Object.keys(sessionData?.contexto || {}).length,
                 };
                 console.log('[A4][Profundization] Adapt payload:', payloadSummary);
                 const { data, error } = await supabase.functions.invoke('adapt-ac4-strategies', {

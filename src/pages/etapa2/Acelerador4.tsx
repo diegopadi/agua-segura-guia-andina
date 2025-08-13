@@ -64,7 +64,7 @@ const steps = [
   {
     number: 3,
     title: "Selección de estrategias",
-    description: "Selecciona 2 estrategias por cada momento (inicio, desarrollo y cierre) del repositorio EEPE",
+    description: "Selecciona hasta 5 estrategias del repositorio EEPE (agrupadas por tipo)",
     icon: CheckCircle,
     type: "strategies_viewer",
     uses_ai: false,
@@ -149,19 +149,10 @@ const Acelerador4 = () => {
       try {
         let appConfig = (existingSession as any).session_data?.app_config;
 
-        // Helper para verificar distribución de 6 por momento y total 18
+        // Helper para verificar completitud simple por cantidad total
         const isCompleteRepo = (cfg: any) => {
           const items = cfg?.estrategias_repo?.items ?? [];
-          const dist = { inicio: 0, desarrollo: 0, cierre: 0 } as Record<string, number>;
-          for (const it of items) {
-            const raw = (it as any)?.momento_sugerido;
-            const list = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
-            for (const entry of list) {
-              const m = String(entry).toLowerCase().trim();
-              if (m in dist) dist[m]!++;
-            }
-          }
-          return items.length >= 18 && dist.inicio >= 6 && dist.desarrollo >= 6 && dist.cierre >= 6;
+          return items.length >= 18; // mínimo recomendado
         };
 
         // Cargar desde app_configs si no está en sesión
@@ -194,7 +185,7 @@ const Acelerador4 = () => {
           await supabase.from('acelerador_sessions').update({ session_data: newData }).eq('id', (existingSession as any).id);
           (existingSession as any).session_data = newData;
           if (repaired) {
-            toast({ title: "Repositorio actualizado", description: "Se restauraron 18 estrategias (6 por momento)." });
+            toast({ title: "Repositorio actualizado", description: "Se restauraron 18 estrategias." });
           }
         }
       } catch (e) {
@@ -415,7 +406,7 @@ const Acelerador4 = () => {
                   Bienvenido al Acelerador 4: Selección de Estrategias Metodológicas
                 </CardTitle>
                 <CardDescription>
-                  Este acelerador te guiará para seleccionar 6 estrategias (2 por momento) adaptadas del libro EEPE: Enseñanza de Ecología en el Patio de la Escuela.
+                  Este acelerador te guiará para seleccionar hasta 5 estrategias del repositorio EEPE, agrupadas por tipo, y preparará preguntas de profundización y un informe final.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

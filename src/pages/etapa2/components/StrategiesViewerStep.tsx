@@ -31,6 +31,7 @@ interface RepoItem {
   etiquetas?: string[];
   recursos?: string[];
   referencia?: string;
+  tipo_estrategia?: string;
 }
 
 export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
@@ -43,110 +44,113 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
   const { toast } = useToast();
   const repoItems: RepoItem[] = sessionData?.app_config?.estrategias_repo?.items || [];
 
-  const grouped = useMemo(() => {
-    const by: Record<"inicio" | "desarrollo" | "cierre", RepoItem[]> = {
-      inicio: [],
-      desarrollo: [],
-      cierre: [],
+  // Agrupación por tipo de estrategia (nuevo esquema)
+  type TipoKey =
+    | 'indagacion_diagnostico'
+    | 'experimentos_demostraciones'
+    | 'proyectos_rutas_aplicadas'
+    | 'comunicacion_movilizacion'
+    | 'reflexion_evaluacion_cierre';
+
+  const TYPE_KEYS: TipoKey[] = [
+    'indagacion_diagnostico',
+    'experimentos_demostraciones',
+    'proyectos_rutas_aplicadas',
+    'comunicacion_movilizacion',
+    'reflexion_evaluacion_cierre',
+  ];
+
+  const TYPE_LABELS: Record<TipoKey, string> = {
+    indagacion_diagnostico: 'Indagación y diagnóstico participativo',
+    experimentos_demostraciones: 'Experimentos y demostraciones científicas',
+    proyectos_rutas_aplicadas: 'Proyectos y rutas de aprendizaje aplicadas',
+    comunicacion_movilizacion: 'Comunicación, participación y movilización',
+    reflexion_evaluacion_cierre: 'Reflexión, evaluación y cierre',
+  };
+
+  const inferTipo = (it: RepoItem): TipoKey => {
+    const explicit = String((it as any)?.tipo_estrategia || '').toLowerCase().trim();
+    if ((TYPE_KEYS as string[]).includes(explicit)) return explicit as TipoKey;
+    const hay = (txt?: string) => (txt || '').toLowerCase();
+    const blob = [hay(it.nombre), hay(it.descripcion), ...(it.etiquetas || []).map(hay)].join(' ');
+    if (/\bindag|diagn|observaci/.test(blob)) return 'indagacion_diagnostico';
+    if (/experim|demostr|c y t/.test(blob)) return 'experimentos_demostraciones';
+    if (/proyecto|ruta|mejora/.test(blob)) return 'proyectos_rutas_aplicadas';
+    if (/campaña|feria|mural|teatr|comunic/.test(blob)) return 'comunicacion_movilizacion';
+    return 'reflexion_evaluacion_cierre';
+  };
+
+  const groupedByType = useMemo(() => {
+    const by: Record<TipoKey, RepoItem[]> = {
+      indagacion_diagnostico: [],
+      experimentos_demostraciones: [],
+      proyectos_rutas_aplicadas: [],
+      comunicacion_movilizacion: [],
+      reflexion_evaluacion_cierre: [],
     };
     for (const it of repoItems) {
-      const raw = (it as any)?.momento_sugerido;
-      const momentsList = Array.isArray(raw)
-        ? raw
-        : raw != null
-        ? [raw]
-        : [];
-      for (const entry of momentsList) {
-        const m = String(entry).toLowerCase().trim();
-        if (m === "inicio" || m === "desarrollo" || m === "cierre") {
-          by[m as "inicio" | "desarrollo" | "cierre"].push(it);
-        }
-      }
+      const k = inferTipo(it);
+      by[k].push(it);
     }
     return by;
   }, [repoItems]);
 
-  type Moment = "inicio" | "desarrollo" | "cierre";
-  const moments: Moment[] = ["inicio", "desarrollo", "cierre"];
+  const MAX_SELECTION = 5;
 
-  const initialSelectedByMoment = useMemo(() => {
-    const saved = sessionData?.strategies_selected_by_moment || {};
-    const toSet = (arr?: RepoItem[]) => new Set<string>((arr || []).map((s) => s.id));
-    return {
-      inicio: toSet(saved.inicio),
-      desarrollo: toSet(saved.desarrollo),
-      cierre: toSet(saved.cierre),
-    } as Record<Moment, Set<string>>;
-  }, [sessionData?.strategies_selected_by_moment]);
+  const initialSelectedIds = useMemo<string[]>(() => {
+    const saved = sessionData?.strategies_result?.strategies || sessionData?.strategies_selected || [];
+    const ids = (saved || []).map((s: any) => s.id).filter(Boolean);
+    return Array.from(new Set(ids)) as string[];
+  }, [sessionData?.strategies_result, sessionData?.strategies_selected]);
 
-  const [selectedByMoment, setSelectedByMoment] = useState<Record<Moment, Set<string>>>(
-    initialSelectedByMoment
-  );
+  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
 
-  const toggle = (moment: Moment, id: string, checked: boolean) => {
-    setSelectedByMoment((prev) => {
-      const next = { ...prev, [moment]: new Set(prev[moment]) } as Record<Moment, Set<string>>;
+  const canToggle = (id: string) => selectedIds.includes(id) || selectedIds.length < MAX_SELECTION;
+
+  const toggleId = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
       if (checked) {
-        if (next[moment].has(id)) return next;
-        if (next[moment].size >= 2) {
+        if (prev.includes(id)) return prev;
+        if (prev.length >= MAX_SELECTION) {
           toast({
             title: "Máximo alcanzado",
-            description: "Selecciona solo 2 estrategias por momento",
+            description: `Puedes seleccionar hasta ${MAX_SELECTION} estrategias en total.`,
             variant: "destructive",
           });
-          return next;
+          return prev;
         }
-        next[moment].add(id);
+        return [...prev, id];
       } else {
-        next[moment].delete(id);
+        return prev.filter((x) => x !== id);
       }
-      return next;
     });
   };
 
-  const canContinue = moments.every((m) => selectedByMoment[m].size === 2);
+  const canContinue = selectedIds.length > 0 && selectedIds.length <= MAX_SELECTION;
 
   const handleContinue = () => {
     if (!canContinue) {
       toast({
-        title: "Selección incompleta",
-        description: "Debes seleccionar 2 estrategias en Inicio, Desarrollo y Cierre",
+        title: "Selección requerida",
+        description: "Selecciona al menos 1 estrategia (máximo 5).",
         variant: "destructive",
       });
       return;
     }
 
-    const pick = (m: Moment) =>
-      Array.from(selectedByMoment[m]).map((id) =>
-        repoItems.find((x) => x.id === id)
-      ).filter(Boolean) as RepoItem[];
-
-    const selected_by_moment = {
-      inicio: pick("inicio"),
-      desarrollo: pick("desarrollo"),
-      cierre: pick("cierre"),
-    };
-    const flat = [
-      ...selected_by_moment.inicio,
-      ...selected_by_moment.desarrollo,
-      ...selected_by_moment.cierre,
-    ];
+    const selected = selectedIds
+      .map((id) => repoItems.find((x) => x.id === id))
+      .filter(Boolean) as RepoItem[];
 
     const updated = {
       ...sessionData,
-      strategies_selected_by_moment: selected_by_moment,
-      strategies_selected: flat,
-      strategies_result: { source: "manual", strategies: flat },
+      strategies_selected: selected,
+      strategies_result: { source: "repo", strategies: selected },
     };
 
-    // Debug trace to verify click and payload
-    console.log('[A4][StrategiesViewer] Continuar click', {
-      counts: {
-        inicio: selected_by_moment.inicio.length,
-        desarrollo: selected_by_moment.desarrollo.length,
-        cierre: selected_by_moment.cierre.length,
-      },
-      flatCount: flat.length,
+    console.log("[A4][StrategiesViewer] Continuar click", {
+      selectedCount: selected.length,
+      selectedIds,
     });
 
     toast({ title: "Selección guardada", description: "Avanzando al siguiente paso" });
@@ -154,11 +158,6 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
     onUpdateSessionData(updated);
     onNext();
   };
-  const momentTitle = {
-    inicio: "Inicio",
-    desarrollo: "Desarrollo",
-    cierre: "Cierre",
-  } as Record<Moment, string>;
 
   const handleReloadRepo = () => {
     const defaults = APP_CONFIG_A4_DEFAULT?.estrategias_repo?.items || [];
@@ -172,10 +171,9 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
     onUpdateSessionData(newData);
     toast({
       title: "Repositorio recargado",
-      description: `Se cargaron ${defaults.length} estrategias (6 por momento).`,
+      description: `Se cargaron ${defaults.length} estrategias (18 totales).`,
     });
   };
-
   return (
     <div className="space-y-6">
       <Card>
