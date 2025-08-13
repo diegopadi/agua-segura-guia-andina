@@ -49,9 +49,17 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
       cierre: [],
     };
     for (const it of repoItems) {
-      const m = (it.momento_sugerido || "").toLowerCase();
-      if (m === "inicio" || m === "desarrollo" || m === "cierre") {
-        by[m].push(it);
+      const raw = (it as any)?.momento_sugerido;
+      const momentsList = Array.isArray(raw)
+        ? raw
+        : raw != null
+        ? [raw]
+        : [];
+      for (const entry of momentsList) {
+        const m = String(entry).toLowerCase().trim();
+        if (m === "inicio" || m === "desarrollo" || m === "cierre") {
+          by[m as "inicio" | "desarrollo" | "cierre"].push(it);
+        }
       }
     }
     return by;
