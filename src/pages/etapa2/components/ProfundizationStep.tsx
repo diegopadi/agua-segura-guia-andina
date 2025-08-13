@@ -45,12 +45,12 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
     // Base strategies (adapted if available, else selected)
     const baseStrategies = sessionData?.strategies_adapted?.strategies || sessionData?.strategies_result?.strategies || [];
     if (baseStrategies.length > 0) {
-      const fixed = buildFixedQuestions(baseStrategies);
+      const fixed = buildFixedQuestions();
       setQuestions(fixed);
       setQuestionsGenerated(true);
-      console.log(`[A4][Profundization] Prepared ${fixed.length} questions for ${baseStrategies.length} strategies (3 c/u)`);
-      if (sessionData?.profundization_responses) {
-        setResponses(sessionData.profundization_responses_flat || {});
+      console.log(`[A4][Profundization] Preparadas ${fixed.length} preguntas universales para ${baseStrategies.length} estrategias`);
+      if (sessionData?.profundization_global_flat) {
+        setResponses(sessionData.profundization_global_flat || {});
       }
     } else {
       setQuestions([]);
@@ -58,27 +58,23 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
     }
   }, [sessionId]);
 
-  const buildFixedQuestions = (strategies: any[]): Question[] => {
-    const qs: Question[] = [];
-    let idCounter = 1;
-    strategies.forEach((_s, idx) => {
-      qs.push({ id: idCounter++, enfoque: 'pertinencia', pregunta: `E${idx+1}. ¿Cómo asegurar pertinencia cultural/contextual para esta estrategia?` });
-      qs.push({ id: idCounter++, enfoque: 'viabilidad', pregunta: `E${idx+1}. ¿Qué recursos (TIC y no TIC) concretos usarás y cómo los garantizarás?` });
-      qs.push({ id: idCounter++, enfoque: 'complejidad', pregunta: `E${idx+1}. ¿Qué ajustes harás para el nivel de complejidad y andamiajes?` });
-    });
-    return qs;
-  };
+  const buildFixedQuestions = (): Question[] => ([
+    { id: 1, enfoque: 'pertinencia', pregunta: '¿Por qué estas estrategias son pertinentes para tu contexto y prioridades?' },
+    { id: 2, enfoque: 'viabilidad', pregunta: '¿Qué recursos concretos (TIC y no TIC) usarás y cómo asegurarás su disponibilidad?' },
+    { id: 3, enfoque: 'riesgos', pregunta: '¿Qué riesgos u obstáculos anticipas y cómo los mitigarás?' },
+    { id: 4, enfoque: 'evaluacion', pregunta: '¿Qué evidencias recogerás para evaluar su implementación y resultados?' },
+    { id: 5, enfoque: 'inclusion', pregunta: '¿Cómo asegurarás inclusión y participación (p. ej., EIB/multigrado)?' },
+  ]);
 
   const generateQuestions = async () => {
     try {
       setLoading(true);
-      const baseStrategies = sessionData?.strategies_adapted?.strategies || sessionData?.strategies_result?.strategies || [];
-      const fixed = buildFixedQuestions(baseStrategies);
+      const fixed = buildFixedQuestions();
       setQuestions(fixed);
       setQuestionsGenerated(true);
       const updatedData = { ...sessionData, profundization_questions: fixed };
       onUpdateSession(updatedData);
-      console.log(`[A4][Profundization] Prepared ${fixed.length} questions for ${baseStrategies.length} strategies (3 c/u)`);
+      console.log(`[A4][Profundization] Preparadas ${fixed.length} preguntas universales`);
       toast.success('Preguntas preparadas');
     } catch (error: any) {
       console.error('Error generating questions:', error);
@@ -93,7 +89,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
       setRegenerating(true);
       setResponses({});
       await generateQuestions();
-      const updatedData = { ...sessionData, profundization_responses: {}, profundization_responses_flat: {} };
+      const updatedData = { ...sessionData, profundization_global: {}, profundization_global_flat: {} };
       onUpdateSession(updatedData);
       toast.success('Preguntas regeneradas exitosamente');
     } catch (error: any) {
@@ -107,17 +103,15 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
   const handleResponseChange = (questionId: number, response: string) => {
     const newResponses = { ...responses, [questionId]: response };
     setResponses(newResponses);
-    // Build structured responses grouped by strategy index
-    const structured: any = {};
+
+    const structuredGlobal: any = {};
     Object.entries(newResponses).forEach(([qid, text]) => {
       const q = questions.find(q => q.id === Number(qid));
       if (!q) return;
-      const strategyIdx = Math.ceil(Number(qid) / 3); // 3 preguntas por estrategia
-      const enfoque = q.enfoque;
-      if (!structured[strategyIdx]) structured[strategyIdx] = { pertinencia: '', viabilidad: '', complejidad: '' };
-      structured[strategyIdx][enfoque] = text;
+      structuredGlobal[q.enfoque] = text;
     });
-    const updatedData = { ...sessionData, profundization_responses: structured, profundization_responses_flat: newResponses };
+
+    const updatedData = { ...sessionData, profundization_global: structuredGlobal, profundization_global_flat: newResponses };
     onUpdateSession(updatedData);
   };
 
@@ -129,16 +123,20 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
     switch (enfoque) {
       case 'pertinencia': return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'viabilidad': return 'bg-green-50 text-green-700 border-green-200';
-      case 'complejidad': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'riesgos': return 'bg-red-50 text-red-700 border-red-200';
+      case 'evaluacion': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'inclusion': return 'bg-pink-50 text-pink-700 border-pink-200';
       default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
   const getEnfoqueLabel = (enfoque: string) => {
     switch (enfoque) {
-      case 'pertinencia': return 'Pertinencia Cultural';
+      case 'pertinencia': return 'Pertinencia Contextual';
       case 'viabilidad': return 'Viabilidad de Recursos';
-      case 'complejidad': return 'Nivel de Complejidad';
+      case 'riesgos': return 'Riesgos y mitigación';
+      case 'evaluacion': return 'Evaluación y evidencias';
+      case 'inclusion': return 'Inclusión y participación';
       default: return enfoque;
     }
   };
@@ -211,50 +209,32 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
               <div className="text-sm text-muted-foreground">
                 Responde las siguientes preguntas para optimizar las estrategias metodológicas según tu contexto específico:
               </div>
-              {(() => {
-                const baseStrategies = sessionData?.strategies_adapted?.strategies || sessionData?.strategies_result?.strategies || [];
-                return (
-                  <div className="space-y-8">
-                    {baseStrategies.map((s: any, sIdx: number) => {
-                      const startId = sIdx * 3 + 1;
-                      const groupQs = [startId, startId + 1, startId + 2]
-                        .map((id) => questions.find((q) => q.id === id))
-                        .filter(Boolean) as Question[];
-                      return (
-                        <div key={`strategy-${sIdx}`} className="space-y-4 p-6 border rounded-lg bg-card">
-                          <h3 className="text-base font-semibold">
-                            {s?.title || s?.nombre || `Estrategia ${sIdx + 1}`}
-                          </h3>
-                          {groupQs.map((question, index) => (
-                            <div key={`question-${question.id}-${index}`} className="space-y-3">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="secondary" className={getEnfoqueColor(question.enfoque)}>
-                                    {getEnfoqueLabel(question.enfoque)}
-                                  </Badge>
-                                  <span className="text-sm font-medium text-muted-foreground">Pregunta {question.id}</span>
-                                </div>
-                                {responses[question.id]?.trim() && (
-                                  <div className="flex items-center gap-1 text-green-600">
-                                    <CheckCircle className="h-4 w-4" />
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-foreground leading-relaxed">{question.pregunta}</p>
-                              <Textarea
-                                placeholder="Escribe tu respuesta detallada aquí..."
-                                value={responses[question.id] || ''}
-                                onChange={(e) => handleResponseChange(question.id, e.target.value)}
-                                className="min-h-[100px] resize-none"
-                              />
-                            </div>
-                          ))}
+              <div className="space-y-6">
+                {questions.map((question, index) => (
+                  <div key={`question-${question.id}-${index}`} className="space-y-3 p-6 border rounded-lg bg-card">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className={getEnfoqueColor(question.enfoque)}>
+                          {getEnfoqueLabel(question.enfoque)}
+                        </Badge>
+                        <span className="text-sm font-medium text-muted-foreground">Pregunta {question.id}</span>
+                      </div>
+                      {responses[question.id]?.trim() && (
+                        <div className="flex items-center gap-1 text-green-600">
+                          <CheckCircle className="h-4 w-4" />
                         </div>
-                      );
-                    })}
+                      )}
+                    </div>
+                    <p className="text-foreground leading-relaxed">{question.pregunta}</p>
+                    <Textarea
+                      placeholder="Escribe tu respuesta detallada aquí..."
+                      value={responses[question.id] || ''}
+                      onChange={(e) => handleResponseChange(question.id, e.target.value)}
+                      className="min-h-[100px] resize-none"
+                    />
                   </div>
-                );
-              })()}
+                ))}
+              </div>
               {questions.length > 0 && (
                 <div className="bg-muted/50 p-4 rounded-lg">
                   <p className="text-sm text-muted-foreground">
@@ -265,7 +245,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Prepara las preguntas de profundización para cada estrategia.</p>
+              <p className="text-muted-foreground">Prepara las 5 preguntas de profundización universales.</p>
               <Button 
                 variant="outline" 
                 onClick={generateQuestions}
@@ -292,7 +272,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
                 const baseStrategies = usedAdapted ? sessionData.strategies_adapted.strategies : (sessionData?.strategies_result?.strategies || []);
                 const payloadSummary = {
                   strategies: baseStrategies.length,
-                  responses: Object.keys(sessionData?.profundization_responses || {}).length,
+                  responses_global: Object.keys(sessionData?.profundization_global || {}).length,
                   contexto: Object.keys(sessionData?.contexto || {}).length,
                 };
                 console.log('[A4][Profundization] Adapt payload:', payloadSummary);
@@ -300,7 +280,7 @@ export const ProfundizationStep: React.FC<ProfundizationStepProps> = ({
                   body: {
                     session_id: sessionId,
                     strategies: baseStrategies,
-                    responses: sessionData?.profundization_responses,
+                    responses: sessionData?.profundization_global || {},
                     contexto: sessionData?.contexto,
                   }
                 });

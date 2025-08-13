@@ -76,7 +76,7 @@ const steps = [
   {
     number: 4,
     title: "Preguntas de Profundización",
-    description: "IA formula hasta 3 preguntas para afinar pertinencia, viabilidad y nivel de complejidad",
+    description: "Responde 5 preguntas universales para afinar pertinencia, viabilidad, riesgos, evaluación e inclusión",
     icon: HelpCircle,
     type: "profundization",
     uses_ai: true,

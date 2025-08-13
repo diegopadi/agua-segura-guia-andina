@@ -13,13 +13,13 @@ async function adaptWithOpenAI(strategies: any[], responses: any, contexto: any)
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) throw new Error("Missing OPENAI_API_KEY");
 
-  const system = `Eres un especialista pedagógico del MINEDU. Vas a ADAPTAR 6 estrategias existentes, manteniendo su esencia y momento pedagógico, pero incorporando las respuestas del docente (pertinencia, viabilidad con TIC y complejidad). Devuelve JSON con { strategies: Array<{title, description, reference, momento, tags?: string[]}> }`;
+  const system = `Eres un especialista pedagógico del MINEDU. Vas a ADAPTAR hasta 5 estrategias existentes, manteniendo su esencia y momento pedagógico, incorporando las respuestas de profundización globales del docente (pertinencia/contexto, viabilidad/recursos -incluye TIC y no TIC-, riesgos/mitigación, evaluación/evidencias e inclusión/participación). Devuelve JSON con { strategies: Array<{title, description, reference, momento, tags?: string[]}> }`;
 
   const user = {
     strategies,
     responses,
     contexto,
-    instrucciones: "Rescribe cada estrategia en 120-180 palabras, integra recursos TIC concretos cuando aplique, lenguaje claro para docentes en Perú. No inventes estrategias nuevas, solo reescribe las 6."
+    instrucciones: "Rescribe cada estrategia en 120-180 palabras, integra recursos TIC concretos cuando aplique, usa lenguaje claro para docentes en Perú. No inventes estrategias nuevas, solo reescribe las existentes.",
   };
 
   const body = {
