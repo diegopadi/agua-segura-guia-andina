@@ -51,17 +51,21 @@ serve(async (req) => {
       body: JSON.stringify({ session_id })
     });
 
-    let ac3Context = {};
-    let prioridades = [];
+    let ac3Context = {
+      grado: session_data?.grado || 'Sin información disponible',
+      area: session_data?.area || 'Sin información disponible',
+      competencia: session_data?.competencia || 'Sin información disponible',
+    } as any;
+    let prioridades: any[] = [];
+    let ac3Data: any = null;
     if (getAc3ResultsResponse.ok) {
-      const ac3Data = await getAc3ResultsResponse.json();
-      ac3Context = {
-        grado: ac3Data.priorities?.[0]?.grado || 'No especificado',
-        area: ac3Data.priorities?.[0]?.area || 'No especificado', 
-        competencia: ac3Data.priorities?.[0]?.competencia || 'No especificado'
-      };
+      ac3Data = await getAc3ResultsResponse.json();
       prioridades = ac3Data.priorities || [];
     }
+    const selectedPriorities = Array.isArray(session_data?.priorities) ? session_data.priorities : [];
+    const prioridadesToUse = (selectedPriorities.length > 0 ? selectedPriorities : prioridades) as any[];
+
+    console.log('Priorities selected for report:', (prioridadesToUse || []).map((p: any) => p.title || p.descripcion || p.name || 'Prioridad'));
 
     // Compile all session data with improved strategy handling (A4)
     // 1) Estrategias: tomar máximo 5 desde strategies_result.strategies o strategies_selected
@@ -106,9 +110,9 @@ serve(async (req) => {
     const contextoRaw = session_data?.contexto || {};
     const contextData = session_data?.context_data || {};
     const contexto = {
-      tipo_aula: contextoRaw.tipo_aula || contextData[1] || 'No especificado',
-      modalidad: contextoRaw.modalidad || contextData[2] || 'No especificado',
-      recursos_tic: contextoRaw.recursos_tic || contextData[3] || 'No especificado',
+      tipo_aula: contextoRaw.tipo_aula || contextData[1] || 'Sin información disponible',
+      modalidad: contextoRaw.modalidad || contextData[2] || 'Sin información disponible',
+      recursos_tic: contextoRaw.recursos_tic || contextData[3] || 'Sin información disponible',
     };
 
     // 3) Respuestas globales de profundización (5 universales)
@@ -122,18 +126,20 @@ serve(async (req) => {
     ].map(({ key, label }) => `• ${label}: ${prof[key] || 'Sin respuesta'}`).join('\n');
 
     // 4) Prioridades del AC3 (ya recuperadas)
-    const prioridadesAc3 = prioridades.map((p: any, index: number) =>
-      `${index + 1}. ${p.descripcion || `${p.grado || ''} ${p.area || ''} ${p.competencia || ''}`.trim()}`
-    ).join('\n');
+    const prioridadesAc3 = (prioridadesToUse || []).map((p: any, index: number) =>
+      `${index + 1}. ${p.title || p.nombre || `Prioridad ${index + 1}`}: ${p.description || p.descripcion || 'Sin información disponible'}`
+    ).join('\n') || 'Sin información disponible';
 
     // 5) Texto de estrategias detallado para el prompt
-    const estrategiasText = strategiesNormalized.map((s, idx) => (
-      `${idx + 1}. ${s.title}\n` +
-      `   Momento/tipo: ${s.momento}\n` +
-      `   Referencia: ${s.reference}\n` +
-      `   Tags: ${(s.tags || []).join(', ') || '—'}\n` +
-      `   Descripción: ${s.description}`
-    )).join('\n\n');
+    const estrategiasText = strategiesNormalized.length > 0
+      ? strategiesNormalized.map((s, idx) => (
+          `${idx + 1}. ${s.title}\n` +
+          `   Momento/tipo: ${s.momento}\n` +
+          `   Referencia: ${s.reference}\n` +
+          `   Tags: ${(s.tags || []).join(', ') || '—'}\n` +
+          `   Descripción: ${s.description || 'Sin información disponible'}`
+        )).join('\n\n')
+      : 'Sin información disponible';
 
     // 6) Ensamble de contexto legible
     const contextoCompleto = `Aula: ${contexto.tipo_aula}\nModalidad: ${contexto.modalidad}\nRecursos TIC: ${contexto.recursos_tic}`;
@@ -225,6 +231,7 @@ serve(async (req) => {
       summary: `Informe técnico con ${strategiesCount} estrategias metodológicas validadas y contextualizadas para ${contexto.tipo_aula} ${contexto.modalidad}.`,
       strategies_count: strategiesCount,
       citations_count: citationsCount,
+      word_count: wordCount,
       ready_for_accelerator_5: true
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
