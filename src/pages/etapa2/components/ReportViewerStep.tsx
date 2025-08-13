@@ -52,67 +52,30 @@ export const ReportViewerStep: React.FC<ReportViewerStepProps> = ({
     try {
       if (!sessionId || !sessionData) throw new Error('Faltan datos requeridos');
 
-      const usedAdapted = Array.isArray(sessionData?.strategies_adapted?.strategies) && sessionData.strategies_adapted.strategies.length > 0;
-      const strategies = usedAdapted ? sessionData.strategies_adapted.strategies : (sessionData?.strategies_result?.strategies || []);
-      const sourceUsed = usedAdapted ? 'adapted' : 'result';
-      const plantilla = sessionData?.app_config?.plantilla_informe_ac4 || {};
-      const estructura = plantilla?.estructura || {};
+      // Invocar función Edge para generar informe detallado con IA
+      const { data, error } = await supabase.functions.invoke('generate-strategies-report', {
+        body: {
+          session_id: sessionId,
+          session_data: sessionData,
+          template_id: step.template_id || 'plantilla7_informe_ac4',
+        },
+      });
 
-      const mapping = [
-        ...(estructura.parte_1 || ['portada','introduccion','estrategia_1','estrategia_2']),
-        ...(estructura.parte_2 || ['estrategia_3','estrategia_4']),
-        ...(estructura.parte_3 || ['estrategia_5','estrategia_6'])
-      ];
-      console.log(`[A4] Report: fuente=${sourceUsed}; partes=3; mapping=${JSON.stringify(mapping)}`);
-      console.log('[A4] Report: usando plantilla_informe_ac4 de app_config');
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'No se pudo generar el informe');
 
-      if (strategies.length === 0) throw new Error('No hay estrategias seleccionadas');
+      const result = {
+        success: true,
+        html_content: data.html_content,
+        summary: data.summary,
+        word_count: data.word_count,
+        strategies_count: data.strategies_count,
+        citations_count: data.citations_count,
+      } as any;
 
-      const renderToken = (token: string) => {
-        const t = (token || '').toLowerCase();
-        if (t === 'portada') {
-          return `<section><h1>${plantilla.titulo || 'Informe de Estrategias (AC4)'}</h1><p>${new Date().toLocaleDateString()}</p></section>`;
-        }
-        if (t === 'introduccion') {
-          return `<section><h2>Introducción</h2><p>${plantilla.intro || ''}</p></section>`;
-        }
-        if (t.startsWith('estrategia_')) {
-          const n = parseInt(t.split('_')[1], 10);
-          if (!isNaN(n) && n >= 1 && n <= 6 && strategies[n-1]) {
-            const s = strategies[n-1];
-            return `<article><h3>${n}. ${s.title || s.nombre || 'Estrategia'}</h3><p>${s.description || s.descripcion || ''}</p><p><small>${s.reference || s.referencia || 'EEPE - Enseñanza de Ecología en el Patio de la Escuela'}</small></p></article>`;
-          }
-        }
-        return '';
-      };
-
-      const partHtml = (tokens: string[] = [], idx: number) => {
-        const content = tokens.map(renderToken).join('\n');
-        return `<section><h2>Parte ${idx}</h2>\n${content}\n</section>`;
-      };
-
-      const parte1 = partHtml(estructura.parte_1 || ['portada','introduccion','estrategia_1','estrategia_2'], 1);
-      const parte2 = partHtml(estructura.parte_2 || ['estrategia_3','estrategia_4'], 2);
-      const parte3 = partHtml(estructura.parte_3 || ['estrategia_5','estrategia_6'], 3);
-
-      const insumosList = Array.isArray(plantilla?.insumos_para_a5)
-        ? plantilla.insumos_para_a5
-        : [
-            'Competencias y capacidades vinculadas',
-            'Recursos TIC identificados',
-            'Momentos pedagógicos sugeridos',
-          ];
-
-      const insumosA5 = `<section><h2>Insumos para A5</h2><ul>${insumosList.map((i: string) => `<li>${i}</li>`).join('')}</ul></section>`;
-
-      const html = `${parte1}\n${parte2}\n${parte3}\n${insumosA5}`;
-
-      const resumen = `Informe de estrategias metodológicas. Total: ${strategies.length}.`;
-      const wordCount = html.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
-      const data = { success: true, html_content: html, summary: resumen, strategies_count: strategies.length, word_count: wordCount };
-      setReport(data);
-      onUpdateSessionData({ ...sessionData, final_report: data });
-      toast({ title: regenerating ? 'Informe regenerado' : 'Informe generado', description: 'Se construyó con la plantilla de APP_CONFIG_A4' });
+      setReport(result);
+      onUpdateSessionData({ ...sessionData, final_report: result });
+      toast({ title: regenerating ? 'Informe regenerado' : 'Informe generado', description: 'Documento técnico creado con IA' });
     } catch (error: any) {
       console.error('Error generating report:', error);
       setError(error.message || 'Hubo un problema al generar el informe.');

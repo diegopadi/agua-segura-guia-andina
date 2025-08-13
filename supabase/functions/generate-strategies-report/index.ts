@@ -63,51 +63,80 @@ serve(async (req) => {
       prioridades = ac3Data.priorities || [];
     }
 
-    // Compile all session data with improved strategy handling
-    let strategies = [];
-    
-    // Try different sources for strategies
-    if (session_data.refined_result?.strategies) {
-      strategies = Array.isArray(session_data.refined_result.strategies) 
-        ? session_data.refined_result.strategies 
-        : [session_data.refined_result.strategies];
-    } else if (session_data.ai_analysis_result?.strategies) {
-      strategies = Array.isArray(session_data.ai_analysis_result.strategies)
-        ? session_data.ai_analysis_result.strategies
-        : [session_data.ai_analysis_result.strategies];
-    } else if (session_data.strategies) {
-      strategies = Array.isArray(session_data.strategies)
-        ? session_data.strategies
-        : [session_data.strategies];
+    // Compile all session data with improved strategy handling (A4)
+    // 1) Estrategias: tomar máximo 5 desde strategies_result.strategies o strategies_selected
+    type RepoStrategy = {
+      id?: string;
+      nombre?: string; // title alt
+      descripcion?: string; // description alt
+      referencia?: string; // reference alt
+      tipo_estrategia?: string; // momento/tipo
+      momento_sugerido?: string;
+      etiquetas?: string[];
+      title?: string;
+      description?: string;
+      reference?: string;
+      momento?: string;
+      tags?: string[];
+    };
+
+    let strategies: RepoStrategy[] = [];
+    if (Array.isArray(session_data?.strategies_result?.strategies)) {
+      strategies = session_data.strategies_result.strategies as RepoStrategy[];
+    } else if (Array.isArray(session_data?.strategies_selected)) {
+      strategies = session_data.strategies_selected as RepoStrategy[];
+    } else if (Array.isArray(session_data?.refined_result?.strategies)) {
+      strategies = session_data.refined_result.strategies as RepoStrategy[];
+    } else if (Array.isArray(session_data?.ai_analysis_result?.strategies)) {
+      strategies = session_data.ai_analysis_result.strategies as RepoStrategy[];
     }
 
-    console.log('Found strategies:', strategies);
-    
-    const context = session_data.context_data || {};
-    const chatHistory = session_data.chat_history || [];
-    const profundizationQuestions = session_data.profundization_questions || [];
-    const profundizationResponses = session_data.profundization_responses || {};
+    // Limitar a 5 y normalizar campos
+    const strategiesNormalized = (strategies || []).slice(0, 5).map((s: RepoStrategy, i: number) => ({
+      title: s.title || s.nombre || `Estrategia ${i + 1}`,
+      description: s.description || s.descripcion || '',
+      reference: s.reference || s.referencia || 'EEPE - Enseñanza de Ecología en el Patio de la Escuela',
+      momento: s.momento || s.momento_sugerido || s.tipo_estrategia || 'desarrollo',
+      tags: s.tags || s.etiquetas || [],
+    }));
 
-    // Prepare template variables
-    const estrategiasText = strategies.map((strategy: string, index: number) => 
-      `${index + 1}. ${strategy}`
+    console.log('A4 strategies (normalized):', strategiesNormalized.map(s => s.title));
+
+    // 2) Contexto: preferir objeto "contexto" y caer en context_data
+    const contextoRaw = session_data?.contexto || {};
+    const contextData = session_data?.context_data || {};
+    const contexto = {
+      tipo_aula: contextoRaw.tipo_aula || contextData[1] || 'No especificado',
+      modalidad: contextoRaw.modalidad || contextData[2] || 'No especificado',
+      recursos_tic: contextoRaw.recursos_tic || contextData[3] || 'No especificado',
+    };
+
+    // 3) Respuestas globales de profundización (5 universales)
+    const prof = session_data?.profundization_global || {};
+    const respuestasProfundizacion = [
+      { key: 'pertinencia', label: 'Pertinencia Contextual' },
+      { key: 'viabilidad', label: 'Viabilidad y Recursos (TIC/No TIC)' },
+      { key: 'riesgos', label: 'Riesgos y Mitigación' },
+      { key: 'evaluacion', label: 'Evaluación y Evidencias' },
+      { key: 'inclusion', label: 'Inclusión y Participación' },
+    ].map(({ key, label }) => `• ${label}: ${prof[key] || 'Sin respuesta'}`).join('\n');
+
+    // 4) Prioridades del AC3 (ya recuperadas)
+    const prioridadesAc3 = prioridades.map((p: any, index: number) =>
+      `${index + 1}. ${p.descripcion || `${p.grado || ''} ${p.area || ''} ${p.competencia || ''}`.trim()}`
     ).join('\n');
 
-    const respuestasProfundizacion = profundizationQuestions.map((q: any, index: number) => {
-      const response = profundizationResponses[q.id] || 'Sin respuesta';
-      return `**${q.enfoque?.toUpperCase() || 'ANÁLISIS'} - ${q.pregunta}**
-Respuesta del docente: ${response}`;
-    }).join('\n\n');
+    // 5) Texto de estrategias detallado para el prompt
+    const estrategiasText = strategiesNormalized.map((s, idx) => (
+      `${idx + 1}. ${s.title}\n` +
+      `   Momento/tipo: ${s.momento}\n` +
+      `   Referencia: ${s.reference}\n` +
+      `   Tags: ${(s.tags || []).join(', ') || '—'}\n` +
+      `   Descripción: ${s.description}`
+    )).join('\n\n');
 
-    const prioridadesAc3 = prioridades.map((p: any, index: number) => 
-      `${index + 1}. ${p.descripcion || p.grado + ' - ' + p.area + ' - ' + p.competencia}`
-    ).join('\n');
-
-    const contextoCompleto = `
-Aula: ${context[1] || 'No especificado'}
-Modalidad: ${context[2] || 'No especificado'}  
-Recursos TIC: ${context[3] || 'No especificado'}
-${chatHistory.length > 0 ? '\nRefinamientos aplicados: Sí' : '\nRefinamientos aplicados: No'}`;
+    // 6) Ensamble de contexto legible
+    const contextoCompleto = `Aula: ${contexto.tipo_aula}\nModalidad: ${contexto.modalidad}\nRecursos TIC: ${contexto.recursos_tic}`;
 
     // Replace template variables
     let userPrompt = template.user_prompt
@@ -169,9 +198,9 @@ ${chatHistory.length > 0 ? '\nRefinamientos aplicados: Sí' : '\nRefinamientos a
     <div class="context-box">
         <h3>📍 Contexto Educativo</h3>
         <ul>
-            <li><strong>Tipo de aula:</strong> ${context[1] || 'No especificado'}</li>
-            <li><strong>Modalidad:</strong> ${context[2] || 'No especificado'}</li>
-            <li><strong>Recursos TIC:</strong> ${context[3] || 'No especificado'}</li>
+            <li><strong>Tipo de aula:</strong> ${contexto.tipo_aula}</li>
+            <li><strong>Modalidad:</strong> ${contexto.modalidad}</li>
+            <li><strong>Recursos TIC:</strong> ${contexto.recursos_tic}</li>
         </ul>
     </div>
 
@@ -184,7 +213,7 @@ ${chatHistory.length > 0 ? '\nRefinamientos aplicados: Sí' : '\nRefinamientos a
 
     // Calculate report metrics
     const wordCount = reportContent.split(' ').length;
-    const strategiesCount = strategies.length;
+    const strategiesCount = strategiesNormalized.length;
     const citationsCount = (reportContent.match(/MINEDU|Ministerio de Educación|CNEB/gi) || []).length;
 
     console.log('Generated strategies report successfully');
@@ -193,8 +222,7 @@ ${chatHistory.length > 0 ? '\nRefinamientos aplicados: Sí' : '\nRefinamientos a
       success: true,
       content: reportContent,
       html_content: htmlContent,
-      summary: `Informe técnico con ${strategiesCount} estrategias metodológicas validadas y contextualizadas para ${context[1] || 'contexto'} ${context[2] || 'educativo'}.`,
-      word_count: wordCount,
+      summary: `Informe técnico con ${strategiesCount} estrategias metodológicas validadas y contextualizadas para ${contexto.tipo_aula} ${contexto.modalidad}.`,
       strategies_count: strategiesCount,
       citations_count: citationsCount,
       ready_for_accelerator_5: true
