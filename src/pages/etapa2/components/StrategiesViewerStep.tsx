@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { CheckCircle, ArrowLeft, ArrowRight, RefreshCcw } from "lucide-react";
+import { CheckCircle, ArrowLeft, ArrowRight, RefreshCcw, Save, Clock } from "lucide-react";
 import { APP_CONFIG_A4_DEFAULT } from "@/integrations/supabase/appConfigDefaults";
 
 interface StrategiesViewerStepProps {
@@ -104,6 +104,8 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
   }, [sessionData?.strategies_result, sessionData?.strategies_selected]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const canToggle = (id: string) => selectedIds.includes(id) || selectedIds.length < MAX_SELECTION;
   const toggleId = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -124,9 +126,72 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
     });
   };
 
-  const canContinue = selectedIds.length > 0 && selectedIds.length <= MAX_SELECTION;
+  // Auto-save functionality with debouncing
+  const autoSave = useCallback(async (ids: string[]) => {
+    if (isSaving) return;
+    
+    try {
+      setIsSaving(true);
+      
+      const selected = ids
+        .map((id) => repoItems.find((x) => x.id === id))
+        .filter(Boolean) as RepoItem[];
+
+      const updated = {
+        ...sessionData,
+        strategies_selected: selected,
+        strategies_result: { source: "repo", strategies: selected },
+      };
+
+      console.log("[A4][StrategiesViewer] Auto-saving selection", {
+        selectedCount: selected.length,
+        selectedIds: ids,
+      });
+
+      await onUpdateSessionData(updated);
+      setLastSaved(new Date());
+      
+      toast({ 
+        title: "Guardado automático", 
+        description: `${selected.length} estrategias guardadas`,
+        duration: 2000
+      });
+    } catch (error) {
+      console.error("[A4][StrategiesViewer] Auto-save error:", error);
+      toast({
+        title: "Error de guardado",
+        description: "No se pudo guardar automáticamente. Los cambios se guardarán al continuar.",
+        variant: "destructive",
+        duration: 3000
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [sessionData, repoItems, onUpdateSessionData, isSaving, toast]);
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (selectedIds.length === 0) return;
+    
+    const timeoutId = setTimeout(() => {
+      autoSave(selectedIds);
+    }, 1500); // 1.5 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedIds, autoSave]);
+
+  const canContinue = selectedIds.length > 0 && selectedIds.length <= MAX_SELECTION && !isSaving;
 
   const handleContinue = async () => {
+    if (isSaving) {
+      toast({
+        title: "Guardando",
+        description: "Por favor espera a que se complete el guardado automático.",
+        variant: "default",
+      });
+      return;
+    }
+
     if (!canContinue) {
       toast({
         title: "Selección requerida",
@@ -136,28 +201,37 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
       return;
     }
 
-    const selected = selectedIds
-      .map((id) => repoItems.find((x) => x.id === id))
-      .filter(Boolean) as RepoItem[];
-
-    const updated = {
-      ...sessionData,
-      strategies_selected: selected,
-      strategies_result: { source: "repo", strategies: selected },
-    };
-
-    console.log("[A4][StrategiesViewer] Continuar click", {
-      selectedCount: selected.length,
-      selectedIds,
-    });
-
-    toast({ title: "Selección guardada", description: "Avanzando al siguiente paso" });
-
     try {
-      // Wait for session data to be updated before proceeding
+      setIsSaving(true);
+      
+      const selected = selectedIds
+        .map((id) => repoItems.find((x) => x.id === id))
+        .filter(Boolean) as RepoItem[];
+
+      const updated = {
+        ...sessionData,
+        strategies_selected: selected,
+        strategies_result: { source: "repo", strategies: selected },
+      };
+
+      console.log("[A4][StrategiesViewer] Continuar click", {
+        selectedCount: selected.length,
+        selectedIds,
+      });
+
+      // Final save before navigation
       await onUpdateSessionData(updated);
+      setLastSaved(new Date());
+      
+      toast({ title: "Selección guardada", description: "Avanzando al siguiente paso" });
+      
       console.log("[A4][StrategiesViewer] Session data updated successfully, proceeding to next step");
-      onNext();
+      
+      // Small delay to ensure save is complete
+      setTimeout(() => {
+        onNext();
+      }, 300);
+      
     } catch (error) {
       console.error("[A4][StrategiesViewer] Error updating session data:", error);
       toast({
@@ -165,6 +239,8 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
         description: "No se pudo guardar la selección. Intenta nuevamente.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -203,7 +279,23 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">Seleccionadas: {selectedIds.length}/{MAX_SELECTION}</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">Seleccionadas: {selectedIds.length}/{MAX_SELECTION}</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {isSaving && (
+                <>
+                  <Save className="w-4 h-4 animate-pulse" />
+                  <span>Guardando...</span>
+                </>
+              )}
+              {!isSaving && lastSaved && (
+                <>
+                  <Clock className="w-4 h-4" />
+                  <span>Guardado {lastSaved.toLocaleTimeString()}</span>
+                </>
+              )}
+            </div>
+          </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {TYPE_KEYS.map((k) => (
               <div key={k} className="rounded-lg border">
@@ -272,8 +364,17 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
               Anterior
             </Button>
             <Button type="button" onClick={handleContinue} disabled={!canContinue}>
-              Continuar
-              <ArrowRight className="w-4 h-4 ml-2" />
+              {isSaving ? (
+                <>
+                  <Save className="w-4 h-4 mr-2 animate-pulse" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  Continuar
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
             </Button>
           </div>
         </CardContent>

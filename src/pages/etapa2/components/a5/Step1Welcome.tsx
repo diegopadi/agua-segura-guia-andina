@@ -27,6 +27,13 @@ export default function Step1Welcome({ onNext, onValidated, sessionId, sessionDa
   const [validated, setValidated] = useState(false);
 
   useEffect(() => {
+    // Only load data if we're in Acelerador 5 context
+    if (!sessionId || sessionData?.acelerador_number === 4) {
+      console.log('[A5][Step1] Skipping load - not in A5 context or wrong accelerator');
+      setLoading(false);
+      return;
+    }
+
     const loadFromA4 = async () => {
       try {
         setLoading(true);
@@ -130,7 +137,7 @@ export default function Step1Welcome({ onNext, onValidated, sessionId, sessionDa
     };
 
     loadFromA4();
-  }, [user?.id, sessionId]);
+  }, [user?.id, sessionId, sessionData?.acelerador_number]);
 
   const inputs: A4Inputs = useMemo(() => ({
     priorities,
