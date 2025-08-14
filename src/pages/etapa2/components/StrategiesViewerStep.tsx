@@ -150,12 +150,6 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
 
       await onUpdateSessionData(updated);
       setLastSaved(new Date());
-      
-      toast({ 
-        title: "Guardado automático", 
-        description: `${selected.length} estrategias guardadas`,
-        duration: 2000
-      });
     } catch (error) {
       console.error("[A4][StrategiesViewer] Auto-save error:", error);
       toast({
