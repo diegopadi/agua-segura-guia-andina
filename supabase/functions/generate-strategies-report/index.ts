@@ -85,24 +85,54 @@ serve(async (req) => {
     };
 
     let strategies: RepoStrategy[] = [];
+    
+    // Debug: Log all available strategy sources for troubleshooting
+    console.log('[A4][Report] Available strategy sources:', {
+      strategies_result: session_data?.strategies_result,
+      strategies_selected: session_data?.strategies_selected,
+      refined_result: session_data?.refined_result,
+      ai_analysis_result: session_data?.ai_analysis_result
+    });
+    
     if (Array.isArray(session_data?.strategies_result?.strategies)) {
       strategies = session_data.strategies_result.strategies as RepoStrategy[];
+      console.log('[A4][Report] Using strategies_result.strategies:', strategies.length);
     } else if (Array.isArray(session_data?.strategies_selected)) {
       strategies = session_data.strategies_selected as RepoStrategy[];
+      console.log('[A4][Report] Using strategies_selected:', strategies.length);
     } else if (Array.isArray(session_data?.refined_result?.strategies)) {
       strategies = session_data.refined_result.strategies as RepoStrategy[];
+      console.log('[A4][Report] Using refined_result.strategies:', strategies.length);
     } else if (Array.isArray(session_data?.ai_analysis_result?.strategies)) {
       strategies = session_data.ai_analysis_result.strategies as RepoStrategy[];
+      console.log('[A4][Report] Using ai_analysis_result.strategies:', strategies.length);
     }
 
-    // Limitar a 5 y normalizar campos
-    const strategiesNormalized = (strategies || []).slice(0, 5).map((s: RepoStrategy, i: number) => ({
-      title: s.title || s.nombre || `Estrategia ${i + 1}`,
-      description: s.description || s.descripcion || '',
-      reference: s.reference || s.referencia || 'EEPE - Enseñanza de Ecología en el Patio de la Escuela',
-      momento: s.momento || s.momento_sugerido || s.tipo_estrategia || 'desarrollo',
-      tags: s.tags || s.etiquetas || [],
-    }));
+    // Debug: Log raw strategies before normalization
+    console.log('[A4][Report] Raw strategies found:', strategies.map((s, i) => ({
+      index: i,
+      id: s.id,
+      nombre: s.nombre,
+      title: s.title,
+      descripcion: s.descripcion,
+      description: s.description
+    })));
+
+    // Limitar a 5 y normalizar campos - mejorar mapeo para RepoItem
+    const strategiesNormalized = (strategies || []).slice(0, 5)
+      .filter(s => s && (s.nombre || s.title)) // Filtrar estrategias válidas
+      .map((s: RepoStrategy, i: number) => {
+        const normalized = {
+          title: s.title || s.nombre || `Estrategia ${i + 1}`,
+          description: s.description || s.descripcion || '',
+          reference: s.reference || s.referencia || 'EEPE - Enseñanza de Ecología en el Patio de la Escuela',
+          momento: s.momento || s.momento_sugerido || s.tipo_estrategia || 'desarrollo',
+          tags: s.tags || s.etiquetas || [],
+        };
+        
+        console.log(`[A4][Report] Normalized strategy ${i}:`, normalized);
+        return normalized;
+      });
 
     console.log('A4 strategies (normalized):', strategiesNormalized.map(s => s.title));
 
