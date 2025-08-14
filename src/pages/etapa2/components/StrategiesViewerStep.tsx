@@ -14,7 +14,7 @@ interface StrategiesViewerStepProps {
   onNext: () => void;
   onPrev: () => void;
   sessionData: any;
-  onUpdateSessionData: (data: any) => void;
+  onUpdateSessionData: (data: any) => Promise<void>;
   step: {
     title: string;
     description: string;
@@ -126,7 +126,7 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
 
   const canContinue = selectedIds.length > 0 && selectedIds.length <= MAX_SELECTION;
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!canContinue) {
       toast({
         title: "Selección requerida",
@@ -153,8 +153,19 @@ export const StrategiesViewerStep: React.FC<StrategiesViewerStepProps> = ({
 
     toast({ title: "Selección guardada", description: "Avanzando al siguiente paso" });
 
-    onUpdateSessionData(updated);
-    onNext();
+    try {
+      // Wait for session data to be updated before proceeding
+      await onUpdateSessionData(updated);
+      console.log("[A4][StrategiesViewer] Session data updated successfully, proceeding to next step");
+      onNext();
+    } catch (error) {
+      console.error("[A4][StrategiesViewer] Error updating session data:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la selección. Intenta nuevamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleReloadRepo = () => {

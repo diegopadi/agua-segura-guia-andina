@@ -231,6 +231,7 @@ const Acelerador4 = () => {
         description: "No se pudo guardar el progreso",
         variant: "destructive",
       });
+      throw error; // Re-throw to allow callers to handle the error
     }
   };
 
@@ -321,12 +322,12 @@ const Acelerador4 = () => {
       onNext: nextStep,
       onPrev: prevStep,
       sessionData: session.session_data || {},
-      onUpdateSessionData: (data: any) => {
+      onUpdateSessionData: async (data: any) => {
         const updatedSession = {
           ...session,
           session_data: data
         };
-        updateSession(updatedSession);
+        await updateSession(updatedSession);
       },
       step
     };
