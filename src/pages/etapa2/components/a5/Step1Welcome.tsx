@@ -107,14 +107,31 @@ export default function Step1Welcome({ onNext, onValidated, sessionId, sessionDa
             ? result
             : (Array.isArray(selected) ? selected : []);
 
+        console.log('[A5][Step1] Raw strategies data:', { 
+          adapted: adapted.length, 
+          result: result.length, 
+          selected: selected.length,
+          sampleStrategy: base[0] || null
+        });
+
         console.log('[A5][Step1] Strategies found:', base.length, 'from source:', 
           adapted.length > 0 ? 'adapted' : result.length > 0 ? 'result' : 'selected');
 
-        const st: A4StrategyData[] = base.slice(0, 5).map((s: any) => ({
-          id: String(s.id || crypto.randomUUID()),
-          title: s.title || s.nombre || 'Estrategia',
-          description: s.description || s.descripcion || '',
-        }));
+        // Mejorar el mapeo para manejar diferentes estructuras de datos
+        const st: A4StrategyData[] = base.slice(0, 5).map((s: any, index: number) => {
+          console.log(`[A5][Step1] Mapping strategy ${index}:`, s);
+          
+          // Manejar diferentes estructuras de datos que puede tener una estrategia
+          const id = String(s.id || s.uuid || index);
+          const title = s.title || s.nombre || s.name || `Estrategia ${index + 1}`;
+          const description = s.description || s.descripcion || s.desc || '';
+          
+          return {
+            id,
+            title,
+            description,
+          };
+        });
 
         setPriorities(pr);
         setStrategies(st);
