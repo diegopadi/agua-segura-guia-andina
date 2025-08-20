@@ -295,14 +295,18 @@ export type Database = {
           incompleta: boolean | null
           inicio: string
           inicio_json: Json | null
+          is_active: boolean
           proposito: string
           recursos: Json | null
+          regenerated_at: string | null
+          replaced_by_session_id: string | null
           rubricas_ids: Json | null
           session_index: number
           titulo: string
           unidad_id: string | null
           updated_at: string
           user_id: string
+          version_number: number
         }
         Insert: {
           apoya_estrategia?: Json | null
@@ -322,14 +326,18 @@ export type Database = {
           incompleta?: boolean | null
           inicio: string
           inicio_json?: Json | null
+          is_active?: boolean
           proposito: string
           recursos?: Json | null
+          regenerated_at?: string | null
+          replaced_by_session_id?: string | null
           rubricas_ids?: Json | null
           session_index: number
           titulo: string
           unidad_id?: string | null
           updated_at?: string
           user_id: string
+          version_number?: number
         }
         Update: {
           apoya_estrategia?: Json | null
@@ -349,16 +357,35 @@ export type Database = {
           incompleta?: boolean | null
           inicio?: string
           inicio_json?: Json | null
+          is_active?: boolean
           proposito?: string
           recursos?: Json | null
+          regenerated_at?: string | null
+          replaced_by_session_id?: string | null
           rubricas_ids?: Json | null
           session_index?: number
           titulo?: string
           unidad_id?: string | null
           updated_at?: string
           user_id?: string
+          version_number?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sesiones_clase_replaced_by_session_id_fkey"
+            columns: ["replaced_by_session_id"]
+            isOneToOne: false
+            referencedRelation: "sesiones_clase"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sesiones_clase_replaced_by_session_id_fkey"
+            columns: ["replaced_by_session_id"]
+            isOneToOne: false
+            referencedRelation: "sesiones_clase_activas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       survey_participants: {
         Row: {
@@ -553,9 +580,127 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      sesiones_clase_activas: {
+        Row: {
+          apoya_estrategia: Json | null
+          capacidades: Json | null
+          cierre: string | null
+          cierre_json: Json | null
+          competencias_ids: Json | null
+          created_at: string | null
+          desarrollo: string | null
+          desarrollo_json: Json | null
+          duracion_min: number | null
+          estado: string | null
+          evidencias: Json | null
+          feature_flags: Json | null
+          html_export: string | null
+          id: string | null
+          incompleta: boolean | null
+          inicio: string | null
+          inicio_json: Json | null
+          is_active: boolean | null
+          proposito: string | null
+          recursos: Json | null
+          regenerated_at: string | null
+          replaced_by_session_id: string | null
+          rubricas_ids: Json | null
+          session_index: number | null
+          titulo: string | null
+          unidad_id: string | null
+          updated_at: string | null
+          user_id: string | null
+          version_number: number | null
+        }
+        Insert: {
+          apoya_estrategia?: Json | null
+          capacidades?: Json | null
+          cierre?: string | null
+          cierre_json?: Json | null
+          competencias_ids?: Json | null
+          created_at?: string | null
+          desarrollo?: string | null
+          desarrollo_json?: Json | null
+          duracion_min?: number | null
+          estado?: string | null
+          evidencias?: Json | null
+          feature_flags?: Json | null
+          html_export?: string | null
+          id?: string | null
+          incompleta?: boolean | null
+          inicio?: string | null
+          inicio_json?: Json | null
+          is_active?: boolean | null
+          proposito?: string | null
+          recursos?: Json | null
+          regenerated_at?: string | null
+          replaced_by_session_id?: string | null
+          rubricas_ids?: Json | null
+          session_index?: number | null
+          titulo?: string | null
+          unidad_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          version_number?: number | null
+        }
+        Update: {
+          apoya_estrategia?: Json | null
+          capacidades?: Json | null
+          cierre?: string | null
+          cierre_json?: Json | null
+          competencias_ids?: Json | null
+          created_at?: string | null
+          desarrollo?: string | null
+          desarrollo_json?: Json | null
+          duracion_min?: number | null
+          estado?: string | null
+          evidencias?: Json | null
+          feature_flags?: Json | null
+          html_export?: string | null
+          id?: string | null
+          incompleta?: boolean | null
+          inicio?: string | null
+          inicio_json?: Json | null
+          is_active?: boolean | null
+          proposito?: string | null
+          recursos?: Json | null
+          regenerated_at?: string | null
+          replaced_by_session_id?: string | null
+          rubricas_ids?: Json | null
+          session_index?: number | null
+          titulo?: string | null
+          unidad_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          version_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sesiones_clase_replaced_by_session_id_fkey"
+            columns: ["replaced_by_session_id"]
+            isOneToOne: false
+            referencedRelation: "sesiones_clase"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sesiones_clase_replaced_by_session_id_fkey"
+            columns: ["replaced_by_session_id"]
+            isOneToOne: false
+            referencedRelation: "sesiones_clase_activas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      acquire_unit_lock: {
+        Args: { unidad_id_param: string }
+        Returns: boolean
+      }
+      check_a7_data_exists: {
+        Args: { unidad_id_param: string; user_id_param: string }
+        Returns: Json
+      }
       create_unique_participant: {
         Args: { survey_id_param: string }
         Returns: {
@@ -587,6 +732,10 @@ export type Database = {
       get_unique_participants_count: {
         Args: { survey_id_param: string }
         Returns: number
+      }
+      release_unit_lock: {
+        Args: { unidad_id_param: string }
+        Returns: boolean
       }
       sync_survey_participants: {
         Args: { survey_id_param: string }
