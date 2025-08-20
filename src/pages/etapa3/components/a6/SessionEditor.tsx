@@ -11,26 +11,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Save, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+interface TimboxBlock {
+  timebox_min: number;
+  steps: string[];
+  apoya_estrategia: boolean;
+}
+
 interface SessionData {
   id: string;
   session_index: number;
   titulo: string;
   proposito: string;
-  inicio: {
-    timebox_min: number;
-    steps: string[];
-    apoya_estrategia: boolean;
-  } | string; // Support both new and legacy formats
-  desarrollo: {
-    timebox_min: number;
-    steps: string[];
-    apoya_estrategia: boolean;
-  } | string;
-  cierre: {
-    timebox_min: number;
-    steps: string[];
-    apoya_estrategia: boolean;
-  } | string;
+  inicio: TimboxBlock | string; // Support both new and legacy formats
+  desarrollo: TimboxBlock | string;
+  cierre: TimboxBlock | string;
   evidencias: string[];
   recursos: string[];
   duracion_min: number;
@@ -72,6 +66,23 @@ export default function SessionEditor() {
     loadSessionData();
   }, [sessionId]);
 
+  // Helper function to safely parse JSON block data
+  const parseBlockData = (jsonData: any, textData: any, fallback: string): TimboxBlock | string => {
+    // If we have JSON data and it looks like a timebox block
+    if (jsonData && typeof jsonData === 'object' && 
+        typeof jsonData.timebox_min === 'number' && 
+        Array.isArray(jsonData.steps)) {
+      return {
+        timebox_min: jsonData.timebox_min,
+        steps: jsonData.steps.filter((step: any) => typeof step === 'string'),
+        apoya_estrategia: Boolean(jsonData.apoya_estrategia)
+      };
+    }
+    
+    // Fallback to text data or default
+    return (typeof textData === 'string' ? textData : fallback);
+  };
+
   const loadSessionData = async () => {
     try {
       setLoading(true);
@@ -106,10 +117,10 @@ export default function SessionEditor() {
 
       setSession({
         ...sessionData,
-        // Handle both legacy and new formats with proper typing
-        inicio: sessionData.inicio_json || sessionData.inicio || '',
-        desarrollo: sessionData.desarrollo_json || sessionData.desarrollo || '',
-        cierre: sessionData.cierre_json || sessionData.cierre || '',
+        // Handle both legacy and new formats with proper parsing
+        inicio: parseBlockData(sessionData.inicio_json, sessionData.inicio, 'Actividad de inicio por definir'),
+        desarrollo: parseBlockData(sessionData.desarrollo_json, sessionData.desarrollo, 'Actividad de desarrollo por definir'),
+        cierre: parseBlockData(sessionData.cierre_json, sessionData.cierre, 'Actividad de cierre por definir'),
         evidencias: Array.isArray(sessionData.evidencias) ? (sessionData.evidencias as string[]) : [],
         recursos: Array.isArray(sessionData.recursos) ? (sessionData.recursos as string[]) : [],
         competencias_ids: Array.isArray(sessionData.competencias_ids) ? (sessionData.competencias_ids as string[]) : [],
@@ -118,7 +129,9 @@ export default function SessionEditor() {
         rubrics_count: 0,
         has_all_rubrics: false,
         incompleta: sessionData.incompleta || false,
-        feature_flags: (sessionData.feature_flags && typeof sessionData.feature_flags === 'object') ? sessionData.feature_flags as any : {}
+        feature_flags: (sessionData.feature_flags && typeof sessionData.feature_flags === 'object') 
+          ? sessionData.feature_flags as { a6_json_blocks_v1?: boolean } 
+          : {}
       });
 
       // Load rubrics
@@ -147,6 +160,18 @@ export default function SessionEditor() {
     try {
       setSaving(true);
       
+      // Helper to convert TimboxBlock to JSON-compatible object
+      const toJsonBlock = (block: TimboxBlock | string) => {
+        if (typeof block === 'object') {
+          return {
+            timebox_min: block.timebox_min,
+            steps: block.steps,
+            apoya_estrategia: block.apoya_estrategia
+          } as any; // Cast to any to satisfy Json type
+        }
+        return null;
+      };
+      
       const { error } = await supabase
         .from('sesiones_clase')
         .update({
@@ -155,9 +180,9 @@ export default function SessionEditor() {
           inicio: typeof session.inicio === 'object' ? JSON.stringify(session.inicio) : session.inicio,
           desarrollo: typeof session.desarrollo === 'object' ? JSON.stringify(session.desarrollo) : session.desarrollo,
           cierre: typeof session.cierre === 'object' ? JSON.stringify(session.cierre) : session.cierre,
-          inicio_json: typeof session.inicio === 'object' ? session.inicio : null,
-          desarrollo_json: typeof session.desarrollo === 'object' ? session.desarrollo : null,
-          cierre_json: typeof session.cierre === 'object' ? session.cierre : null,
+          inicio_json: toJsonBlock(session.inicio),
+          desarrollo_json: toJsonBlock(session.desarrollo),
+          cierre_json: toJsonBlock(session.cierre),
           evidencias: session.evidencias,
           recursos: session.recursos,
           duracion_min: session.duracion_min,
@@ -431,8 +456,8 @@ export default function SessionEditor() {
               { key: 'desarrollo', title: 'Desarrollo', description: 'Actividades principales del aprendizaje' },
               { key: 'cierre', title: 'Cierre', description: 'Actividades de síntesis y evaluación' }
             ].map(({ key, title, description }) => {
-              const blockData = session[key as keyof SessionData] as any;
-              const isJsonStructure = typeof blockData === 'object' && blockData.timebox_min !== undefined;
+              const blockData = session[key as 'inicio' | 'desarrollo' | 'cierre'];
+              const isJsonStructure = typeof blockData === 'object' && 'timebox_min' in blockData;
               
               return (
                 <Card key={key}>
@@ -448,14 +473,19 @@ export default function SessionEditor() {
                             <label className="text-sm font-medium">Tiempo (min)</label>
                             <Input
                               type="number"
-                              value={blockData.timebox_min || 0}
-                              onChange={(e) => setSession({ 
-                                ...session, 
-                                [key]: {
-                                  ...blockData,
-                                  timebox_min: parseInt(e.target.value) || 0
+                              value={isJsonStructure ? (blockData as TimboxBlock).timebox_min : 0}
+                              onChange={(e) => {
+                                if (isJsonStructure) {
+                                  const currentBlock = blockData as TimboxBlock;
+                                  setSession({ 
+                                    ...session, 
+                                    [key]: {
+                                      ...currentBlock,
+                                      timebox_min: parseInt(e.target.value) || 0
+                                    }
+                                  });
                                 }
-                              })}
+                              }}
                               min={1}
                               max={session.duracion_min}
                             />
@@ -465,14 +495,19 @@ export default function SessionEditor() {
                             <div className="flex items-center mt-2">
                               <input
                                 type="checkbox"
-                                checked={blockData.apoya_estrategia || false}
-                                onChange={(e) => setSession({ 
-                                  ...session, 
-                                  [key]: {
-                                    ...blockData,
-                                    apoya_estrategia: e.target.checked
+                                checked={isJsonStructure ? (blockData as TimboxBlock).apoya_estrategia : false}
+                                onChange={(e) => {
+                                  if (isJsonStructure) {
+                                    const currentBlock = blockData as TimboxBlock;
+                                    setSession({ 
+                                      ...session, 
+                                      [key]: {
+                                        ...currentBlock,
+                                        apoya_estrategia: e.target.checked
+                                      }
+                                    });
                                   }
-                                })}
+                                }}
                                 className="mr-2"
                               />
                               <span className="text-sm">Este bloque usa la estrategia A4 principal</span>
@@ -482,14 +517,19 @@ export default function SessionEditor() {
                         <div>
                           <label className="text-sm font-medium">Pasos de la actividad</label>
                           <Textarea
-                            value={(blockData.steps || []).join('\n')}
-                            onChange={(e) => setSession({ 
-                              ...session, 
-                              [key]: {
-                                ...blockData,
-                                steps: e.target.value.split('\n').filter(Boolean)
+                            value={isJsonStructure ? (blockData as TimboxBlock).steps.join('\n') : ''}
+                            onChange={(e) => {
+                              if (isJsonStructure) {
+                                const currentBlock = blockData as TimboxBlock;
+                                setSession({ 
+                                  ...session, 
+                                  [key]: {
+                                    ...currentBlock,
+                                    steps: e.target.value.split('\n').filter(Boolean)
+                                  }
+                                });
                               }
-                            })}
+                            }}
                             placeholder={`Describa los pasos de ${title.toLowerCase()} (uno por línea)`}
                             rows={8}
                             className="min-h-[200px]"
@@ -499,7 +539,7 @@ export default function SessionEditor() {
                     ) : (
                       <>
                         <Textarea
-                          value={blockData as string || ''}
+                          value={typeof blockData === 'string' ? blockData : ''}
                           onChange={(e) => setSession({ ...session, [key]: e.target.value })}
                           placeholder={`Describa las actividades de ${title.toLowerCase()}`}
                           rows={8}
