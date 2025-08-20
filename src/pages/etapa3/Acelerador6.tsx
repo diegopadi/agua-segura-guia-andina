@@ -78,21 +78,21 @@ export default function Acelerador6() {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Get unidadId from session data, or generate one if needed
+  // Get unidadId from session data, must be a valid UUID
   const getUnidadId = () => {
     const sessionData = a6Session?.session_data as any;
     if (!sessionData?.a5_data) return null;
     
-    // First try to get existing unidad_id
+    // First try to get existing unidad_id (must be UUID)
     let unidadId = sessionData.unidadData?.unidad_id;
     
-    // If not found, generate one from A5 data structure  
-    if (!unidadId && sessionData.a5_data) {
-      const a5Data = sessionData.a5_data;
-      const area = a5Data?.area || 'Sin área';
-      const grado = a5Data?.grado || 'Sin grado';
-      const timestamp = Date.now();
-      unidadId = `unidad-${area.toLowerCase().replace(/\s+/g, '-')}-${grado}-${timestamp}`;
+    // Validate that it's a proper UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (!unidadId || !uuidRegex.test(unidadId)) {
+      // Generate a new UUID if none exists or invalid format
+      unidadId = crypto.randomUUID();
+      console.log('Generated new UUID for unidad:', unidadId);
     }
     
     return unidadId;
