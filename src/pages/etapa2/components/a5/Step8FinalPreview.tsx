@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Download, Copy, Printer, AlertCircle } from "lucide-react";
+import { ArrowLeft, Download, Copy, Printer, AlertCircle, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { A5InfoData, A5SituationPurposeData, A5CompetenciesData, A5SessionsStructureData, A5FeedbackData, A5MaterialsData } from "./types";
 import { resolveCompetenceNames, parseCompetencyIndex, CompetencyIndex } from "@/utils/a5-competencies";
 
@@ -114,9 +115,11 @@ Firma del Docente: _______________________`;
 export default function Step8FinalPreview({ onPrev }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [documento, setDocumento] = useState<UADocumento | null>(null);
   const [missingData, setMissingData] = useState<string[]>([]);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // Load all data from previous steps
   useEffect(() => {
@@ -379,6 +382,58 @@ export default function Step8FinalPreview({ onPrev }: Props) {
     printWindow.close();
   };
 
+  const FinalizarAcceleradorButton = () => {
+    const handleFinalize = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setIsCompleting(true);
+        
+        // Update Acelerador 5 session to completed
+        const { error } = await supabase
+          .from('acelerador_sessions')
+          .update({ 
+            status: 'completed',
+            current_step: 8,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id)
+          .eq('acelerador_number', 5);
+
+        if (error) throw error;
+
+        toast({
+          title: "¡Acelerador 5 completado!",
+          description: "Ya puedes acceder al Diseñador de Sesiones de Aprendizaje",
+        });
+
+        // Navigate to Acelerador 6
+        navigate('/etapa3/acelerador6');
+        
+      } catch (error) {
+        console.error('Error finalizing accelerator:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo finalizar el acelerador",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCompleting(false);
+      }
+    };
+
+    return (
+      <Button 
+        onClick={handleFinalize} 
+        disabled={isCompleting}
+        className="flex items-center gap-2"
+      >
+        <CheckCircle className="w-4 h-4" />
+        {isCompleting ? "Finalizando..." : "Finalizar Acelerador"}
+      </Button>
+    );
+  };
+
   if (loading) {
     return (
       <Card>
@@ -611,10 +666,11 @@ export default function Step8FinalPreview({ onPrev }: Props) {
               <Download className="w-4 h-4" />
               Descargar TXT
             </Button>
-            <Button onClick={printDocument} className="flex items-center gap-2">
+            <Button variant="outline" onClick={printDocument} className="flex items-center gap-2">
               <Printer className="w-4 h-4" />
               Imprimir PDF
             </Button>
+            <FinalizarAcceleradorButton />
           </div>
         </div>
       </CardContent>

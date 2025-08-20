@@ -92,7 +92,8 @@ export default function Acelerador6() {
           return;
         }
 
-        // Create new Acelerador 6 session
+        // Create new Acelerador 6 session with correct data mapping
+        const a5Data = a5Session.session_data as any;
         const { data: newSession, error: createError } = await supabase
           .from('acelerador_sessions')
           .insert({
@@ -101,7 +102,16 @@ export default function Acelerador6() {
             current_step: 1,
             status: 'in_progress',
             session_data: {
-              A5SessionsStructureData: a5Session.session_data
+              unidadData: {
+                area: a5Data.info?.area || 'Comunicación',
+                grado: a5Data.info?.grado || '3ro',
+                horasPorSesion: a5Data.sessions?.horasPorSesion || 45,
+                numSesiones: a5Data.sessions?.numSesiones || 5,
+                numEstudiantes: a5Data.sessions?.numEstudiantes || 25,
+                unidad_id: `unidad_${user.id}_${Date.now()}`
+              },
+              competencias_ids: a5Data.comp?.competencias || [],
+              originalA5Data: a5Data
             }
           })
           .select()
@@ -125,9 +135,12 @@ export default function Acelerador6() {
 
       // Get existing sessions if any
       if (accSession?.user_id) {
+        const sessionData = accSession.session_data as any;
+        const unidadId = sessionData?.unidadData?.unidad_id || 'temp';
+        
         const response = await supabase.functions.invoke('get-unidad-sesiones', {
           body: { 
-            unidad_id: (accSession.session_data as any)?.A5SessionsStructureData?.unidad_id || 'temp',
+            unidad_id: unidadId,
             user_id: accSession.user_id
           }
         });
@@ -150,7 +163,8 @@ export default function Acelerador6() {
   };
 
   const generateAllSessions = async () => {
-    if (!(acceleratorSession?.session_data as any)?.A5SessionsStructureData) {
+    const sessionData = acceleratorSession?.session_data as any;
+    if (!sessionData?.unidadData) {
       toast({
         title: "Error", 
         description: "No hay datos de unidad desde el Acelerador 5",
@@ -162,13 +176,14 @@ export default function Acelerador6() {
     try {
       setGenerating(true);
       
-      const unidadData = (acceleratorSession.session_data as any).A5SessionsStructureData;
+      const unidadData = sessionData.unidadData;
+      const competenciasIds = sessionData.competencias_ids || [];
       
       // Call prepare-sesion-clase function
       const response = await supabase.functions.invoke('prepare-sesion-clase', {
         body: {
           unidad_data: unidadData,
-          competencias_ids: unidadData.competencias_ids || [],
+          competencias_ids: competenciasIds,
           duracion_min: unidadData.horasPorSesion || 45,
           recursos_IE: ["pizarra", "plumones", "papel"],
           area: unidadData.area || "Comunicación",
@@ -185,7 +200,7 @@ export default function Acelerador6() {
       // Save sessions to database
       const sessionsToSave = generatedSessions.map((session: any, index: number) => ({
         user_id: acceleratorSession.user_id,
-        unidad_id: unidadData.unidad_id || 'temp-' + Date.now(),
+        unidad_id: unidadData.unidad_id,
         session_index: session.session_index || index + 1,
         titulo: session.titulo,
         proposito: session.proposito,
@@ -195,7 +210,7 @@ export default function Acelerador6() {
         evidencias: session.evidencias || [],
         recursos: session.recursos || [],
         duracion_min: session.duracion_min || 45,
-        competencias_ids: session.competencias_ids || [],
+        competencias_ids: competenciasIds,
         capacidades: session.capacidades || [],
         estado: 'BORRADOR'
       }));
@@ -299,7 +314,7 @@ export default function Acelerador6() {
     );
   }
 
-  const unidadData = (acceleratorSession.session_data as any)?.A5SessionsStructureData;
+  const unidadData = (acceleratorSession.session_data as any)?.unidadData;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -325,7 +340,7 @@ export default function Acelerador6() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm font-medium">Sesiones</p>
-                <p className="text-2xl font-bold">{unidadData.n_sesiones || 6}</p>
+                <p className="text-2xl font-bold">{unidadData.numSesiones || 6}</p>
               </div>
               <div>
                 <p className="text-sm font-medium">Duración</p>
