@@ -75,6 +75,7 @@ export default function Acelerador6() {
   const [currentStep, setCurrentStep] = useState(1);
   const [a6Session, setA6Session] = useState<AcceleratorSession | null>(null);
   const [a5Data, setA5Data] = useState<any>(null);
+  const [a4Data, setA4Data] = useState<any>(null);
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -139,6 +140,60 @@ export default function Acelerador6() {
       loadOrCreateSession();
     }
   }, [user, sessionId]);
+
+  // Load A4 data for strategies
+  const loadA4Data = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('acelerador_sessions')
+        .select('session_data')
+        .eq('user_id', user?.id)
+        .eq('acelerador_number', 4)
+        .single();
+
+      if (error) {
+        console.warn('[A6] No A4 session found:', error);
+        return null;
+      }
+
+      const sd: any = data?.session_data || {};
+      console.log('[A6] A4 session data loaded:', sd);
+
+      // Extract strategies from A4 - check multiple fields for compatibility
+      let strategies = [];
+      if (Array.isArray(sd?.strategies_adapted?.strategies)) {
+        strategies = sd.strategies_adapted.strategies;
+        console.log('[A6] Found adapted strategies:', strategies.length);
+      } else if (Array.isArray(sd?.strategies_result?.strategies)) {
+        strategies = sd.strategies_result.strategies;
+        console.log('[A6] Found result strategies:', strategies.length);
+      } else if (Array.isArray(sd?.strategies_selected)) {
+        strategies = sd.strategies_selected;
+        console.log('[A6] Found selected strategies:', strategies.length);
+      }
+
+      // Extract priorities
+      let priorities = [];
+      if (Array.isArray(sd?.priorities)) {
+        priorities = sd.priorities;
+      } else if (Array.isArray(sd?.selected_priorities)) {
+        priorities = sd.selected_priorities;
+      }
+
+      // Extract profundization responses
+      const profundizationResponses = sd?.profundization_global_flat || {};
+
+      return {
+        strategies,
+        priorities,
+        profundizationResponses,
+        source: sd?.strategies_adapted ? 'adapted' : sd?.strategies_result ? 'result' : 'selected'
+      };
+    } catch (error) {
+      console.error('[A6] Error loading A4 data:', error);
+      return null;
+    }
+  };
 
   const loadOrCreateSession = async () => {
     try {
@@ -226,7 +281,10 @@ export default function Acelerador6() {
             acelerador_number: 6,
             current_step: 1,
             status: 'in_progress',
-            session_data: { a5_data: a5Session.session_data }
+            session_data: { 
+              a5_data: a5Session.session_data,
+              a4_data: await loadA4Data()
+            }
           })
           .select()
           .single();
@@ -237,6 +295,7 @@ export default function Acelerador6() {
 
       setA6Session(existingSession);
       setA5Data((existingSession.session_data as any)?.a5_data);
+      setA4Data((existingSession.session_data as any)?.a4_data || null);
       setCurrentStep(existingSession.current_step || 1);
       
       // Load existing sessions with current session data
@@ -358,7 +417,8 @@ export default function Acelerador6() {
         area: a5Data.info?.area,
         grado: a5Data.info?.grado,
         competencias_ids: competenciasIds,
-        estructuraLength: unidadData.estructura?.length
+        estructuraLength: unidadData.estructura?.length,
+        a4_strategies: sessionData.a4_data?.strategies?.length || 0
       });
 
       // Call prepare-sesion-clase function with correct parameters
@@ -376,7 +436,10 @@ export default function Acelerador6() {
           duracion_min: (unidadData.horasPorSesion || 45) * 60, // Convert to minutes
           recursos_IE: ["pizarra", "plumones", "papel"],
           area: a5Data.info?.area || "Comunicación",
-          grado: a5Data.info?.grado || "3ro"
+          grado: a5Data.info?.grado || "3ro",
+          a4_strategies: sessionData.a4_data?.strategies || [],
+          a4_priorities: sessionData.a4_data?.priorities || [],
+          profundization_responses: sessionData.a4_data?.profundizationResponses || {}
         }
       });
 
