@@ -185,7 +185,24 @@ export default function Acelerador6() {
         user_id: acceleratorSession?.user_id
       });
       
-      // Call prepare-sesion-clase function
+      // Validate unidad_id is a proper UUID
+      if (!unidadData.unidad_id || typeof unidadData.unidad_id !== 'string') {
+        console.warn('Invalid unidad_id, generating new one:', unidadData.unidad_id);
+        unidadData.unidad_id = crypto.randomUUID();
+        
+        // Update the session data
+        await supabase
+          .from('acelerador_sessions')
+          .update({
+            session_data: {
+              ...sessionData,
+              unidadData: unidadData
+            }
+          })
+          .eq('id', acceleratorSession.id);
+      }
+
+      // Call prepare-sesion-clase function with validated data
       const response = await supabase.functions.invoke('prepare-sesion-clase', {
         body: {
           unidad_data: unidadData,

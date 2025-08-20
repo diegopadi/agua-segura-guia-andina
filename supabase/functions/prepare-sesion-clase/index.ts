@@ -16,11 +16,16 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { unidad_data, competencias_ids, duracion_min, recursos_IE, area, grado } = await req.json();
 
+    // Extract correct parameters
+    const numSesiones = unidad_data?.numSesiones || unidad_data?.n_sesiones || 6;
+    const horasPorSesion = unidad_data?.horasPorSesion || duracion_min || 45;
+    
     console.log('Generating sessions with params:', { 
-      n_sesiones: unidad_data?.n_sesiones, 
-      duracion_min, 
+      numSesiones, 
+      horasPorSesion, 
       area, 
-      grado 
+      grado,
+      unidad_data_keys: unidad_data ? Object.keys(unidad_data) : []
     });
 
     // Construct prompt for session generation
@@ -34,7 +39,7 @@ Requisitos generales:
 - Incluye un DISCLAIMER al final: "Este diseño ha sido generado automáticamente. Puede contener errores. Valídelo y ajústelo antes de su aplicación en aula."
 
 [DEBE-HACER]
-- Genera ${unidad_data?.n_sesiones || 6} sesiones como borradores.
+- Genera ${numSesiones} sesiones como borradores.
 - Cada sesión debe incluir campos editables:
   * titulo
   * proposito (1–2 oraciones, observable)
@@ -50,8 +55,8 @@ Requisitos generales:
 [ENTRADAS]
 - Área: ${area}
 - Grado: ${grado}
-- Duración por sesión: ${duracion_min} minutos
-- Número de sesiones: ${unidad_data?.n_sesiones || 6}
+- Duración por sesión: ${horasPorSesion} minutos
+- Número de sesiones: ${numSesiones}
 - Competencias: ${JSON.stringify(competencias_ids)}
 - Recursos IE: ${JSON.stringify(recursos_IE)}
 - Unidad base: ${JSON.stringify(unidad_data)}
@@ -70,7 +75,7 @@ Genera el JSON con la estructura exacta solicitada para las sesiones.`;
           { role: 'system', content: prompt },
           { 
             role: 'user', 
-            content: `Genera ${unidad_data?.n_sesiones || 6} sesiones para ${area} de ${grado} grado, cada una de ${duracion_min} minutos, siguiendo la estructura JSON especificada.` 
+            content: `Genera ${numSesiones} sesiones para ${area} de ${grado} grado, cada una de ${horasPorSesion} minutos, siguiendo la estructura JSON especificada.` 
           }
         ],
         max_tokens: 4000,
@@ -97,20 +102,20 @@ Genera el JSON con la estructura exacta solicitada para las sesiones.`;
       }
     } catch (parseError) {
       console.error('Failed to parse OpenAI response:', parseError);
-      // Fallback structure
+      // Fallback structure with corrected parameters
       result = {
-        sesiones: Array.from({ length: unidad_data?.n_sesiones || 6 }, (_, i) => ({
+        sesiones: Array.from({ length: numSesiones }, (_, i) => ({
           session_index: i + 1,
           titulo: `Sesión ${i + 1}: Desarrollo de competencias`,
           proposito: `Desarrollar competencias específicas del área de ${area}`,
           competencias_ids: competencias_ids || [],
           capacidades: ["Capacidad principal"],
           inicio: `Actividad de inicio (10 min): Presentación del tema`,
-          desarrollo: `Actividad de desarrollo (${duracion_min - 20} min): Trabajo principal`,
+          desarrollo: `Actividad de desarrollo (${Math.max(horasPorSesion - 20, 10)} min): Trabajo principal`,
           cierre: "Actividad de cierre (10 min): Reflexión y síntesis",
           evidencias: ["Participación activa", "Producto de la sesión"],
           recursos: recursos_IE || ["pizarra", "plumones"],
-          duracion_min: duracion_min || 45,
+          duracion_min: horasPorSesion,
           evaluacion_sesion_placeholder: {
             criterios_pedagogicos_sugeridos: ["Comprensión del tema", "Participación activa"],
             nps_estudiantes_pregunta: "¿Qué tan útil te pareció esta sesión para tu aprendizaje?",
