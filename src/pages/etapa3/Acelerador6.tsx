@@ -376,6 +376,56 @@ export default function Acelerador6() {
         throw new Error("No se encontraron datos válidos de la estructura de sesiones en el Acelerador 5");
       }
 
+      // Duration detection and conversion function
+      const detectAndConvertDuration = (horasPorSesion: number): { duracion_min: number, wasConverted: boolean, originalValue: number } => {
+        // Si ≤ 6, probablemente son horas (nadie tiene sesiones de 6+ horas)
+        if (horasPorSesion <= 6) {
+          return {
+            duracion_min: horasPorSesion * 60,
+            wasConverted: true,
+            originalValue: horasPorSesion
+          };
+        }
+        // Si > 6, probablemente ya son minutos
+        return {
+          duracion_min: horasPorSesion,
+          wasConverted: false,
+          originalValue: horasPorSesion
+        };
+      };
+
+      // Process duration from A5 data
+      const rawDuration = unidadData.horasPorSesion || 2; // Default de A5
+      const { duracion_min, wasConverted, originalValue } = detectAndConvertDuration(rawDuration);
+
+      // Validar rango final (30-180 min)
+      if (duracion_min < 30 || duracion_min > 180) {
+        toast({
+          title: "Duración inválida",
+          description: `${duracion_min} minutos está fuera del rango permitido (30-180 min). Por favor ajusta en A5.`,
+          variant: "destructive"
+        });
+        setGenerating(false);
+        return;
+      }
+
+      // Toast informativo si se convirtió
+      if (wasConverted) {
+        toast({
+          title: "Duración convertida",
+          description: `Se convirtieron ${originalValue} horas a ${duracion_min} minutos automáticamente.`,
+          variant: "default"
+        });
+      }
+
+      // Telemetry logging
+      console.log('Duration processing:', { 
+        original: rawDuration, 
+        normalized: duracion_min,
+        was_converted: wasConverted,
+        validation_passed: true
+      });
+
       // Check if there are existing active sessions for this unidad_id
       const { data: existingSessions, error: checkError } = await supabase
         .from('sesiones_clase')
@@ -444,15 +494,16 @@ export default function Acelerador6() {
 
       console.log('Generating sessions with data:', {
         numSesiones: unidadData.numSesiones,
-        horasPorSesion: unidadData.horasPorSesion,
+        duracion_min: duracion_min,
         area: a5Data.info?.area,
         grado: a5Data.info?.grado,
         competencias_ids: competenciasIds,
         estructuraLength: unidadData.estructura?.length,
-        a4_strategies: sessionData.a4_data?.strategies?.length || 0
+        a4_strategies: sessionData.a4_data?.strategies?.length || 0,
+        was_converted: wasConverted
       });
 
-      // Call prepare-sesion-clase function with correct parameters
+      // Call prepare-sesion-clase function with simplified parameters
       const response = await supabase.functions.invoke('prepare-sesion-clase', {
         body: {
           unidad_data: {
@@ -460,11 +511,10 @@ export default function Acelerador6() {
             grado: a5Data.info?.grado || "3ro",
             unidad_id: unidadId,
             numSesiones: unidadData.numSesiones || 5,
-            horasPorSesion: unidadData.horasPorSesion || 45,
             numEstudiantes: unidadData.numEstudiantes || 25
           },
           competencias_ids: competenciasIds,
-          duracion_min: unidadData.horasPorSesion || 45, // Duration in minutes
+          duracion_min: duracion_min, // SOLO esto - ya en minutos
           recursos_IE: ["pizarra", "plumones", "papel"],
           area: a5Data.info?.area || "Comunicación",
           grado: a5Data.info?.grado || "3ro",

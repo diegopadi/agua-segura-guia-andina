@@ -16,13 +16,14 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { unidad_data, competencias_ids, duracion_min, recursos_IE, area, grado, a4_strategies = [], a4_priorities = [], profundization_responses = {} } = await req.json();
 
-    // Extract correct parameters
-    const numSesiones = unidad_data?.numSesiones || unidad_data?.n_sesiones || 6;
-    const horasPorSesion = unidad_data?.horasPorSesion || duracion_min || 45;
+    // Extract parameters - SOLO usar duracion_min
+    const numSesiones = unidad_data?.numSesiones || 6;
+    const horasPorSesion = duracion_min; // Renombrar para compatibilidad interna
     
     console.log('Generating sessions with params:', { 
       numSesiones, 
-      horasPorSesion, 
+      duracion_min,
+      horasPorSesion, // Para logging
       area, 
       grado,
       unidad_data_keys: unidad_data ? Object.keys(unidad_data) : [],
@@ -32,13 +33,14 @@ serve(async (req) => {
       a4_priorities_titles: a4_priorities.map(p => p.title || 'Untitled').join(', ')
     });
 
-    // Validate critical parameters
-    if (horasPorSesion > 300) {
-      console.error('CRITICAL: Duration seems incorrect:', horasPorSesion, 'minutes');
+    // Validación estricta 30-180 minutos
+    if (!Number.isFinite(duracion_min) || duracion_min < 30 || duracion_min > 180) {
+      console.error('CRITICAL: Invalid duration_min:', duracion_min);
       return new Response(JSON.stringify({ 
         status: "error", 
         reason: "invalid_duration",
-        message: `Duration ${horasPorSesion} minutes seems incorrect. Expected 45-90 minutes.`
+        message: `Duración ${duracion_min} minutos inválida. Debe estar entre 30-180 minutos.`,
+        suggestion: "Ajusta la duración en A5 entre 1-3 horas (30-180 min)"
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -134,7 +136,25 @@ Responde ÚNICAMENTE con JSON válido, sin texto adicional.`;
     }
 
     const data = await response.json();
+
+    // Validar estructura OpenAI
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('OpenAI response missing structure:', data);
+      throw new Error('OpenAI returned malformed response structure');
+    }
+
     let generatedContent = data.choices[0].message.content;
+
+    // PREVIEW del content antes del parse
+    console.log('OpenAI content preview (first 300 chars):', generatedContent?.substring(0, 300));
+    console.log('OpenAI content length:', generatedContent?.length);
+
+    // Validar contenido no vacío
+    if (!generatedContent || typeof generatedContent !== 'string' || generatedContent.trim().length === 0) {
+      console.error('CRITICAL: OpenAI returned empty content');
+      console.error('Request duration was:', duracion_min);
+      throw new Error(`OpenAI returned empty response with duration ${duracion_min} min`);
+    }
 
     // Parse and validate JSON response with strict structure checking
     let result;
@@ -260,19 +280,23 @@ Responde ÚNICAMENTE con JSON válido, sin texto adicional.`;
       });
       
     } catch (parseError) {
-      console.error('CRITICAL: JSON parse error:', parseError);
-      console.error('Response preview:', generatedContent?.substring(0, 300));
+      console.error('CRITICAL: JSON parse failed:', parseError);
+      console.error('Raw content that failed:', generatedContent?.substring(0, 500));
+      console.error('Original request params:', { numSesiones, duracion_min, area, grado });
       
       return new Response(JSON.stringify({ 
         status: "error", 
         reason: "json_parse_failed",
-        message: "OpenAI response is not valid JSON",
+        message: "La IA devolvió formato inválido. Intenta con duración entre 45-90 minutos.",
+        suggestion: duracion_min < 45 ? 
+          "Duración muy corta. Cambia a 45-90 minutos y reintenta" :
+          "Verifica que la duración esté entre 45-90 minutos",
         debug_info: {
-          parse_error: parseError.message,
-          response_preview: generatedContent?.substring(0, 300) || 'No content'
+          duration_used: duracion_min,
+          content_preview: generatedContent?.substring(0, 200) || 'Empty'
         }
       }), {
-        status: 500,
+        status: 502, // 502 no 500
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
