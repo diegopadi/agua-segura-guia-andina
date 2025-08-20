@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ export default function Acelerador6() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [acceleratorSession, setAcceleratorSession] = useState<AcceleratorSession | null>(null);
@@ -47,21 +49,76 @@ export default function Acelerador6() {
     try {
       setLoading(true);
       
-      // Get accelerator session
-      const { data: accSession, error: accError } = await supabase
-        .from('acelerador_sessions')
-        .select('*')
-        .eq('id', sessionId)
-        .eq('acelerador_number', 6)
-        .single();
+      let accSession;
+      
+      if (sessionId) {
+        // Load existing session
+        const { data, error } = await supabase
+          .from('acelerador_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .eq('acelerador_number', 6)
+          .single();
 
-      if (accError) {
-        toast({
-          title: "Error",
-          description: "No se pudo cargar la sesión del acelerador",
-          variant: "destructive",
-        });
-        return;
+        if (error) {
+          toast({
+            title: "Error",
+            description: "No se pudo cargar la sesión del acelerador",
+            variant: "destructive",
+          });
+          return;
+        }
+        accSession = data;
+      } else {
+        // Create new session for Acelerador 6
+        if (!user) return;
+        
+        // First check if user has completed Acelerador 5
+        const { data: a5Session, error: a5Error } = await supabase
+          .from('acelerador_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('acelerador_number', 5)
+          .eq('status', 'completed')
+          .single();
+
+        if (a5Error || !a5Session) {
+          toast({
+            title: "Error",
+            description: "Debes completar el Acelerador 5 primero",
+            variant: "destructive",
+          });
+          navigate('/etapa2');
+          return;
+        }
+
+        // Create new Acelerador 6 session
+        const { data: newSession, error: createError } = await supabase
+          .from('acelerador_sessions')
+          .insert({
+            user_id: user.id,
+            acelerador_number: 6,
+            current_step: 1,
+            status: 'in_progress',
+            session_data: {
+              A5SessionsStructureData: a5Session.session_data
+            }
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          toast({
+            title: "Error",
+            description: "No se pudo crear la sesión del acelerador",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        accSession = newSession;
+        // Navigate to the new session URL
+        navigate(`/etapa3/acelerador6/${newSession.id}`, { replace: true });
       }
 
       setAcceleratorSession(accSession);

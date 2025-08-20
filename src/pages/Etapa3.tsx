@@ -21,7 +21,7 @@ interface AcceleratorSession {
 const accelerators = [
   {
     number: 6,
-    title: "Sesiones de Aprendizaje",
+    title: "Diseñador de Sesiones de Aprendizaje",
     description: "Genera y personaliza sesiones de aprendizaje detalladas con objetivos, actividades y evaluación",
     icon: BookOpen,
     color: "bg-blue-500",
@@ -199,7 +199,7 @@ const Etapa3 = () => {
                   className="w-full group-hover:bg-primary/90 transition-colors"
                   variant={progress > 0 ? "default" : "outline"}
                 >
-                  <Link to={`/etapa3/acelerador${accelerator.number}${progress > 0 ? `/${sessions.find(s => s.acelerador_number === accelerator.number)?.id || ''}` : ''}`} className="flex items-center gap-2">
+                  <Link to={progress > 0 ? `/etapa3/acelerador${accelerator.number}/${sessions.find(s => s.acelerador_number === accelerator.number)?.id || ''}` : `/etapa3/acelerador${accelerator.number}`} className="flex items-center gap-2">
                     {progress > 0 ? "Continuar" : "Comenzar"}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
