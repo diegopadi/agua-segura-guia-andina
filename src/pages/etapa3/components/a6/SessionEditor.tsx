@@ -59,13 +59,10 @@ export default function SessionEditor() {
     try {
       setLoading(true);
       
-      // Load session
+      // Load session data without join
       const { data: sessionData, error: sessionError } = await supabase
         .from('sesiones_clase')
-        .select(`
-          *,
-          acelerador_sessions!inner(id)
-        `)
+        .select('*')
         .eq('id', sessionId)
         .single();
 
@@ -78,10 +75,16 @@ export default function SessionEditor() {
         return;
       }
 
-      // Store the accelerator session ID for navigation
-      const acceleratorSessionData = sessionData.acelerador_sessions as any;
-      if (acceleratorSessionData && acceleratorSessionData.id) {
-        setAcceleratorSessionId(acceleratorSessionData.id);
+      // Find the accelerator session separately
+      const { data: acceleratorData } = await supabase
+        .from('acelerador_sessions')
+        .select('id')
+        .eq('user_id', sessionData.user_id)
+        .eq('acelerador_number', 6)
+        .single();
+
+      if (acceleratorData) {
+        setAcceleratorSessionId(acceleratorData.id);
       }
 
       setSession({
