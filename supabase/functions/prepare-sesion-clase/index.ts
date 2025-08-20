@@ -90,41 +90,70 @@ Genera el JSON con la estructura exacta solicitada para las sesiones.`;
     const data = await response.json();
     let generatedContent = data.choices[0].message.content;
 
-    // Parse JSON response
+    // Parse JSON response with improved robustness
     let result;
     try {
-      // Clean the response to extract JSON
-      const jsonMatch = generatedContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0]);
+      console.log('Raw OpenAI response:', generatedContent);
+      
+      // Multiple cleaning strategies for JSON extraction
+      let cleanedContent = generatedContent.trim();
+      
+      // Remove common prefixes that might break JSON parsing
+      cleanedContent = cleanedContent.replace(/^```json\s*/, '');
+      cleanedContent = cleanedContent.replace(/\s*```$/, '');
+      cleanedContent = cleanedContent.replace(/^.*?(\{[\s\S]*\}).*$/s, '$1');
+      
+      // Try to find JSON boundaries more precisely
+      const jsonStart = cleanedContent.indexOf('{');
+      const jsonEnd = cleanedContent.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        const jsonString = cleanedContent.substring(jsonStart, jsonEnd + 1);
+        console.log('Extracted JSON string:', jsonString);
+        result = JSON.parse(jsonString);
+        
+        // Validate that result has the expected structure
+        if (!result.sesiones || !Array.isArray(result.sesiones)) {
+          throw new Error('Invalid JSON structure: missing sesiones array');
+        }
+        
+        console.log('Successfully parsed OpenAI response with', result.sesiones.length, 'sessions');
       } else {
-        throw new Error('No JSON found in response');
+        throw new Error('No valid JSON boundaries found in response');
       }
     } catch (parseError) {
       console.error('Failed to parse OpenAI response:', parseError);
-      // Fallback structure with corrected parameters
+      console.log('Using fallback session generation...');
+      
+      // Enhanced fallback structure with proper parameters
       result = {
         sesiones: Array.from({ length: numSesiones }, (_, i) => ({
           session_index: i + 1,
-          titulo: `Sesión ${i + 1}: Desarrollo de competencias`,
-          proposito: `Desarrollar competencias específicas del área de ${area}`,
+          titulo: `Sesión ${i + 1}: ${area} - Desarrollo de competencias`,
+          proposito: `Desarrollar competencias específicas del área de ${area} para ${grado} grado`,
           competencias_ids: competencias_ids || [],
-          capacidades: ["Capacidad principal"],
-          inicio: `Actividad de inicio (10 min): Presentación del tema`,
-          desarrollo: `Actividad de desarrollo (${Math.max(horasPorSesion - 20, 10)} min): Trabajo principal`,
-          cierre: "Actividad de cierre (10 min): Reflexión y síntesis",
-          evidencias: ["Participación activa", "Producto de la sesión"],
-          recursos: recursos_IE || ["pizarra", "plumones"],
+          capacidades: ["Comprende conceptos fundamentales", "Aplica conocimientos", "Comunica ideas"],
+          inicio: `Actividad de inicio (10 min): Motivación y presentación del tema de ${area}`,
+          desarrollo: `Actividad de desarrollo (${Math.max(horasPorSesion - 20, 15)} min): Trabajo colaborativo y práctica guiada`,
+          cierre: "Actividad de cierre (10 min): Consolidación y reflexión sobre los aprendizajes",
+          evidencias: ["Participación en discusiones", "Resolución de ejercicios", "Trabajo colaborativo"],
+          recursos: recursos_IE || ["pizarra", "plumones", "papel", "materiales de aula"],
           duracion_min: horasPorSesion,
           evaluacion_sesion_placeholder: {
-            criterios_pedagogicos_sugeridos: ["Comprensión del tema", "Participación activa"],
+            criterios_pedagogicos_sugeridos: [
+              "Logro de competencias programadas",
+              "Participación activa y colaborativa",
+              "Calidad de los productos elaborados"
+            ],
             nps_estudiantes_pregunta: "¿Qué tan útil te pareció esta sesión para tu aprendizaje?",
-            nps_docente_pregunta: "¿Qué tan bien funcionó esta sesión para ti como docente?"
+            nps_docente_pregunta: "¿Qué tan bien funcionó esta sesión para lograr los objetivos programados?"
           },
           disclaimer: "Este diseño ha sido generado automáticamente. Puede contener errores. Valídelo y ajústelo antes de su aplicación en aula."
         })),
-        checklist_recursos: recursos_IE || ["pizarra", "plumones", "papel"]
+        checklist_recursos: recursos_IE || ["pizarra", "plumones", "papel", "cuadernos", "materiales básicos"]
       };
+      
+      console.log('Fallback structure generated with', result.sesiones.length, 'sessions');
     }
 
     console.log('Generated content:', JSON.stringify(result, null, 2));
