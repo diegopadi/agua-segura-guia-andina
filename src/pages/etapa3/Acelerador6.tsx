@@ -217,6 +217,42 @@ export default function Acelerador6() {
         });
       }
 
+      // Check if there are existing sessions for this unidad_id
+      const { data: existingSessions, error: checkError } = await supabase
+        .from('sesiones_clase')
+        .select('id')
+        .eq('unidad_id', unidad_id)
+        .eq('user_id', user?.id);
+
+      if (checkError) {
+        throw new Error(`Error al verificar sesiones existentes: ${checkError.message}`);
+      }
+
+      // If there are existing sessions, ask for confirmation
+      if (existingSessions && existingSessions.length > 0) {
+        const confirmed = window.confirm(
+          `Ya existen ${existingSessions.length} sesiones para esta unidad. ¿Deseas reemplazarlas con nuevas sesiones? Esta acción no se puede deshacer.`
+        );
+        
+        if (!confirmed) {
+          setGenerating(false);
+          return;
+        }
+
+        // Delete existing sessions
+        const { error: deleteError } = await supabase
+          .from('sesiones_clase')
+          .delete()
+          .eq('unidad_id', unidad_id)
+          .eq('user_id', user?.id);
+
+        if (deleteError) {
+          throw new Error(`Error al eliminar sesiones existentes: ${deleteError.message}`);
+        }
+
+        console.log(`Deleted ${existingSessions.length} existing sessions`);
+      }
+
       console.log('Generating sessions with data:', {
         numSesiones: unidadData.numSesiones,
         horasPorSesion: unidadData.horasPorSesion,
@@ -275,7 +311,7 @@ export default function Acelerador6() {
         estado: 'BORRADOR'
       }));
 
-      // Insert sessions into database
+      // Insert new sessions into database
       const { error: insertError, data: insertedData } = await supabase
         .from('sesiones_clase')
         .insert(sessionsToSave)
@@ -287,7 +323,9 @@ export default function Acelerador6() {
 
       toast({
         title: "Éxito",
-        description: `Se generaron ${generatedSessions.length} sesiones correctamente`,
+        description: existingSessions && existingSessions.length > 0 
+          ? `Se reemplazaron ${existingSessions.length} sesiones existentes con ${generatedSessions.length} nuevas sesiones`
+          : `Se generaron ${generatedSessions.length} sesiones correctamente`,
       });
 
       // Move to next step and reload sessions
