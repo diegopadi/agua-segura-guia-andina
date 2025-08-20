@@ -29,6 +29,11 @@ serve(async (req) => {
       throw new Error(`Error fetching session: ${sessionError.message}`);
     }
 
+    // Validate session duration (must be realistic for rubric generation)
+    if (!sessionData.duracion_min || sessionData.duracion_min < 30 || sessionData.duracion_min > 180) {
+      throw new Error(`Invalid session duration: ${sessionData.duracion_min} minutes. Must be between 30-180 minutes.`);
+    }
+
     const prompt = `[SYSTEM]
 Eres un asistente pedagógico que genera instrumentos de evaluación de sesión. Basas tus criterios en el CNEB y en la sesión seleccionada. Tu salida es referencial, no normativa, y debe ser validada por el docente.
 
@@ -86,14 +91,28 @@ Genera el JSON con la estructura exacta solicitada para las 3 rúbricas.`;
     // Parse JSON response
     let result;
     try {
+      // Log the raw content for debugging
+      console.log('OpenAI raw response preview:', generatedContent?.substring(0, 200));
+      
+      if (!generatedContent || generatedContent.trim() === '') {
+        throw new Error('Empty response from OpenAI');
+      }
+      
       const jsonMatch = generatedContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         result = JSON.parse(jsonMatch[0]);
       } else {
         throw new Error('No JSON found in response');
       }
+      
+      // Validate that result has rubricas array
+      if (!result || !Array.isArray(result.rubricas)) {
+        throw new Error('Invalid structure: missing rubricas array');
+      }
+      
     } catch (parseError) {
       console.error('Failed to parse OpenAI response:', parseError);
+      console.error('Raw content:', generatedContent);
       // Fallback structure
       result = {
         rubricas: [
@@ -143,6 +162,12 @@ Genera el JSON con la estructura exacta solicitada para las 3 rúbricas.`;
           }
         ]
       };
+    }
+
+    // Ensure result.rubricas is always an array before processing
+    if (!result || !Array.isArray(result.rubricas)) {
+      console.error('Invalid result structure:', result);
+      throw new Error('Generated rubrics structure is invalid');
     }
 
     // Save instruments to database

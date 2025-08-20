@@ -217,6 +217,16 @@ export default function SessionEditor() {
   const generateRubrics = async () => {
     if (!session) return;
 
+    // Validate session duration before generating rubrics
+    if (session.duracion_min < 30 || session.duracion_min > 180) {
+      toast({
+        title: "Error de validación",
+        description: `La duración de la sesión (${session.duracion_min} min) debe estar entre 30 y 180 minutos para generar rúbricas.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setGeneratingRubrics(true);
       
