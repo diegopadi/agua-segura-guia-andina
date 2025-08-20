@@ -140,19 +140,27 @@ export default function Acelerador6() {
           hasSessions: !!a5SessionData?.sessions
         });
 
-        // More robust validation - check multiple possible data structures
-        const hasBasicInfo = a5SessionData?.informacion_general || a5SessionData?.info;
-        const hasSessionStructure = a5SessionData?.estructura_sesiones || 
-                                   a5SessionData?.sesiones_estructura || 
-                                   a5SessionData?.sessions;
+        // Validate A5 data structure - check for required fields
+        const hasInfo = a5SessionData?.info;
+        const hasSessions = a5SessionData?.sessions?.estructura && Array.isArray(a5SessionData.sessions.estructura);
+        const hasCompetencies = a5SessionData?.comp?.competencias && Array.isArray(a5SessionData.comp.competencias);
 
-        if (!a5SessionData || !hasBasicInfo || !hasSessionStructure) {
-          console.error('A5 data validation failed:', {
-            hasSessionData: !!a5SessionData,
-            hasBasicInfo: !!hasBasicInfo,
-            hasSessionStructure: !!hasSessionStructure
-          });
-          setError("Los datos del Acelerador 5 están incompletos. Por favor, completa todos los pasos del Acelerador 5, incluyendo la información general y la estructura de sesiones.");
+        console.log('A5 validation details:', {
+          hasInfo: !!hasInfo,
+          infoKeys: hasInfo ? Object.keys(hasInfo) : [],
+          hasSessions: !!hasSessions,
+          sessionsCount: hasSessions ? a5SessionData.sessions.estructura.length : 0,
+          hasCompetencies: !!hasCompetencies,
+          competenciesCount: hasCompetencies ? a5SessionData.comp.competencias.length : 0
+        });
+
+        if (!a5SessionData || !hasInfo || !hasSessions || !hasCompetencies) {
+          const missing = [];
+          if (!hasInfo) missing.push("información general");
+          if (!hasSessions) missing.push("estructura de sesiones");
+          if (!hasCompetencies) missing.push("competencias");
+          
+          setError(`Los datos del Acelerador 5 están incompletos. Faltan: ${missing.join(", ")}. Por favor, completa todos los pasos del Acelerador 5.`);
           return;
         }
 
@@ -238,11 +246,11 @@ export default function Acelerador6() {
       setGenerating(true);
       
       const a5Data = sessionData.a5_data;
-      const unidadData = a5Data?.estructura_sesiones || a5Data?.sesiones_estructura;
-      const competenciasIds = a5Data?.competencias?.competencias || [];
+      const unidadData = a5Data?.sessions;
+      const competenciasIds = a5Data?.comp?.competencias || [];
       
-      if (!unidadData) {
-        throw new Error("No se encontraron datos de la estructura de sesiones en el Acelerador 5");
+      if (!unidadData?.estructura || !Array.isArray(unidadData.estructura)) {
+        throw new Error("No se encontraron datos válidos de la estructura de sesiones en el Acelerador 5");
       }
 
       // Generate or validate unidad_id
@@ -297,17 +305,18 @@ export default function Acelerador6() {
       console.log('Generating sessions with data:', {
         numSesiones: unidadData.numSesiones,
         horasPorSesion: unidadData.horasPorSesion,
-        area: a5Data.informacion_general?.area,
-        grado: a5Data.informacion_general?.grado,
-        competencias_ids: competenciasIds
+        area: a5Data.info?.area,
+        grado: a5Data.info?.grado,
+        competencias_ids: competenciasIds,
+        estructuraLength: unidadData.estructura?.length
       });
 
       // Call prepare-sesion-clase function with correct parameters
       const response = await supabase.functions.invoke('prepare-sesion-clase', {
         body: {
           unidad_data: {
-            area: a5Data.informacion_general?.area || "Comunicación",
-            grado: a5Data.informacion_general?.grado || "3ro",
+            area: a5Data.info?.area || "Comunicación",
+            grado: a5Data.info?.grado || "3ro",
             unidad_id: unidad_id,
             numSesiones: unidadData.numSesiones || 5,
             horasPorSesion: unidadData.horasPorSesion || 45,
@@ -316,8 +325,8 @@ export default function Acelerador6() {
           competencias_ids: competenciasIds,
           duracion_min: (unidadData.horasPorSesion || 45) * 60, // Convert to minutes
           recursos_IE: ["pizarra", "plumones", "papel"],
-          area: a5Data.informacion_general?.area || "Comunicación",
-          grado: a5Data.informacion_general?.grado || "3ro"
+          area: a5Data.info?.area || "Comunicación",
+          grado: a5Data.info?.grado || "3ro"
         }
       });
 
@@ -487,7 +496,7 @@ export default function Acelerador6() {
     const step = steps.find(s => s.number === currentStep);
     if (!step) return null;
 
-    const unidadData = a5Data?.estructura_sesiones || a5Data?.sesiones_estructura;
+    const unidadData = a5Data?.sessions;
 
     switch (step.type) {
       case 'welcome':
