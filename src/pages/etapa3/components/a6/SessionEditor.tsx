@@ -27,6 +27,7 @@ interface SessionData {
   estado: string;
   rubrics_count: number;
   has_all_rubrics: boolean;
+  acelerador_session_id?: string;
 }
 
 interface RubricData {
@@ -48,6 +49,7 @@ export default function SessionEditor() {
   const [saving, setSaving] = useState(false);
   const [generatingRubrics, setGeneratingRubrics] = useState(false);
   const [activeTab, setActiveTab] = useState("sesion");
+  const [acceleratorSessionId, setAcceleratorSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSessionData();
@@ -60,7 +62,10 @@ export default function SessionEditor() {
       // Load session
       const { data: sessionData, error: sessionError } = await supabase
         .from('sesiones_clase')
-        .select('*')
+        .select(`
+          *,
+          acelerador_sessions!inner(id)
+        `)
         .eq('id', sessionId)
         .single();
 
@@ -71,6 +76,12 @@ export default function SessionEditor() {
           variant: "destructive",
         });
         return;
+      }
+
+      // Store the accelerator session ID for navigation
+      const acceleratorSessionData = sessionData.acelerador_sessions as any;
+      if (acceleratorSessionData && acceleratorSessionData.id) {
+        setAcceleratorSessionId(acceleratorSessionData.id);
       }
 
       setSession({
@@ -231,7 +242,13 @@ export default function SessionEditor() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate(-1)}>
+          <Button variant="outline" onClick={() => {
+            if (acceleratorSessionId) {
+              navigate(`/etapa3/acelerador6/${acceleratorSessionId}`);
+            } else {
+              navigate('/etapa3');
+            }
+          }}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Volver
           </Button>
