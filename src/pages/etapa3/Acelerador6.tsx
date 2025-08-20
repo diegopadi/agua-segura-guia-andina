@@ -108,7 +108,7 @@ export default function Acelerador6() {
                 horasPorSesion: a5Data.sessions?.horasPorSesion || 45,
                 numSesiones: a5Data.sessions?.numSesiones || 5,
                 numEstudiantes: a5Data.sessions?.numEstudiantes || 25,
-                unidad_id: `unidad_${user.id}_${Date.now()}`
+                unidad_id: crypto.randomUUID()
               },
               competencias_ids: a5Data.comp?.competencias || [],
               originalA5Data: a5Data
