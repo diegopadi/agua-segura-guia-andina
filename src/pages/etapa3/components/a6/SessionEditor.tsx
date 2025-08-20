@@ -16,15 +16,32 @@ interface SessionData {
   session_index: number;
   titulo: string;
   proposito: string;
-  inicio: string;
-  desarrollo: string;
-  cierre: string;
+  inicio: {
+    timebox_min: number;
+    steps: string[];
+    apoya_estrategia: boolean;
+  } | string; // Support both new and legacy formats
+  desarrollo: {
+    timebox_min: number;
+    steps: string[];
+    apoya_estrategia: boolean;
+  } | string;
+  cierre: {
+    timebox_min: number;
+    steps: string[];
+    apoya_estrategia: boolean;
+  } | string;
   evidencias: string[];
   recursos: string[];
   duracion_min: number;
   competencias_ids: string[];
   capacidades: string[];
+  rubricas_ids: string[];
   estado: string;
+  incompleta?: boolean;
+  feature_flags?: {
+    a6_json_blocks_v1?: boolean;
+  };
   rubrics_count: number;
   has_all_rubrics: boolean;
   acelerador_session_id?: string;
@@ -59,10 +76,10 @@ export default function SessionEditor() {
     try {
       setLoading(true);
       
-      // Load session data without join
+      // Load session data with new fields
       const { data: sessionData, error: sessionError } = await supabase
         .from('sesiones_clase')
-        .select('*')
+        .select('*, inicio_json, desarrollo_json, cierre_json, incompleta, feature_flags, rubricas_ids, apoya_estrategia')
         .eq('id', sessionId)
         .single();
 
@@ -89,12 +106,19 @@ export default function SessionEditor() {
 
       setSession({
         ...sessionData,
+        // Handle both legacy and new formats with proper typing
+        inicio: sessionData.inicio_json || sessionData.inicio || '',
+        desarrollo: sessionData.desarrollo_json || sessionData.desarrollo || '',
+        cierre: sessionData.cierre_json || sessionData.cierre || '',
         evidencias: Array.isArray(sessionData.evidencias) ? (sessionData.evidencias as string[]) : [],
         recursos: Array.isArray(sessionData.recursos) ? (sessionData.recursos as string[]) : [],
         competencias_ids: Array.isArray(sessionData.competencias_ids) ? (sessionData.competencias_ids as string[]) : [],
         capacidades: Array.isArray(sessionData.capacidades) ? (sessionData.capacidades as string[]) : [],
+        rubricas_ids: Array.isArray(sessionData.rubricas_ids) ? (sessionData.rubricas_ids as string[]) : [],
         rubrics_count: 0,
-        has_all_rubrics: false
+        has_all_rubrics: false,
+        incompleta: sessionData.incompleta || false,
+        feature_flags: (sessionData.feature_flags && typeof sessionData.feature_flags === 'object') ? sessionData.feature_flags as any : {}
       });
 
       // Load rubrics
@@ -128,14 +152,20 @@ export default function SessionEditor() {
         .update({
           titulo: session.titulo,
           proposito: session.proposito,
-          inicio: session.inicio,
-          desarrollo: session.desarrollo,
-          cierre: session.cierre,
+          inicio: typeof session.inicio === 'object' ? JSON.stringify(session.inicio) : session.inicio,
+          desarrollo: typeof session.desarrollo === 'object' ? JSON.stringify(session.desarrollo) : session.desarrollo,
+          cierre: typeof session.cierre === 'object' ? JSON.stringify(session.cierre) : session.cierre,
+          inicio_json: typeof session.inicio === 'object' ? session.inicio : null,
+          desarrollo_json: typeof session.desarrollo === 'object' ? session.desarrollo : null,
+          cierre_json: typeof session.cierre === 'object' ? session.cierre : null,
           evidencias: session.evidencias,
           recursos: session.recursos,
           duracion_min: session.duracion_min,
           competencias_ids: session.competencias_ids,
           capacidades: session.capacidades,
+          rubricas_ids: session.rubricas_ids || [],
+          incompleta: session.incompleta || false,
+          feature_flags: session.feature_flags || { a6_json_blocks_v1: typeof session.inicio === 'object' },
           estado: 'EN_EDICION'
         })
         .eq('id', sessionId);
@@ -206,17 +236,51 @@ export default function SessionEditor() {
       isValid: false,
       missingFields: [],
       hasCompetencias: false,
-      hasAllRubrics: false
+      hasAllRubrics: false,
+      isJsonStructure: false
     };
     
-    const requiredFields = ['titulo', 'proposito', 'inicio', 'desarrollo', 'cierre'];
-    const missingFields = requiredFields.filter(field => !session[field as keyof SessionData]);
+    const requiredFields = ['titulo', 'proposito'];
+    const missingFields: string[] = [];
+    
+    // Check basic required fields
+    requiredFields.forEach(field => {
+      if (!session[field as keyof SessionData]) {
+        missingFields.push(field);
+      }
+    });
+    
+    // Check activity blocks
+    const isJsonStructure = typeof session.inicio === 'object' && 'timebox_min' in session.inicio;
+    
+    if (isJsonStructure) {
+      // Validate JSON structure
+      const inicio = session.inicio as any;
+      const desarrollo = session.desarrollo as any;
+      const cierre = session.cierre as any;
+      
+      if (!inicio.steps || inicio.steps.length === 0) missingFields.push('inicio steps');
+      if (!desarrollo.steps || desarrollo.steps.length === 0) missingFields.push('desarrollo steps');
+      if (!cierre.steps || cierre.steps.length === 0) missingFields.push('cierre steps');
+      
+      // Check timebox sum
+      const totalTimeboxes = (inicio.timebox_min || 0) + (desarrollo.timebox_min || 0) + (cierre.timebox_min || 0);
+      if (Math.abs(totalTimeboxes - session.duracion_min) > 5) {
+        missingFields.push('timebox balance');
+      }
+    } else {
+      // Validate legacy text structure
+      if (!session.inicio) missingFields.push('inicio');
+      if (!session.desarrollo) missingFields.push('desarrollo');
+      if (!session.cierre) missingFields.push('cierre');
+    }
     
     return {
       isValid: missingFields.length === 0 && session.competencias_ids.length > 0 && rubrics.length >= 3,
       missingFields,
       hasCompetencias: session.competencias_ids.length > 0,
-      hasAllRubrics: rubrics.length >= 3
+      hasAllRubrics: rubrics.length >= 3,
+      isJsonStructure
     };
   };
 
@@ -361,28 +425,98 @@ export default function SessionEditor() {
               </CardContent>
             </Card>
 
-            {/* Activities */}
+            {/* Activities with timebox support */}
             {[
               { key: 'inicio', title: 'Inicio', description: 'Actividades de motivación y saberes previos' },
               { key: 'desarrollo', title: 'Desarrollo', description: 'Actividades principales del aprendizaje' },
               { key: 'cierre', title: 'Cierre', description: 'Actividades de síntesis y evaluación' }
-            ].map(({ key, title, description }) => (
-              <Card key={key}>
-                <CardHeader>
-                  <CardTitle>{title}</CardTitle>
-                  <CardDescription>{description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    value={session[key as keyof SessionData] as string}
-                    onChange={(e) => setSession({ ...session, [key]: e.target.value })}
-                    placeholder={`Describa las actividades de ${title.toLowerCase()}`}
-                    rows={8}
-                    className="min-h-[200px]"
-                  />
-                </CardContent>
-              </Card>
-            ))}
+            ].map(({ key, title, description }) => {
+              const blockData = session[key as keyof SessionData] as any;
+              const isJsonStructure = typeof blockData === 'object' && blockData.timebox_min !== undefined;
+              
+              return (
+                <Card key={key}>
+                  <CardHeader>
+                    <CardTitle>{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {isJsonStructure ? (
+                      <>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-sm font-medium">Tiempo (min)</label>
+                            <Input
+                              type="number"
+                              value={blockData.timebox_min || 0}
+                              onChange={(e) => setSession({ 
+                                ...session, 
+                                [key]: {
+                                  ...blockData,
+                                  timebox_min: parseInt(e.target.value) || 0
+                                }
+                              })}
+                              min={1}
+                              max={session.duracion_min}
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="text-sm font-medium">Apoya estrategia A4</label>
+                            <div className="flex items-center mt-2">
+                              <input
+                                type="checkbox"
+                                checked={blockData.apoya_estrategia || false}
+                                onChange={(e) => setSession({ 
+                                  ...session, 
+                                  [key]: {
+                                    ...blockData,
+                                    apoya_estrategia: e.target.checked
+                                  }
+                                })}
+                                className="mr-2"
+                              />
+                              <span className="text-sm">Este bloque usa la estrategia A4 principal</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Pasos de la actividad</label>
+                          <Textarea
+                            value={(blockData.steps || []).join('\n')}
+                            onChange={(e) => setSession({ 
+                              ...session, 
+                              [key]: {
+                                ...blockData,
+                                steps: e.target.value.split('\n').filter(Boolean)
+                              }
+                            })}
+                            placeholder={`Describa los pasos de ${title.toLowerCase()} (uno por línea)`}
+                            rows={8}
+                            className="min-h-[200px]"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Textarea
+                          value={blockData as string || ''}
+                          onChange={(e) => setSession({ ...session, [key]: e.target.value })}
+                          placeholder={`Describa las actividades de ${title.toLowerCase()}`}
+                          rows={8}
+                          className="min-h-[200px]"
+                        />
+                        <Alert>
+                          <AlertDescription>
+                            Esta sesión usa el formato anterior. Para usar la nueva estructura con timeboxes y pasos, 
+                            regenere la sesión desde el Acelerador 6.
+                          </AlertDescription>
+                        </Alert>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
 
             {/* Resources and Evidence */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

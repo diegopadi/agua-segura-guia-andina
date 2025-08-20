@@ -45,56 +45,72 @@ serve(async (req) => {
       });
     }
 
-    // Construct prompt for session generation
+    // Construct strict JSON prompt for session generation
     const prompt = `[SYSTEM]
-Eres un asistente pedagógico experto en currículo CNEB y diseño de sesiones para secundaria en Perú. Tu labor es proponer sesiones de aprendizaje con lenguaje claro, acción concreta y viables con recursos limitados. Tu salida no es normativa oficial: es un formato referencial que el docente debe validar.
+Eres un especialista en diseño curricular con experiencia en el CNEB del Perú. Genera sesiones de aprendizaje con estructura JSON ESTRICTA.
 
-Requisitos generales:
-- Usa SIEMPRE el CNEB proporcionado en el contexto para derivar competencias/capacidades (no inventes códigos ni definiciones). 
-- Mantén coherencia con: unidad base (A5), estrategias del A4, recursos declarados por la IE y duración por sesión.
-- Escribe en español (es-PE). Sé claro, breve y accionable. 
-- Incluye un DISCLAIMER al final: "Este diseño ha sido generado automáticamente. Puede contener errores. Valídelo y ajústelo antes de su aplicación en aula."
-
-[INTEGRACIÓN DE ESTRATEGIAS A4]
-${a4_strategies.length > 0 ? `
-- ESTRATEGIAS SELECCIONADAS A4: ${JSON.stringify(a4_strategies)}
-- DISTRIBUYE estas estrategias entre las ${numSesiones} sesiones de manera equilibrada
-- Cada sesión debe incorporar al menos UNA estrategia específica del A4 en sus actividades
-- Traduce cada estrategia en actividades concretas y prácticas para el aula
-- Menciona EXPLÍCITAMENTE qué estrategia A4 está siendo aplicada en cada actividad
-- Varía el uso de estrategias para crear sesiones diversas y dinámicas
-` : '- No se proporcionaron estrategias específicas del A4. Genera sesiones estándar basadas en la unidad.'}
-
-${Object.keys(profundization_responses).length > 0 ? `
-[CONTEXTO DE PROFUNDIZACIÓN A4]
-- Respuestas de profundización: ${JSON.stringify(profundization_responses)}
-- Considera estas respuestas para adaptar las estrategias al contexto específico
-` : ''}
-
-[DEBE-HACER]
-- Genera ${numSesiones} sesiones como borradores.
-- Cada sesión debe incluir campos editables:
-  * titulo (que refleje la estrategia A4 integrada cuando aplique)
-  * proposito (1–2 oraciones, observable)
-  * competencias_ids (referencia a CNEB provista)
-  * capacidades (nombres/alias a partir del CNEB)
-  * inicio / desarrollo / cierre (actividades con tiempos parciales que sumen la duración total; indica propósito breve de cada actividad + estrategia A4 aplicada)
-  * evidencias (1–2 evidencias observables y de bajo costo)
-  * recursos (según contexto de IE; sugiere alternativas baratas si faltan)
-  * duracion_min (entero, ej. 45)
-  * evaluacion_sesion_placeholder con criterios_pedagogicos_sugeridos, nps_estudiantes_pregunta, nps_docente_pregunta
-- Respeta conectividad variable: prioriza estrategias ejecutables sin proyector/Internet; cuando uses recursos tecnológicos, ofrece plan B.
-
-[ENTRADAS]
+[CONTEXT]
 - Área: ${area}
-- Grado: ${grado}
+- Grado: ${grado}  
 - Duración por sesión: ${horasPorSesion} minutos
 - Número de sesiones: ${numSesiones}
-- Competencias: ${JSON.stringify(competencias_ids)}
-- Recursos IE: ${JSON.stringify(recursos_IE)}
-- Unidad base: ${JSON.stringify(unidad_data)}
+- Unidad: ${JSON.stringify(unidad_data)}
+- Estrategias A4 (${a4_strategies.length}): ${JSON.stringify(a4_strategies)}
+- Prioridades A4 (${a4_priorities.length}): ${JSON.stringify(a4_priorities)}
+- Competencias seleccionadas: ${JSON.stringify(competencias_ids)}
 
-Genera el JSON con la estructura exacta solicitada para las sesiones.`;
+[INSTRUCCIONES DE SALIDA ESTRICTAS]
+Devuelve SOLO un objeto JSON válido (sin explicación ni texto fuera del JSON).
+
+Estructura OBLIGATORIA por sesión:
+{
+  "session_index": <int>,
+  "titulo": "Sesión X – <Estrategia A4>: <Título descriptivo>",
+  "proposito": "<string>",
+  "competencias_ids": [<string>],
+  "capacidades": [<string>],
+  "duracion_min": ${horasPorSesion},
+  "inicio": {
+    "timebox_min": <int>,
+    "steps": [<string>, <string>],
+    "apoya_estrategia": <boolean>
+  },
+  "desarrollo": {
+    "timebox_min": <int>, 
+    "steps": [<string>, <string>, <string>],
+    "apoya_estrategia": <boolean>
+  },
+  "cierre": {
+    "timebox_min": <int>,
+    "steps": [<string>, <string>],
+    "apoya_estrategia": <boolean>
+  },
+  "evidencias": [<string>],
+  "recursos": [<string>],
+  "rubricas_ids": [],
+  "disclaimer": "Generado automáticamente; valide antes de usar."
+}
+
+REGLAS OBLIGATORIAS:
+1. Una estrategia A4 principal por sesión y rotación entre sesiones
+2. Suma de timebox_min = duracion_min ±5 minutos
+3. Título incluye la estrategia A4 explícitamente
+4. Mapear competencias_ids/capacidades desde el contexto proporcionado
+5. Steps con verbos operativos y acciones concretas (no genéricos)
+6. apoya_estrategia=true cuando el bloque usa la estrategia A4 principal
+7. Idioma: es-PE, tono docente cercano
+8. Incluir alternativas de bajo costo en recursos
+
+RESPUESTA GLOBAL:
+{
+  "sesiones": [<estructura_sesion>, <estructura_sesion>, ...],
+  "checklist_recursos": [
+    {"recurso": "Pizarra", "alternativa_bajo_costo": "Papelógrafo", "offline_plan": "Tarjetas de papel"},
+    {"recurso": "Proyector", "alternativa_bajo_costo": "Láminas impresas", "offline_plan": "Dibujos en pizarra"}
+  ]
+}
+
+Responde ÚNICAMENTE con JSON válido, sin texto adicional.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -105,12 +121,10 @@ Genera el JSON con la estructura exacta solicitada para las sesiones.`;
       body: JSON.stringify({
         model: 'gpt-5-2025-08-07',
         messages: [
-          { role: 'system', content: prompt },
-          { 
-            role: 'user', 
-            content: `Genera ${numSesiones} sesiones para ${area} de ${grado} grado, cada una de ${horasPorSesion} minutos, siguiendo la estructura JSON especificada.` 
-          }
+          { role: 'system', content: 'Eres un especialista en diseño curricular del CNEB. Responde ÚNICAMENTE con JSON válido estricto.' },
+          { role: 'user', content: prompt }
         ],
+        response_format: { type: "json_object" },
         max_completion_tokens: 4000,
       }),
     });
@@ -122,102 +136,149 @@ Genera el JSON con la estructura exacta solicitada para las sesiones.`;
     const data = await response.json();
     let generatedContent = data.choices[0].message.content;
 
-    // Parse JSON response with improved robustness
+    // Parse and validate JSON response with strict structure checking
     let result;
     try {
-      console.log('Raw OpenAI response:', generatedContent);
+      // Clean the response (remove markdown formatting if present)
+      const cleanContent = generatedContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      result = JSON.parse(cleanContent);
       
-      // Multiple cleaning strategies for JSON extraction
-      let cleanedContent = generatedContent.trim();
-      
-      // Remove common prefixes that might break JSON parsing
-      cleanedContent = cleanedContent.replace(/^```json\s*/, '');
-      cleanedContent = cleanedContent.replace(/\s*```$/, '');
-      cleanedContent = cleanedContent.replace(/^.*?(\{[\s\S]*\}).*$/s, '$1');
-      
-      // Try to find JSON boundaries more precisely
-      const jsonStart = cleanedContent.indexOf('{');
-      const jsonEnd = cleanedContent.lastIndexOf('}');
-      
-      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-        const jsonString = cleanedContent.substring(jsonStart, jsonEnd + 1);
-        console.log('Extracted JSON string:', jsonString);
-        result = JSON.parse(jsonString);
-        
-        // Validate that result has the expected structure
-        if (!result.sesiones || !Array.isArray(result.sesiones)) {
-          throw new Error('Invalid JSON structure: missing sesiones array');
-        }
-        
-        console.log('Successfully parsed OpenAI response with', result.sesiones.length, 'sessions');
-      } else {
-        throw new Error('No valid JSON boundaries found in response');
+      // Strict validation of response structure
+      if (!result.sesiones || !Array.isArray(result.sesiones)) {
+        throw new Error('Missing sesiones array in response');
       }
-    } catch (parseError) {
-      console.error('CRITICAL: Failed to parse OpenAI response:', parseError);
-      console.error('Raw response length:', generatedContent?.length || 0);
-      console.error('Response preview:', generatedContent?.substring(0, 200) || 'No content');
+
+      // Validate each session structure
+      for (let i = 0; i < result.sesiones.length; i++) {
+        const session = result.sesiones[i];
+        
+        // Check if inicio/desarrollo/cierre are objects with timebox_min and steps
+        if (!session.inicio || typeof session.inicio !== 'object' || 
+            typeof session.inicio.timebox_min !== 'number' || 
+            !Array.isArray(session.inicio.steps)) {
+          return new Response(JSON.stringify({ 
+            status: "error", 
+            reason: "invalid_shape_blocks",
+            message: `Session ${i + 1}: inicio must be an object with timebox_min (number) and steps (array)`,
+            session_index: i + 1
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (!session.desarrollo || typeof session.desarrollo !== 'object' || 
+            typeof session.desarrollo.timebox_min !== 'number' || 
+            !Array.isArray(session.desarrollo.steps)) {
+          return new Response(JSON.stringify({ 
+            status: "error", 
+            reason: "invalid_shape_blocks",
+            message: `Session ${i + 1}: desarrollo must be an object with timebox_min (number) and steps (array)`,
+            session_index: i + 1
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (!session.cierre || typeof session.cierre !== 'object' || 
+            typeof session.cierre.timebox_min !== 'number' || 
+            !Array.isArray(session.cierre.steps)) {
+          return new Response(JSON.stringify({ 
+            status: "error", 
+            reason: "invalid_shape_blocks",
+            message: `Session ${i + 1}: cierre must be an object with timebox_min (number) and steps (array)`,
+            session_index: i + 1
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Validate timebox sum
+        const totalTimebox = session.inicio.timebox_min + session.desarrollo.timebox_min + session.cierre.timebox_min;
+        const expectedDuration = session.duracion_min || horasPorSesion;
+        if (Math.abs(totalTimebox - expectedDuration) > 5) {
+          return new Response(JSON.stringify({ 
+            status: "error", 
+            reason: "timebox_mismatch",
+            message: `Session ${i + 1}: timebox sum (${totalTimebox}) differs from expected duration (${expectedDuration}) by more than 5 minutes`,
+            session_index: i + 1,
+            expected: expectedDuration,
+            actual: totalTimebox
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Validate competencias and capacidades
+        if (!Array.isArray(session.competencias_ids) || session.competencias_ids.length === 0) {
+          return new Response(JSON.stringify({ 
+            status: "error", 
+            reason: "missing_competencies",
+            message: `Session ${i + 1}: competencias_ids must be a non-empty array`,
+            session_index: i + 1
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (!Array.isArray(session.capacidades) || session.capacidades.length === 0) {
+          return new Response(JSON.stringify({ 
+            status: "error", 
+            reason: "missing_competencies",
+            message: `Session ${i + 1}: capacidades must be a non-empty array`,
+            session_index: i + 1
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Validate A4 strategy in title
+        if (!session.titulo || typeof session.titulo !== 'string' || 
+            (!session.titulo.toLowerCase().includes('estrategia') && !session.titulo.toLowerCase().includes('a4'))) {
+          return new Response(JSON.stringify({ 
+            status: "error", 
+            reason: "missing_a4_strategy",
+            message: `Session ${i + 1}: title must include reference to A4 strategy`,
+            session_index: i + 1,
+            title: session.titulo
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      console.log('Validation successful, sessions:', {
+        sessions_count: result.sesiones.length,
+        total_strategies: a4_strategies.length,
+        duration: horasPorSesion
+      });
       
-      // Return explicit error instead of silent fallback
+    } catch (parseError) {
+      console.error('CRITICAL: JSON parse error:', parseError);
+      console.error('Response preview:', generatedContent?.substring(0, 300));
+      
       return new Response(JSON.stringify({ 
         status: "error", 
         reason: "json_parse_failed",
-        message: "Failed to parse OpenAI response. The generated content was not valid JSON.",
+        message: "OpenAI response is not valid JSON",
         debug_info: {
           parse_error: parseError.message,
-          response_preview: generatedContent?.substring(0, 200) || 'No content'
+          response_preview: generatedContent?.substring(0, 300) || 'No content'
         }
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-      
-      // Enhanced fallback structure with proper parameters
-      result = {
-        sesiones: Array.from({ length: numSesiones }, (_, i) => {
-          const strategyIndex = i % (a4_strategies.length || 1);
-          const strategy = a4_strategies[strategyIndex];
-          const hasStrategy = strategy && strategy.title;
-          
-          return {
-            session_index: i + 1,
-            titulo: hasStrategy 
-              ? `Sesión ${i + 1}: ${area} - ${strategy.title}` 
-              : `Sesión ${i + 1}: ${area} - Desarrollo de competencias`,
-            proposito: hasStrategy 
-              ? `Desarrollar competencias de ${area} aplicando la estrategia "${strategy.title}" en ${grado} grado`
-              : `Desarrollar competencias específicas del área de ${area} para ${grado} grado`,
-            competencias_ids: competencias_ids || [],
-            capacidades: ["Comprende conceptos fundamentales", "Aplica conocimientos", "Comunica ideas"],
-            inicio: hasStrategy 
-              ? `Actividad de inicio (10 min): Motivación usando elementos de "${strategy.title}" para introducir el tema de ${area}`
-              : `Actividad de inicio (10 min): Motivación y presentación del tema de ${area}`,
-            desarrollo: hasStrategy 
-              ? `Actividad de desarrollo (${Math.max(horasPorSesion - 20, 15)} min): Implementación de la estrategia "${strategy.title}" - ${strategy.description || 'desarrollo de actividades colaborativas y práctica guiada'}`
-              : `Actividad de desarrollo (${Math.max(horasPorSesion - 20, 15)} min): Trabajo colaborativo y práctica guiada`,
-            cierre: hasStrategy 
-              ? `Actividad de cierre (10 min): Evaluación y reflexión sobre la aplicación de "${strategy.title}" en los aprendizajes`
-              : "Actividad de cierre (10 min): Consolidación y reflexión sobre los aprendizajes",
-            evidencias: ["Participación en discusiones", "Resolución de ejercicios", "Trabajo colaborativo"],
-            recursos: recursos_IE || ["pizarra", "plumones", "papel", "materiales de aula"],
-            duracion_min: horasPorSesion,
-            evaluacion_sesion_placeholder: {
-              criterios_pedagogicos_sugeridos: [
-                "Logro de competencias programadas",
-                hasStrategy ? `Aplicación efectiva de "${strategy.title}"` : "Participación activa y colaborativa",
-                "Calidad de los productos elaborados"
-              ],
-              nps_estudiantes_pregunta: "¿Qué tan útil te pareció esta sesión para tu aprendizaje?",
-              nps_docente_pregunta: "¿Qué tan bien funcionó esta sesión para lograr los objetivos programados?"
-            },
-            disclaimer: "Este diseño ha sido generado automáticamente. Puede contener errores. Valídelo y ajústelo antes de su aplicación en aula."
-          };
-        }),
-        checklist_recursos: recursos_IE || ["pizarra", "plumones", "papel", "cuadernos", "materiales básicos"]
-      };
-      
-      console.log('Fallback structure generated with', result.sesiones.length, 'sessions');
     }
+
+    // NO FALLBACK - If we reach here, validation passed
+    console.log('Sessions generated successfully with strict validation');
 
     console.log('Generated content:', JSON.stringify(result, null, 2));
 

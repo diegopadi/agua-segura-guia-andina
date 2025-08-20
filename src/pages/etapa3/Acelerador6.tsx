@@ -472,6 +472,8 @@ export default function Acelerador6() {
         competencias_ids: Array.isArray(competenciasIds) ? competenciasIds : [],
         capacidades: Array.isArray(session.capacidades) ? session.capacidades : [],
         rubricas_ids: [],
+        incompleta: false,
+        feature_flags: { a6_json_blocks_v1: true },
         estado: 'BORRADOR'
       }));
 

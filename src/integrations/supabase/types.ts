@@ -278,17 +278,23 @@ export type Database = {
       }
       sesiones_clase: {
         Row: {
+          apoya_estrategia: Json | null
           capacidades: Json | null
           cierre: string
+          cierre_json: Json | null
           competencias_ids: Json | null
           created_at: string
           desarrollo: string
+          desarrollo_json: Json | null
           duracion_min: number
           estado: string | null
           evidencias: Json | null
+          feature_flags: Json | null
           html_export: string | null
           id: string
+          incompleta: boolean | null
           inicio: string
+          inicio_json: Json | null
           proposito: string
           recursos: Json | null
           rubricas_ids: Json | null
@@ -299,17 +305,23 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          apoya_estrategia?: Json | null
           capacidades?: Json | null
           cierre: string
+          cierre_json?: Json | null
           competencias_ids?: Json | null
           created_at?: string
           desarrollo: string
+          desarrollo_json?: Json | null
           duracion_min?: number
           estado?: string | null
           evidencias?: Json | null
+          feature_flags?: Json | null
           html_export?: string | null
           id?: string
+          incompleta?: boolean | null
           inicio: string
+          inicio_json?: Json | null
           proposito: string
           recursos?: Json | null
           rubricas_ids?: Json | null
@@ -320,17 +332,23 @@ export type Database = {
           user_id: string
         }
         Update: {
+          apoya_estrategia?: Json | null
           capacidades?: Json | null
           cierre?: string
+          cierre_json?: Json | null
           competencias_ids?: Json | null
           created_at?: string
           desarrollo?: string
+          desarrollo_json?: Json | null
           duracion_min?: number
           estado?: string | null
           evidencias?: Json | null
+          feature_flags?: Json | null
           html_export?: string | null
           id?: string
+          incompleta?: boolean | null
           inicio?: string
+          inicio_json?: Json | null
           proposito?: string
           recursos?: Json | null
           rubricas_ids?: Json | null
