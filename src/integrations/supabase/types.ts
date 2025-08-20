@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -186,6 +186,39 @@ export type Database = {
           },
         ]
       }
+      instrumentos_evaluacion: {
+        Row: {
+          created_at: string
+          estructura_json: Json
+          html_contenido: string | null
+          html_nombre: string | null
+          id: string
+          sesion_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          estructura_json?: Json
+          html_contenido?: string | null
+          html_nombre?: string | null
+          id?: string
+          sesion_id: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          estructura_json?: Json
+          html_contenido?: string | null
+          html_nombre?: string | null
+          id?: string
+          sesion_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           area_docencia: string | null
@@ -238,6 +271,72 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           terms_accepted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sesiones_clase: {
+        Row: {
+          capacidades: Json | null
+          cierre: string
+          competencias_ids: Json | null
+          created_at: string
+          desarrollo: string
+          duracion_min: number
+          estado: string | null
+          evidencias: Json | null
+          html_export: string | null
+          id: string
+          inicio: string
+          proposito: string
+          recursos: Json | null
+          rubricas_ids: Json | null
+          session_index: number
+          titulo: string
+          unidad_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capacidades?: Json | null
+          cierre: string
+          competencias_ids?: Json | null
+          created_at?: string
+          desarrollo: string
+          duracion_min?: number
+          estado?: string | null
+          evidencias?: Json | null
+          html_export?: string | null
+          id?: string
+          inicio: string
+          proposito: string
+          recursos?: Json | null
+          rubricas_ids?: Json | null
+          session_index: number
+          titulo: string
+          unidad_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capacidades?: Json | null
+          cierre?: string
+          competencias_ids?: Json | null
+          created_at?: string
+          desarrollo?: string
+          duracion_min?: number
+          estado?: string | null
+          evidencias?: Json | null
+          html_export?: string | null
+          id?: string
+          inicio?: string
+          proposito?: string
+          recursos?: Json | null
+          rubricas_ids?: Json | null
+          session_index?: number
+          titulo?: string
+          unidad_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -447,7 +546,7 @@ export type Database = {
         }[]
       }
       delete_participant_completely: {
-        Args: { survey_id_param: string; participant_token_param: string }
+        Args: { participant_token_param: string; survey_id_param: string }
         Returns: boolean
       }
       generate_unique_participant_token: {
@@ -457,10 +556,10 @@ export type Database = {
       get_public_survey_data: {
         Args: { token_param: string }
         Returns: {
-          survey_id: string
-          title: string
           description: string
           status: string
+          survey_id: string
+          title: string
         }[]
       }
       get_survey_participants_count: {
