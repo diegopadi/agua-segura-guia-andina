@@ -727,7 +727,7 @@ export default function Acelerador6() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => navigate(`/etapa3/acelerador6/session-editor/${session.id}`)}
+                              onClick={() => navigate(`/etapa3/sesion/${session.id}/editar`)}
                             >
                               <Edit3 className="w-4 h-4 mr-2" />
                               Editar
@@ -735,7 +735,7 @@ export default function Acelerador6() {
                             <Button
                               variant="outline" 
                               size="sm"
-                              onClick={() => navigate(`/etapa3/acelerador6/session-editor/${session.id}`)}
+                              onClick={() => navigate(`/etapa3/sesion/${session.id}/editar`)}
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               Ver
