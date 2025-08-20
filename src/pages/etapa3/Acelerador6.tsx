@@ -92,11 +92,12 @@ export default function Acelerador6() {
     
     if (!unidadId || !uuidRegex.test(unidadId)) {
       try {
-        // Look for existing sessions for this user and area/grado
+        // Look for existing sessions for this user and area/grado (only active ones)
         const { data: existingSessions, error } = await supabase
           .from('sesiones_clase')
           .select('unidad_id')
           .eq('user_id', user?.id)
+          .eq('is_active', true)
           .limit(1);
         
         if (error) throw error;
@@ -375,40 +376,70 @@ export default function Acelerador6() {
         throw new Error("No se encontraron datos válidos de la estructura de sesiones en el Acelerador 5");
       }
 
-      // Check if there are existing sessions for this unidad_id
+      // Check if there are existing active sessions for this unidad_id
       const { data: existingSessions, error: checkError } = await supabase
         .from('sesiones_clase')
         .select('id')
         .eq('unidad_id', unidadId)
-        .eq('user_id', user?.id);
+        .eq('user_id', user?.id)
+        .eq('is_active', true);
 
       if (checkError) {
         throw new Error(`Error al verificar sesiones existentes: ${checkError.message}`);
       }
 
       // If there are existing sessions, ask for confirmation
+      // FASE 2: Secure versioning - check A7 data and handle regeneration safely
       if (existingSessions && existingSessions.length > 0) {
-        const confirmed = window.confirm(
-          `Ya existen ${existingSessions.length} sesiones para esta unidad. ¿Deseas reemplazarlas con nuevas sesiones? Esta acción no se puede deshacer.`
-        );
-        
-        if (!confirmed) {
-          setGenerating(false);
-          return;
+        try {
+          // Check for A7 data (instruments, rubrics) using new function
+          const { data: a7CheckRaw } = await supabase.rpc('check_a7_data_exists', {
+            unidad_id_param: unidadId,
+            user_id_param: user?.id
+          });
+
+          // Type-safe handling of the JSON response
+          const a7Check = a7CheckRaw as {
+            has_a7_data: boolean;
+            warning_level: 'none' | 'high' | 'critical';
+            instrumento_count: number;
+            rubrica_count: number;
+            sesion_count: number;
+          };
+
+          console.log('A7 data check:', a7Check);
+
+          // Show strong warning if A7 data exists
+          if (a7Check?.has_a7_data) {
+            const warningMessage = a7Check.warning_level === 'critical' 
+              ? `⚠️ ADVERTENCIA CRÍTICA: Esta unidad tiene ${a7Check.instrumento_count} instrumentos de evaluación creados en Acelerador 7.\n\n🔴 Si regeneras las sesiones, los instrumentos podrían quedar desvinculados y requerir reconfiguración manual.\n\n¿Estás seguro de que deseas continuar? Esta acción creará nuevas versiones de las sesiones.`
+              : `⚠️ ADVERTENCIA: Esta unidad tiene ${a7Check.rubrica_count} rúbricas generadas.\n\nRegenerar creará nuevas versiones de las sesiones. ¿Continuar?`;
+            
+            const confirmed = window.confirm(warningMessage);
+            if (!confirmed) {
+              setGenerating(false);
+              return;
+            }
+          } else {
+            const confirmed = window.confirm(
+              `Ya existen ${existingSessions.length} sesiones para esta unidad. Se crearán nuevas versiones manteniendo un historial seguro. ¿Continuar?`
+            );
+            if (!confirmed) {
+              setGenerating(false);
+              return;
+            }
+          }
+        } catch (checkError) {
+          console.error('Error checking A7 data:', checkError);
+          // Continue with basic confirmation if check fails
+          const confirmed = window.confirm(
+            `Ya existen ${existingSessions.length} sesiones. ¿Crear nuevas versiones?`
+          );
+          if (!confirmed) {
+            setGenerating(false);
+            return;
+          }
         }
-
-        // Delete existing sessions
-        const { error: deleteError } = await supabase
-          .from('sesiones_clase')
-          .delete()
-          .eq('unidad_id', unidadId)
-          .eq('user_id', user?.id);
-
-        if (deleteError) {
-          throw new Error(`Error al eliminar sesiones existentes: ${deleteError.message}`);
-        }
-
-        console.log(`Deleted ${existingSessions.length} existing sessions`);
       }
 
       console.log('Generating sessions with data:', {
@@ -456,43 +487,59 @@ export default function Acelerador6() {
       const generatedSessions = response.data.sesiones;
       console.log('Generated sessions:', generatedSessions);
 
-      // Prepare sessions for database
-      const sessionsToSave = generatedSessions.map((session: any, index: number) => ({
-        user_id: user?.id,
-        unidad_id: unidadId,
-        session_index: session.session_index || index + 1,
-        titulo: session.titulo || `Sesión ${index + 1}`,
-        proposito: session.proposito || 'Propósito por definir',
-        inicio: session.inicio || 'Actividad de inicio por definir',
-        desarrollo: session.desarrollo || 'Actividad de desarrollo por definir',
-        cierre: session.cierre || 'Actividad de cierre por definir',
-        evidencias: Array.isArray(session.evidencias) ? session.evidencias : [],
-        recursos: Array.isArray(session.recursos) ? session.recursos : ['pizarra', 'plumones'],
-        duracion_min: Number(session.duracion_min) || (unidadData.horasPorSesion || 45),
-        competencias_ids: Array.isArray(competenciasIds) ? competenciasIds : [],
-        capacidades: Array.isArray(session.capacidades) ? session.capacidades : [],
-        rubricas_ids: [],
-        incompleta: false,
-        feature_flags: { a6_json_blocks_v1: true },
-        estado: 'BORRADOR'
-      }));
+      // Use secure versioning function instead of direct DB insert
+      const versioningResponse = await supabase.functions.invoke('regenerate-sessions-versioning', {
+        body: {
+          unidadId,
+          userId: user?.id,
+          sessionData: generatedSessions.map((session: any, index: number) => ({
+            title: session.titulo || `Sesión ${index + 1}`,
+            purpose: session.proposito || 'Propósito por definir',
+            activities: {
+              inicio: session.inicio || 'Actividad de inicio por definir',
+              desarrollo: session.desarrollo || 'Actividad de desarrollo por definir',
+              cierre: session.cierre || 'Actividad de cierre por definir'
+            },
+            recursos: Array.isArray(session.recursos) ? session.recursos : ['pizarra', 'plumones'],
+            evidencias: Array.isArray(session.evidencias) ? session.evidencias : [],
+            competencias_ids: Array.isArray(competenciasIds) ? competenciasIds : [],
+            capacidades: Array.isArray(session.capacidades) ? session.capacidades : [],
+            duration_min: Number(session.duracion_min) || (unidadData.horasPorSesion || 45),
+            session_index: session.session_index || index + 1
+          }))
+        }
+      });
 
-      // Insert new sessions into database
-      const { error: insertError, data: insertedData } = await supabase
-        .from('sesiones_clase')
-        .insert(sessionsToSave)
-        .select();
+      console.log('Versioning function response:', versioningResponse);
 
-      if (insertError) {
-        throw new Error(`Error al guardar sesiones: ${insertError.message}`);
+      if (versioningResponse.error) {
+        throw new Error(`Error en versioning: ${versioningResponse.error.message}`);
       }
+
+      if (!versioningResponse.data?.success) {
+        throw new Error(versioningResponse.data?.error || 'Error desconocido en versioning');
+      }
+
+      const versioningData = versioningResponse.data.data;
+      const isRegeneration = existingSessions && existingSessions.length > 0;
 
       toast({
         title: "Éxito",
-        description: existingSessions && existingSessions.length > 0 
-          ? `Se reemplazaron ${existingSessions.length} sesiones existentes con ${generatedSessions.length} nuevas sesiones`
-          : `Se generaron ${generatedSessions.length} sesiones correctamente`,
+        description: isRegeneration 
+          ? `Se regeneraron ${versioningData.newSessions.length} sesiones (versión ${versioningData.versionNumber}). ${versioningData.a7Check?.has_a7_data ? 'Revisa los vínculos A7.' : ''}`
+          : `Se generaron ${versioningData.newSessions.length} sesiones correctamente`,
       });
+
+      // Show additional A7 warning if needed
+      if (versioningData.a7Check?.has_a7_data) {
+        setTimeout(() => {
+          toast({
+            title: "Revisión necesaria",
+            description: `Esta unidad tiene ${versioningData.a7Check.instrumento_count} instrumentos de evaluación. Verifica que sigan funcionando correctamente.`,
+            variant: "default"
+          });
+        }, 2000);
+      }
 
       // Move to next step and reload sessions
       nextStep();
@@ -770,8 +817,30 @@ export default function Acelerador6() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="grid gap-4">
-                    {sessions.map((session) => (
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Sesiones generadas ({sessions.length})</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={generateAllSessions}
+                      disabled={generating}
+                      className="text-primary hover:text-primary-foreground"
+                    >
+                      {generating ? (
+                        <>
+                          <Clock className="w-4 h-4 mr-2 animate-spin" />
+                          Regenerando...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-4 h-4 mr-2" />
+                          Rehacer sesiones con IA
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  <div className="grid gap-4">{sessions.map((session) => (
                       <Card key={session.id} className="border-l-4 border-l-primary">
                         <CardHeader className="pb-2">
                           <div className="flex items-center justify-between">

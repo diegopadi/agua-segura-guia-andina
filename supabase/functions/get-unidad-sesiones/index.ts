@@ -20,7 +20,7 @@ serve(async (req) => {
 
     console.log('Getting sessions for unit:', unidad_id, 'user:', user_id);
 
-    // Get sessions for the unit
+    // Get sessions for the unit (only active versions)
     const { data: sessions, error: sessionsError } = await supabase
       .from('sesiones_clase')
       .select(`
@@ -33,10 +33,13 @@ serve(async (req) => {
         competencias_ids,
         rubricas_ids,
         created_at,
-        updated_at
+        updated_at,
+        version_number,
+        is_active
       `)
       .eq('unidad_id', unidad_id)
       .eq('user_id', user_id)
+      .eq('is_active', true)
       .order('session_index', { ascending: true });
 
     if (sessionsError) {
