@@ -110,19 +110,49 @@ export default function Acelerador6() {
           .order('updated_at', { ascending: false })
           .limit(1);
 
-        if (a5Error || !a5Sessions || a5Sessions.length === 0) {
-          setError("Debes crear una sesión del Acelerador 5 antes de continuar con el Acelerador 6.");
+        if (a5Error) {
+          console.error('Error fetching Acelerador 5 sessions:', a5Error);
+          setError("Error al verificar el estado del Acelerador 5. Por favor, intenta nuevamente.");
+          return;
+        }
+
+        if (!a5Sessions || a5Sessions.length === 0) {
+          setError("No se encontró ninguna sesión del Acelerador 5. Debes completar el Acelerador 5 primero.");
           return;
         }
 
         const a5Session = a5Sessions[0];
+        console.log('Found A5 session:', {
+          id: a5Session.id,
+          status: a5Session.status,
+          updated_at: a5Session.updated_at,
+          current_step: a5Session.current_step
+        });
         
         // Validate that A5 has the necessary data
         const a5SessionData = a5Session.session_data as any;
-        if (!a5SessionData || 
-            !a5SessionData.informacion_general || 
-            (!a5SessionData.estructura_sesiones && !a5SessionData.sesiones_estructura)) {
-          setError("Los datos del Acelerador 5 están incompletos. Por favor, completa primero el Acelerador 5 con la información general y estructura de sesiones.");
+        console.log('A5 session data structure:', {
+          hasSessionData: !!a5SessionData,
+          hasInfo: !!a5SessionData?.informacion_general,
+          hasInformacion: !!a5SessionData?.info,
+          hasEstructuraSesiones: !!a5SessionData?.estructura_sesiones,
+          hasSesionesEstructura: !!a5SessionData?.sesiones_estructura,
+          hasSessions: !!a5SessionData?.sessions
+        });
+
+        // More robust validation - check multiple possible data structures
+        const hasBasicInfo = a5SessionData?.informacion_general || a5SessionData?.info;
+        const hasSessionStructure = a5SessionData?.estructura_sesiones || 
+                                   a5SessionData?.sesiones_estructura || 
+                                   a5SessionData?.sessions;
+
+        if (!a5SessionData || !hasBasicInfo || !hasSessionStructure) {
+          console.error('A5 data validation failed:', {
+            hasSessionData: !!a5SessionData,
+            hasBasicInfo: !!hasBasicInfo,
+            hasSessionStructure: !!hasSessionStructure
+          });
+          setError("Los datos del Acelerador 5 están incompletos. Por favor, completa todos los pasos del Acelerador 5, incluyendo la información general y la estructura de sesiones.");
           return;
         }
 
