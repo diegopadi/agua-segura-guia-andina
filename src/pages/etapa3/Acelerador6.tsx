@@ -101,17 +101,28 @@ export default function Acelerador6() {
       }
 
       if (!existingSession) {
-        // Check if A5 is completed
-        const { data: a5Session, error: a5Error } = await supabase
+        // Find the most recent Acelerador 5 session (regardless of status)
+        const { data: a5Sessions, error: a5Error } = await supabase
           .from('acelerador_sessions')
           .select('*')
           .eq('user_id', user?.id)
           .eq('acelerador_number', 5)
-          .eq('status', 'completed')
-          .single();
+          .order('updated_at', { ascending: false })
+          .limit(1);
 
-        if (a5Error || !a5Session) {
-          setError("Debes completar el Acelerador 5 antes de continuar con el Acelerador 6.");
+        if (a5Error || !a5Sessions || a5Sessions.length === 0) {
+          setError("Debes crear una sesión del Acelerador 5 antes de continuar con el Acelerador 6.");
+          return;
+        }
+
+        const a5Session = a5Sessions[0];
+        
+        // Validate that A5 has the necessary data
+        const a5SessionData = a5Session.session_data as any;
+        if (!a5SessionData || 
+            !a5SessionData.informacion_general || 
+            (!a5SessionData.estructura_sesiones && !a5SessionData.sesiones_estructura)) {
+          setError("Los datos del Acelerador 5 están incompletos. Por favor, completa primero el Acelerador 5 con la información general y estructura de sesiones.");
           return;
         }
 
