@@ -375,11 +375,19 @@ export default function Acelerador6() {
                       </span>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/etapa3/sesion/${session.id}/editar`)}
+                      >
                         <Eye className="w-4 h-4 mr-1" />
                         Ver
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/etapa3/sesion/${session.id}/editar`)}
+                      >
                         <Edit className="w-4 h-4 mr-1" />
                         Editar
                       </Button>
