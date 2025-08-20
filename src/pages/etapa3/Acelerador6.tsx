@@ -179,6 +179,12 @@ export default function Acelerador6() {
       const unidadData = sessionData.unidadData;
       const competenciasIds = sessionData.competencias_ids || [];
       
+      console.log('Generating sessions with data:', {
+        unidadData,
+        competenciasIds,
+        user_id: acceleratorSession?.user_id
+      });
+      
       // Call prepare-sesion-clase function
       const response = await supabase.functions.invoke('prepare-sesion-clase', {
         body: {
@@ -191,51 +197,102 @@ export default function Acelerador6() {
         }
       });
 
+      console.log('Edge function response:', response);
+
+      // Validate edge function response
       if (response.error) {
-        throw new Error(response.error.message);
+        console.error('Edge function error:', response.error);
+        throw new Error(`Error en la función: ${response.error.message}`);
+      }
+
+      if (!response.data) {
+        console.error('No data received from edge function');
+        throw new Error('No se recibieron datos de la función de generación');
+      }
+
+      // Validate response structure
+      if (typeof response.data === 'string' && response.data.includes('Bad Request')) {
+        console.error('Bad Request response:', response.data);
+        throw new Error('La función de generación devolvió un error: Bad Request. Revise los parámetros de entrada.');
       }
 
       const generatedSessions = response.data?.sesiones || [];
       
-      // Save sessions to database
-      const sessionsToSave = generatedSessions.map((session: any, index: number) => ({
-        user_id: acceleratorSession.user_id,
-        unidad_id: unidadData.unidad_id,
-        session_index: session.session_index || index + 1,
-        titulo: session.titulo,
-        proposito: session.proposito,
-        inicio: session.inicio,
-        desarrollo: session.desarrollo,
-        cierre: session.cierre,
-        evidencias: session.evidencias || [],
-        recursos: session.recursos || [],
-        duracion_min: session.duracion_min || 45,
-        competencias_ids: competenciasIds,
-        capacidades: session.capacidades || [],
-        estado: 'BORRADOR'
-      }));
+      if (!Array.isArray(generatedSessions) || generatedSessions.length === 0) {
+        console.error('Invalid sessions data:', response.data);
+        throw new Error('No se generaron sesiones válidas. Estructura de respuesta inválida.');
+      }
 
-      const { error: insertError } = await supabase
+      console.log('Generated sessions:', generatedSessions);
+
+      // Validate and prepare sessions for database
+      const sessionsToSave = generatedSessions.map((session: any, index: number) => {
+        // Validate required fields
+        if (!session.titulo || !session.proposito) {
+          throw new Error(`Sesión ${index + 1} tiene campos requeridos faltantes`);
+        }
+
+        // Validate UUIDs
+        if (!unidadData.unidad_id || typeof unidadData.unidad_id !== 'string') {
+          throw new Error('UUID de unidad inválido');
+        }
+
+        if (!acceleratorSession?.user_id || typeof acceleratorSession.user_id !== 'string') {
+          throw new Error('UUID de usuario inválido');
+        }
+
+        return {
+          user_id: acceleratorSession.user_id,
+          unidad_id: unidadData.unidad_id,
+          session_index: session.session_index || index + 1,
+          titulo: session.titulo || `Sesión ${index + 1}`,
+          proposito: session.proposito || 'Propósito por definir',
+          inicio: session.inicio || 'Actividad de inicio por definir',
+          desarrollo: session.desarrollo || 'Actividad de desarrollo por definir',
+          cierre: session.cierre || 'Actividad de cierre por definir',
+          evidencias: Array.isArray(session.evidencias) ? session.evidencias : [],
+          recursos: Array.isArray(session.recursos) ? session.recursos : ['pizarra', 'plumones'],
+          duracion_min: Number(session.duracion_min) || Number(unidadData.horasPorSesion) || 45,
+          competencias_ids: Array.isArray(competenciasIds) ? competenciasIds : [],
+          capacidades: Array.isArray(session.capacidades) ? session.capacidades : [],
+          estado: 'BORRADOR'
+        };
+      });
+
+      console.log('Sessions to save:', sessionsToSave);
+
+      // Insert sessions into database
+      const { error: insertError, data: insertedData } = await supabase
         .from('sesiones_clase')
-        .insert(sessionsToSave);
+        .insert(sessionsToSave)
+        .select();
 
       if (insertError) {
-        throw new Error(insertError.message);
+        console.error('Database insert error:', insertError);
+        throw new Error(`Error al guardar en base de datos: ${insertError.message}`);
       }
+
+      console.log('Inserted sessions:', insertedData);
 
       toast({
         title: "Éxito",
-        description: `Se generaron ${generatedSessions.length} sesiones`,
+        description: `Se generaron ${generatedSessions.length} sesiones correctamente`,
       });
 
       // Reload sessions
-      loadData();
+      await loadData();
 
     } catch (error) {
       console.error('Error generating sessions:', error);
+      
+      let errorMessage = "Error desconocido al generar las sesiones";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
-        title: "Error",
-        description: "Error al generar las sesiones",
+        title: "Error en la generación",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
