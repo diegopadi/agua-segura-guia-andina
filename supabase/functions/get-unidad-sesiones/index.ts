@@ -12,9 +12,7 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { searchParams } = new URL(req.url);
-    const unidad_id = searchParams.get('unidad_id');
-    const user_id = searchParams.get('user_id');
+    const { unidad_id, user_id } = await req.json();
 
     if (!unidad_id || !user_id) {
       throw new Error('Missing required parameters: unidad_id, user_id');
