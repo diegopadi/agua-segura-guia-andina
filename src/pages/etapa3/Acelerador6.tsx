@@ -78,7 +78,27 @@ export default function Acelerador6() {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const unidadId = a6Session?.session_data?.unidadData?.unidad_id;
+  // Get unidadId from session data, or generate one if needed
+  const getUnidadId = () => {
+    const sessionData = a6Session?.session_data as any;
+    if (!sessionData?.a5_data) return null;
+    
+    // First try to get existing unidad_id
+    let unidadId = sessionData.unidadData?.unidad_id;
+    
+    // If not found, generate one from A5 data structure  
+    if (!unidadId && sessionData.a5_data) {
+      const a5Data = sessionData.a5_data;
+      const area = a5Data?.area || 'Sin área';
+      const grado = a5Data?.grado || 'Sin grado';
+      const timestamp = Date.now();
+      unidadId = `unidad-${area.toLowerCase().replace(/\s+/g, '-')}-${grado}-${timestamp}`;
+    }
+    
+    return unidadId;
+  };
+  
+  const unidadId = getUnidadId();
 
   useEffect(() => {
     if (user) {
