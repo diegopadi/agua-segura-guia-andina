@@ -79,8 +79,8 @@ export default function Acelerador6() {
   const [error, setError] = useState<string | null>(null);
 
   // Get or create unidadId consistently
-  const getUnidadId = async () => {
-    const sessionData = a6Session?.session_data as any;
+  const getUnidadId = async (passedSessionData?: any) => {
+    const sessionData = passedSessionData || (a6Session?.session_data as any);
     if (!sessionData?.a5_data) return null;
     
     // First try to get existing unidad_id from current session
@@ -110,16 +110,19 @@ export default function Acelerador6() {
         }
         
         // Save the unidad_id back to the session data
-        if (a6Session) {
+        const currentSession = a6Session || (passedSessionData ? { session_data: passedSessionData } : null);
+        if (currentSession) {
           const updatedSessionData = {
             ...sessionData,
             unidad_id: unidadId
           };
           
-          await supabase
-            .from('acelerador_sessions')
-            .update({ session_data: updatedSessionData })
-            .eq('id', a6Session.id);
+          if (a6Session?.id) {
+            await supabase
+              .from('acelerador_sessions')
+              .update({ session_data: updatedSessionData })
+              .eq('id', a6Session.id);
+          }
         }
         
       } catch (error) {
@@ -236,8 +239,8 @@ export default function Acelerador6() {
       setA5Data((existingSession.session_data as any)?.a5_data);
       setCurrentStep(existingSession.current_step || 1);
       
-      // Load existing sessions
-      await loadExistingSessions();
+      // Load existing sessions with current session data
+      await loadExistingSessions(existingSession.session_data);
     } catch (error) {
       console.error('Error loading session:', error);
       setError("Error al cargar la sesión del acelerador");
@@ -246,12 +249,12 @@ export default function Acelerador6() {
     }
   };
 
-  const loadExistingSessions = async () => {
+  const loadExistingSessions = async (passedSessionData?: any) => {
     setLoadingSessions(true);
     setError(null);
     
     try {
-      const unidadId = await getUnidadId();
+      const unidadId = await getUnidadId(passedSessionData);
       if (!unidadId) {
         console.log('No unidadId available, skipping session load');
         setSessions([]);
