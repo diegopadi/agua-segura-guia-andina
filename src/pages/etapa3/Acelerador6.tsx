@@ -78,27 +78,58 @@ export default function Acelerador6() {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Get unidadId from session data, must be a valid UUID
-  const getUnidadId = () => {
+  // Get or create unidadId consistently
+  const getUnidadId = async () => {
     const sessionData = a6Session?.session_data as any;
     if (!sessionData?.a5_data) return null;
     
-    // First try to get existing unidad_id (must be UUID)
-    let unidadId = sessionData.unidadData?.unidad_id;
+    // First try to get existing unidad_id from current session
+    let unidadId = sessionData.unidad_id;
     
     // Validate that it's a proper UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     
     if (!unidadId || !uuidRegex.test(unidadId)) {
-      // Generate a new UUID if none exists or invalid format
-      unidadId = crypto.randomUUID();
-      console.log('Generated new UUID for unidad:', unidadId);
+      try {
+        // Look for existing sessions for this user and area/grado
+        const { data: existingSessions, error } = await supabase
+          .from('sesiones_clase')
+          .select('unidad_id')
+          .eq('user_id', user?.id)
+          .limit(1);
+        
+        if (error) throw error;
+        
+        if (existingSessions && existingSessions.length > 0 && existingSessions[0].unidad_id) {
+          unidadId = existingSessions[0].unidad_id;
+          console.log('Using existing unidad_id from database:', unidadId);
+        } else {
+          // Generate a new UUID if no sessions exist
+          unidadId = crypto.randomUUID();
+          console.log('Generated new UUID for unidad:', unidadId);
+        }
+        
+        // Save the unidad_id back to the session data
+        if (a6Session) {
+          const updatedSessionData = {
+            ...sessionData,
+            unidad_id: unidadId
+          };
+          
+          await supabase
+            .from('acelerador_sessions')
+            .update({ session_data: updatedSessionData })
+            .eq('id', a6Session.id);
+        }
+        
+      } catch (error) {
+        console.error('Error getting unidad_id:', error);
+        unidadId = crypto.randomUUID();
+      }
     }
     
     return unidadId;
   };
-  
-  const unidadId = getUnidadId();
 
   useEffect(() => {
     if (user) {
@@ -216,56 +247,65 @@ export default function Acelerador6() {
   };
 
   const loadExistingSessions = async () => {
-    if (!user?.id || !unidadId) return;
+    setLoadingSessions(true);
+    setError(null);
     
     try {
-      setLoadingSessions(true);
-      console.log("Loading existing sessions for unidad:", unidadId);
-      
-      // Send parameters as query params, not in body
-      const queryParams = new URLSearchParams({
-        unidad_id: unidadId,
-        user_id: user.id
-      });
-      
-      const { data, error } = await supabase.functions.invoke(
-        `get-unidad-sesiones?${queryParams.toString()}`
-      );
-
-      if (error) {
-        console.error("Error loading sessions:", error);
-        throw error;
+      const unidadId = await getUnidadId();
+      if (!unidadId) {
+        console.log('No unidadId available, skipping session load');
+        setSessions([]);
+        return;
       }
 
-      console.log("Loaded sessions data:", data);
-      setSessions(data?.sessions || []);
-    } catch (error) {
-      console.error("Error loading existing sessions:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las sesiones existentes",
-        variant: "destructive",
+      console.log('Loading sessions for unidad:', unidadId);
+      
+      const { data, error } = await supabase.functions.invoke('get-unidad-sesiones', {
+        body: { 
+          unidad_id: unidadId,
+          user_id: user?.id 
+        }
       });
+
+      if (error) throw error;
+
+      if (data?.sessions) {
+        setSessions(data.sessions);
+        console.log('Loaded sessions:', data.sessions);
+      } else {
+        setSessions([]);
+        console.log('No sessions found for unidad:', unidadId);
+      }
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+      setError('Error al cargar las sesiones existentes');
+      setSessions([]);
     } finally {
       setLoadingSessions(false);
     }
   };
 
   const generateAllSessions = async () => {
-    const sessionData = a6Session?.session_data as any;
-    if (!sessionData?.a5_data) {
-      toast({
-        title: "Error", 
-        description: "No hay datos del Acelerador 5",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!a6Session?.session_data) return;
+
+    setGenerating(true);
+    setError(null);
 
     try {
-      setGenerating(true);
-      
+      const sessionData = a6Session.session_data as any;
       const a5Data = sessionData.a5_data;
+      
+      if (!a5Data) {
+        throw new Error('No se encontraron datos del Acelerador 5');
+      }
+
+      const unidadId = await getUnidadId();
+      if (!unidadId) {
+        throw new Error('No se pudo generar el ID de la unidad');
+      }
+
+      console.log('Generating sessions with unidad_id:', unidadId);
+      
       const unidadData = a5Data?.sessions;
       const competenciasIds = a5Data?.comp?.competencias || [];
       
@@ -273,24 +313,11 @@ export default function Acelerador6() {
         throw new Error("No se encontraron datos válidos de la estructura de sesiones en el Acelerador 5");
       }
 
-      // Generate or validate unidad_id
-      let unidad_id = sessionData.unidadData?.unidad_id;
-      if (!unidad_id || typeof unidad_id !== 'string') {
-        unidad_id = crypto.randomUUID();
-        // Update session with unidad_id
-        await updateSession({
-          session_data: {
-            ...sessionData,
-            unidadData: { ...sessionData.unidadData, unidad_id }
-          }
-        });
-      }
-
       // Check if there are existing sessions for this unidad_id
       const { data: existingSessions, error: checkError } = await supabase
         .from('sesiones_clase')
         .select('id')
-        .eq('unidad_id', unidad_id)
+        .eq('unidad_id', unidadId)
         .eq('user_id', user?.id);
 
       if (checkError) {
@@ -312,7 +339,7 @@ export default function Acelerador6() {
         const { error: deleteError } = await supabase
           .from('sesiones_clase')
           .delete()
-          .eq('unidad_id', unidad_id)
+          .eq('unidad_id', unidadId)
           .eq('user_id', user?.id);
 
         if (deleteError) {
@@ -337,7 +364,7 @@ export default function Acelerador6() {
           unidad_data: {
             area: a5Data.info?.area || "Comunicación",
             grado: a5Data.info?.grado || "3ro",
-            unidad_id: unidad_id,
+            unidad_id: unidadId,
             numSesiones: unidadData.numSesiones || 5,
             horasPorSesion: unidadData.horasPorSesion || 45,
             numEstudiantes: unidadData.numEstudiantes || 25
@@ -366,7 +393,7 @@ export default function Acelerador6() {
       // Prepare sessions for database
       const sessionsToSave = generatedSessions.map((session: any, index: number) => ({
         user_id: user?.id,
-        unidad_id: unidad_id,
+        unidad_id: unidadId,
         session_index: session.session_index || index + 1,
         titulo: session.titulo || `Sesión ${index + 1}`,
         proposito: session.proposito || 'Propósito por definir',
