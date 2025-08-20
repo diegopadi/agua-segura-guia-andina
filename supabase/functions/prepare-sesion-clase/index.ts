@@ -27,8 +27,23 @@ serve(async (req) => {
       grado,
       unidad_data_keys: unidad_data ? Object.keys(unidad_data) : [],
       a4_strategies_count: a4_strategies.length,
-      a4_priorities_count: a4_priorities.length
+      a4_priorities_count: a4_priorities.length,
+      a4_strategies_titles: a4_strategies.map(s => s.title || 'Untitled').join(', '),
+      a4_priorities_titles: a4_priorities.map(p => p.title || 'Untitled').join(', ')
     });
+
+    // Validate critical parameters
+    if (horasPorSesion > 300) {
+      console.error('CRITICAL: Duration seems incorrect:', horasPorSesion, 'minutes');
+      return new Response(JSON.stringify({ 
+        status: "error", 
+        reason: "invalid_duration",
+        message: `Duration ${horasPorSesion} minutes seems incorrect. Expected 45-90 minutes.`
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Construct prompt for session generation
     const prompt = `[SYSTEM]
@@ -139,8 +154,23 @@ Genera el JSON con la estructura exacta solicitada para las sesiones.`;
         throw new Error('No valid JSON boundaries found in response');
       }
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', parseError);
-      console.log('Using fallback session generation...');
+      console.error('CRITICAL: Failed to parse OpenAI response:', parseError);
+      console.error('Raw response length:', generatedContent?.length || 0);
+      console.error('Response preview:', generatedContent?.substring(0, 200) || 'No content');
+      
+      // Return explicit error instead of silent fallback
+      return new Response(JSON.stringify({ 
+        status: "error", 
+        reason: "json_parse_failed",
+        message: "Failed to parse OpenAI response. The generated content was not valid JSON.",
+        debug_info: {
+          parse_error: parseError.message,
+          response_preview: generatedContent?.substring(0, 200) || 'No content'
+        }
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
       
       // Enhanced fallback structure with proper parameters
       result = {

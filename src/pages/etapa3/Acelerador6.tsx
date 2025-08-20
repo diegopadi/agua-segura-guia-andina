@@ -433,7 +433,7 @@ export default function Acelerador6() {
             numEstudiantes: unidadData.numEstudiantes || 25
           },
           competencias_ids: competenciasIds,
-          duracion_min: (unidadData.horasPorSesion || 45) * 60, // Convert to minutes
+          duracion_min: unidadData.horasPorSesion || 45, // Duration in minutes
           recursos_IE: ["pizarra", "plumones", "papel"],
           area: a5Data.info?.area || "Comunicación",
           grado: a5Data.info?.grado || "3ro",
@@ -468,9 +468,10 @@ export default function Acelerador6() {
         cierre: session.cierre || 'Actividad de cierre por definir',
         evidencias: Array.isArray(session.evidencias) ? session.evidencias : [],
         recursos: Array.isArray(session.recursos) ? session.recursos : ['pizarra', 'plumones'],
-        duracion_min: Number(session.duracion_min) || (unidadData.horasPorSesion || 45) * 60,
+        duracion_min: Number(session.duracion_min) || (unidadData.horasPorSesion || 45),
         competencias_ids: Array.isArray(competenciasIds) ? competenciasIds : [],
         capacidades: Array.isArray(session.capacidades) ? session.capacidades : [],
+        rubricas_ids: [],
         estado: 'BORRADOR'
       }));
 
