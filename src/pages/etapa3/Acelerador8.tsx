@@ -360,12 +360,12 @@ export default function Acelerador8() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <span>Sesión {sesion.session_index}</span>
-                    {sesion.estado === 'CERRADO' && (
-                      <Badge variant="secondary"
-                        <Lock className="h-3 w-3 mr-1" />
-                        Cerrado
-                      </Badge>
-                    )}
+                     {sesion.estado === 'CERRADO' && (
+                       <Badge variant="secondary">
+                         <Lock className="h-3 w-3 mr-1" />
+                         Cerrado
+                       </Badge>
+                     )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">

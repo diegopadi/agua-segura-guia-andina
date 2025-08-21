@@ -145,19 +145,25 @@ export function useEtapa3V2() {
     try {
       setSaving(true);
 
+      // Prepare data for upsert
+      const dataToUpsert = {
+        ...unidadData,
+        user_id: user.id,
+      } as any; // Use any to avoid strict type checking on upsert
+      
+      if (unidad?.id) {
+        dataToUpsert.id = unidad.id;
+      }
+
       const { data, error } = await supabase
         .from('unidades_aprendizaje')
-        .upsert({
-          ...unidadData,
-          user_id: user.id,
-          id: unidad?.id
-        })
+        .upsert(dataToUpsert)
         .select()
         .single();
 
       if (error) throw error;
 
-      setUnidad(data);
+      setUnidad(data as UnidadAprendizaje);
       
       toast({
         title: "Guardado",
@@ -183,20 +189,26 @@ export function useEtapa3V2() {
     try {
       setSaving(true);
 
+      // Prepare data for upsert
+      const dataToUpsert = {
+        ...rubricaData,
+        unidad_id: unidad.id,
+        user_id: user.id,
+      } as any; // Use any to avoid strict type checking on upsert
+      
+      if (rubrica?.id) {
+        dataToUpsert.id = rubrica.id;
+      }
+
       const { data, error } = await supabase
         .from('rubricas_evaluacion')
-        .upsert({
-          ...rubricaData,
-          unidad_id: unidad.id,
-          user_id: user.id,
-          id: rubrica?.id
-        })
+        .upsert(dataToUpsert)
         .select()
         .single();
 
       if (error) throw error;
 
-      setRubrica(data);
+      setRubrica(data as RubricaEvaluacion);
       
       toast({
         title: "Guardado",
@@ -229,21 +241,21 @@ export function useEtapa3V2() {
         .eq('unidad_id', unidad.id);
 
       // Insert new sessions
+      const sessionsToInsert = sesionesData.map(sesion => ({
+        ...sesion,
+        unidad_id: unidad.id,
+        user_id: user.id
+      })) as any; // Use any to avoid strict type checking
+
       const { data, error } = await supabase
         .from('sesiones_clase')
-        .insert(
-          sesionesData.map(sesion => ({
-            ...sesion,
-            unidad_id: unidad.id,
-            user_id: user.id
-          }))
-        )
+        .insert(sessionsToInsert)
         .select()
         .order('session_index');
 
       if (error) throw error;
 
-      setSesiones(data || []);
+      setSesiones(data as SesionClase[] || []);
       
       toast({
         title: "Guardado",

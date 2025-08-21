@@ -1,217 +1,249 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { BookOpen, Users, BarChart, Target, ArrowRight, Clock, CheckCircle } from "lucide-react"
-import { Link } from "react-router-dom"
-import { useEffect, useState } from "react"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/hooks/useAuth"
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BookOpen, Target, Users, Brain, CheckCircle, Play, Lock, Info } from "lucide-react";
+import { useEtapa3V2 } from "@/hooks/useEtapa3V2";
 
-interface AcceleratorSession {
-  id: string
-  acelerador_number: number
-  current_step: number
-  status: 'in_progress' | 'completed' | 'paused'
-  session_data: any
-  created_at: string
-  updated_at: string
-}
-
+// Configuration for each accelerator in Etapa 3 V2
 const accelerators = [
   {
     number: 6,
-    title: "Diseñador de Sesiones de Aprendizaje",
-    description: "Genera y personaliza sesiones de aprendizaje detalladas con objetivos, actividades y evaluación",
+    title: "Unidad de Aprendizaje",
+    description: "Diseña una unidad de aprendizaje completa con diagnóstico y análisis de coherencia",
     icon: BookOpen,
     color: "bg-blue-500",
-    steps: 6,
-    estimatedTime: "60-90 min"
-  },
-  {
-    number: 7,
-    title: "Evaluación y Seguimiento",
-    description: "Crea instrumentos de evaluación y sistemas de seguimiento para medir el progreso",
-    icon: BarChart,
-    color: "bg-green-500",
-    steps: 5,
+    route: "/etapa3/acelerador6",
     estimatedTime: "45-60 min"
   },
   {
-    number: 8,
-    title: "Análisis y Mejora",
-    description: "Analiza resultados y genera planes de mejora continua para tu institución",
+    number: 7,
+    title: "Rúbrica de Evaluación", 
+    description: "Crea rúbricas personalizadas para evaluar los aprendizajes de la unidad",
     icon: Target,
-    color: "bg-purple-500",
-    steps: 4,
+    color: "bg-green-500",
+    route: "/etapa3/acelerador7", 
     estimatedTime: "30-45 min"
+  },
+  {
+    number: 8,
+    title: "Diseño de Sesiones",
+    description: "Genera y estructura las sesiones de clase que componen la unidad",
+    icon: Brain,
+    color: "bg-purple-500",
+    route: "/etapa3/acelerador8",
+    estimatedTime: "30-40 min"
   }
-]
+];
 
-const Etapa3 = () => {
-  const { user } = useAuth()
-  const [sessions, setSessions] = useState<AcceleratorSession[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (user) {
-      fetchSessions()
-    }
-  }, [user])
-
-  const fetchSessions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('acelerador_sessions')
-        .select('*')
-        .eq('user_id', user?.id)
-        .in('acelerador_number', [6, 7, 8])
-
-      if (error) throw error
-      setSessions((data || []) as AcceleratorSession[])
-    } catch (error) {
-      console.error('Error fetching sessions:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getSessionProgress = (acceleratorNumber: number) => {
-    const session = sessions.find(s => s.acelerador_number === acceleratorNumber)
-    if (!session) return { progress: 0, status: 'not_started' as const }
-    
-    const accelerator = accelerators.find(a => a.number === acceleratorNumber)
-    const progress = session.status === 'completed' ? 100 : (session.current_step / (accelerator?.steps || 1)) * 100
-    
-    return { progress, status: session.status }
-  }
+export default function Etapa3() {
+  const { unidad, rubrica, sesiones, loading, progress } = useEtapa3V2();
+  const [showV2Notice, setShowV2Notice] = useState(true);
 
   const getStatusBadge = (acceleratorNumber: number) => {
-    const { status } = getSessionProgress(acceleratorNumber)
-    
-    switch (status) {
-      case 'completed':
-        return <Badge className="gap-1 bg-green-100 text-green-700"><CheckCircle className="w-3 h-3" />Completado</Badge>
-      case 'in_progress':
-        return <Badge variant="secondary" className="gap-1"><Clock className="w-3 h-3" />En progreso</Badge>
-      case 'paused':
-        return <Badge variant="outline" className="gap-1"><Clock className="w-3 h-3" />Pausado</Badge>
+    switch (acceleratorNumber) {
+      case 6:
+        return progress.a6_completed ? 
+          <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Completado</Badge> :
+          (unidad ? <Badge variant="default" className="bg-blue-600"><Play className="w-3 h-3 mr-1" />En progreso</Badge> :
+           <Badge variant="secondary">No iniciado</Badge>);
+      case 7:
+        return progress.a7_completed ? 
+          <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Completado</Badge> :
+          (rubrica ? <Badge variant="default" className="bg-blue-600"><Play className="w-3 h-3 mr-1" />En progreso</Badge> :
+           <Badge variant="secondary">No iniciado</Badge>);
+      case 8:
+        return progress.a8_completed ? 
+          <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Completado</Badge> :
+          (sesiones.length > 0 ? <Badge variant="default" className="bg-blue-600"><Play className="w-3 h-3 mr-1" />En progreso</Badge> :
+           <Badge variant="secondary">No iniciado</Badge>);
       default:
-        return <Badge variant="outline">No iniciado</Badge>
+        return <Badge variant="secondary">No iniciado</Badge>;
     }
-  }
+  };
 
-  const getOverallProgress = () => {
-    const totalSessions = 3
-    const completedSessions = sessions.filter(s => s.status === 'completed').length
-    return (completedSessions / totalSessions) * 100
-  }
+  const canAccess = (acceleratorNumber: number) => {
+    switch (acceleratorNumber) {
+      case 6:
+        return true; // A6 always accessible
+      case 7:
+        return progress.a6_completed;
+      case 8:
+        return progress.a7_completed;
+      default:
+        return false;
+    }
+  };
+
+  const getProgress = (acceleratorNumber: number) => {
+    switch (acceleratorNumber) {
+      case 6:
+        return progress.a6_completed ? 100 : (unidad ? 50 : 0);
+      case 7:
+        return progress.a7_completed ? 100 : (rubrica ? 50 : 0);
+      case 8:
+        return progress.a8_completed ? 100 : (sesiones.length > 0 ? 50 : 0);
+      default:
+        return 0;
+    }
+  };
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-muted rounded w-1/3 mb-2"></div>
-          <div className="h-4 bg-muted rounded w-2/3"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Cargando Etapa 3...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-primary">Etapa 3: Implementación</h1>
-          <p className="text-muted-foreground mt-2">
-            Implementa sesiones educativas, evalúa y mejora continuamente tus estrategias pedagógicas
-          </p>
-        </div>
-        <Badge variant="outline" className="gap-2">
-          <Target className="w-4 h-4" />
-          {sessions.filter(s => s.status === 'completed').length} de 3 completados
-        </Badge>
-      </div>
-
-      {/* Progress Overview */}
-      <Card className="border-primary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-primary" />
-            Progreso General
-          </CardTitle>
-          <CardDescription>
-            Tu avance en los aceleradores de implementación y evaluación
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">Progreso de Etapa 3</span>
-              <span className="text-sm text-muted-foreground">
-                {Math.round(getOverallProgress())}% completado
-              </span>
-            </div>
-            <Progress value={getOverallProgress()} className="h-3" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Accelerators Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {accelerators.map((accelerator) => {
-          const { progress } = getSessionProgress(accelerator.number)
-          const IconComponent = accelerator.icon
-          
-          return (
-            <Card key={accelerator.number} className="group hover:shadow-lg transition-all duration-200">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className={`p-3 rounded-lg ${accelerator.color} text-white mb-3`}>
-                    <IconComponent className="w-6 h-6" />
-                  </div>
-                  {getStatusBadge(accelerator.number)}
-                </div>
-                <CardTitle className="text-lg">{accelerator.title}</CardTitle>
-                <CardDescription className="text-sm">
-                  {accelerator.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Progreso</span>
-                    <span>{Math.round(progress)}%</span>
-                  </div>
-                  <Progress value={progress} className="h-2" />
-                </div>
-                
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    {accelerator.steps} pasos
-                  </span>
-                </div>
-
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
+      <div className="max-w-6xl mx-auto">
+        {/* V2 Notice */}
+        {showV2Notice && (
+          <Alert className="mb-6 border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              <div className="flex items-center justify-between">
+                <span>
+                  <strong>Etapa 3 Rediseñada:</strong> Nueva estructura simplificada A6 → A7 → A8. 
+                  Los datos anteriores se han preservado como legacy.
+                </span>
                 <Button 
-                  asChild 
-                  className="w-full group-hover:bg-primary/90 transition-colors"
-                  variant={progress > 0 ? "default" : "outline"}
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowV2Notice(false)}
+                  className="text-blue-600 hover:text-blue-800 ml-4"
                 >
-                  <Link to={progress > 0 ? `/etapa3/acelerador${accelerator.number}/${sessions.find(s => s.acelerador_number === accelerator.number)?.id || ''}` : `/etapa3/acelerador${accelerator.number}`} className="flex items-center gap-2">
-                    {progress > 0 ? "Continuar" : "Comenzar"}
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
+                  Entendido
                 </Button>
-              </CardContent>
-            </Card>
-          )
-        })}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-4">Etapa 3</h1>
+          <p className="text-xl text-muted-foreground mb-6">
+            Diseño de Unidad y Evaluación
+          </p>
+          
+          {/* Overall Progress */}
+          <div className="max-w-md mx-auto">
+            <div className="flex justify-between text-sm text-muted-foreground mb-2">
+              <span>Progreso General</span>
+              <span>{progress.overall_progress}%</span>
+            </div>
+            <Progress value={progress.overall_progress} className="h-3" />
+          </div>
+        </div>
+
+        {/* Progress Overview Card */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Progreso General - Etapa 3
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-primary mb-2">
+                {progress.overall_progress}%
+              </div>
+              <p className="text-muted-foreground">
+                Completado ({[progress.a6_completed, progress.a7_completed, progress.a8_completed].filter(Boolean).length} de 3 aceleradores)
+              </p>
+              
+              {unidad && (
+                <div className="mt-4 p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium">Unidad Actual:</p>
+                  <p className="text-sm text-muted-foreground">
+                    {unidad.titulo} - {unidad.area_curricular} ({unidad.grado})
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Accelerators Grid */}
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
+          {accelerators.map((accelerator) => {
+            const IconComponent = accelerator.icon;
+            const progressValue = getProgress(accelerator.number);
+            const accessible = canAccess(accelerator.number);
+            
+            return (
+              <Card key={accelerator.number} className={`relative overflow-hidden group hover:shadow-lg transition-shadow ${!accessible ? 'opacity-60' : ''}`}>
+                <div className={`absolute top-0 left-0 right-0 h-1 ${accelerator.color}`} />
+                
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${accelerator.color} text-white`}>
+                        <IconComponent className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">
+                          Acelerador {accelerator.number}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground font-normal">
+                          {accelerator.title}
+                        </p>
+                      </div>
+                    </div>
+                    {getStatusBadge(accelerator.number)}
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {accelerator.description}
+                  </p>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Progreso</span>
+                      <span className="font-medium">{progressValue}%</span>
+                    </div>
+                    <Progress value={progressValue} className="h-2" />
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs text-muted-foreground">
+                      {accelerator.estimatedTime}
+                    </span>
+                    
+                    {accessible ? (
+                      <Link to={accelerator.route}>
+                        <Button 
+                          size="sm"
+                          variant={progressValue > 0 ? "default" : "outline"}
+                        >
+                          {progressValue > 0 ? "Continuar" : "Iniciar"}
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button size="sm" variant="outline" disabled>
+                        <Lock className="h-3 w-3 mr-1" />
+                        Bloqueado
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
-
     </div>
-  )
+  );
 }
-
-export default Etapa3
