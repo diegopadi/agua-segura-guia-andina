@@ -186,7 +186,7 @@ export type Database = {
           },
         ]
       }
-      instrumentos_evaluacion: {
+      instrumentos_evaluacion_legacy: {
         Row: {
           created_at: string
           estructura_json: Json
@@ -276,7 +276,107 @@ export type Database = {
         }
         Relationships: []
       }
+      rubricas_evaluacion: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          estado: string
+          estructura: Json
+          id: string
+          unidad_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          estado?: string
+          estructura?: Json
+          id?: string
+          unidad_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          estado?: string
+          estructura?: Json
+          id?: string
+          unidad_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubricas_evaluacion_unidad_id_fkey"
+            columns: ["unidad_id"]
+            isOneToOne: false
+            referencedRelation: "unidades_aprendizaje"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sesiones_clase: {
+        Row: {
+          cierre: string | null
+          closed_at: string | null
+          created_at: string
+          desarrollo: string | null
+          estado: string
+          evidencias: string[] | null
+          id: string
+          inicio: string | null
+          rubrica_json: Json | null
+          session_index: number
+          titulo: string
+          unidad_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cierre?: string | null
+          closed_at?: string | null
+          created_at?: string
+          desarrollo?: string | null
+          estado?: string
+          evidencias?: string[] | null
+          id?: string
+          inicio?: string | null
+          rubrica_json?: Json | null
+          session_index: number
+          titulo: string
+          unidad_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cierre?: string | null
+          closed_at?: string | null
+          created_at?: string
+          desarrollo?: string | null
+          estado?: string
+          evidencias?: string[] | null
+          id?: string
+          inicio?: string | null
+          rubrica_json?: Json | null
+          session_index?: number
+          titulo?: string
+          unidad_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sesiones_clase_unidad_id_fkey"
+            columns: ["unidad_id"]
+            isOneToOne: false
+            referencedRelation: "unidades_aprendizaje"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sesiones_clase_legacy: {
         Row: {
           apoya_estrategia: Json | null
           capacidades: Json | null
@@ -375,14 +475,7 @@ export type Database = {
             foreignKeyName: "sesiones_clase_replaced_by_session_id_fkey"
             columns: ["replaced_by_session_id"]
             isOneToOne: false
-            referencedRelation: "sesiones_clase"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sesiones_clase_replaced_by_session_id_fkey"
-            columns: ["replaced_by_session_id"]
-            isOneToOne: false
-            referencedRelation: "sesiones_clase_activas"
+            referencedRelation: "sesiones_clase_legacy"
             referencedColumns: ["id"]
           },
         ]
@@ -578,119 +671,84 @@ export type Database = {
         }
         Relationships: []
       }
-    }
-    Views: {
-      sesiones_clase_activas: {
+      unidades_aprendizaje: {
         Row: {
-          apoya_estrategia: Json | null
+          area_curricular: string
           capacidades: Json | null
-          cierre: string | null
-          cierre_json: Json | null
-          competencias_ids: Json | null
-          created_at: string | null
-          desarrollo: string | null
-          desarrollo_json: Json | null
-          duracion_min: number | null
-          estado: string | null
-          evidencias: Json | null
-          feature_flags: Json | null
-          html_export: string | null
-          id: string | null
-          incompleta: boolean | null
-          inicio: string | null
-          inicio_json: Json | null
-          is_active: boolean | null
-          proposito: string | null
-          recursos: Json | null
-          regenerated_at: string | null
-          replaced_by_session_id: string | null
-          rubricas_ids: Json | null
-          session_index: number | null
-          titulo: string | null
-          unidad_id: string | null
-          updated_at: string | null
-          user_id: string | null
-          version_number: number | null
+          closed_at: string | null
+          competencias_ids: string[] | null
+          created_at: string
+          desempenos: Json | null
+          diagnostico_pdf_url: string | null
+          diagnostico_text: string | null
+          duracion_min: number
+          enfoques_ids: string[] | null
+          estado: string
+          estandares: Json | null
+          estrategias_ids: string[] | null
+          evidencias: string
+          grado: string
+          ia_recomendaciones: string | null
+          id: string
+          numero_sesiones: number
+          proposito: string
+          titulo: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          apoya_estrategia?: Json | null
+          area_curricular: string
           capacidades?: Json | null
-          cierre?: string | null
-          cierre_json?: Json | null
-          competencias_ids?: Json | null
-          created_at?: string | null
-          desarrollo?: string | null
-          desarrollo_json?: Json | null
-          duracion_min?: number | null
-          estado?: string | null
-          evidencias?: Json | null
-          feature_flags?: Json | null
-          html_export?: string | null
-          id?: string | null
-          incompleta?: boolean | null
-          inicio?: string | null
-          inicio_json?: Json | null
-          is_active?: boolean | null
-          proposito?: string | null
-          recursos?: Json | null
-          regenerated_at?: string | null
-          replaced_by_session_id?: string | null
-          rubricas_ids?: Json | null
-          session_index?: number | null
-          titulo?: string | null
-          unidad_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-          version_number?: number | null
+          closed_at?: string | null
+          competencias_ids?: string[] | null
+          created_at?: string
+          desempenos?: Json | null
+          diagnostico_pdf_url?: string | null
+          diagnostico_text?: string | null
+          duracion_min: number
+          enfoques_ids?: string[] | null
+          estado?: string
+          estandares?: Json | null
+          estrategias_ids?: string[] | null
+          evidencias: string
+          grado: string
+          ia_recomendaciones?: string | null
+          id?: string
+          numero_sesiones: number
+          proposito: string
+          titulo: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          apoya_estrategia?: Json | null
+          area_curricular?: string
           capacidades?: Json | null
-          cierre?: string | null
-          cierre_json?: Json | null
-          competencias_ids?: Json | null
-          created_at?: string | null
-          desarrollo?: string | null
-          desarrollo_json?: Json | null
-          duracion_min?: number | null
-          estado?: string | null
-          evidencias?: Json | null
-          feature_flags?: Json | null
-          html_export?: string | null
-          id?: string | null
-          incompleta?: boolean | null
-          inicio?: string | null
-          inicio_json?: Json | null
-          is_active?: boolean | null
-          proposito?: string | null
-          recursos?: Json | null
-          regenerated_at?: string | null
-          replaced_by_session_id?: string | null
-          rubricas_ids?: Json | null
-          session_index?: number | null
-          titulo?: string | null
-          unidad_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-          version_number?: number | null
+          closed_at?: string | null
+          competencias_ids?: string[] | null
+          created_at?: string
+          desempenos?: Json | null
+          diagnostico_pdf_url?: string | null
+          diagnostico_text?: string | null
+          duracion_min?: number
+          enfoques_ids?: string[] | null
+          estado?: string
+          estandares?: Json | null
+          estrategias_ids?: string[] | null
+          evidencias?: string
+          grado?: string
+          ia_recomendaciones?: string | null
+          id?: string
+          numero_sesiones?: number
+          proposito?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "sesiones_clase_replaced_by_session_id_fkey"
-            columns: ["replaced_by_session_id"]
-            isOneToOne: false
-            referencedRelation: "sesiones_clase"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sesiones_clase_replaced_by_session_id_fkey"
-            columns: ["replaced_by_session_id"]
-            isOneToOne: false
-            referencedRelation: "sesiones_clase_activas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
+    }
+    Views: {
+      [_ in never]: never
     }
     Functions: {
       acquire_unit_lock: {

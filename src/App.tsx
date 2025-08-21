@@ -17,7 +17,8 @@ import Acelerador4 from "./pages/etapa2/Acelerador4";
 import Acelerador5 from "./pages/etapa2/Acelerador5";
 import Etapa3 from "./pages/Etapa3";
 import Acelerador6 from "./pages/etapa3/Acelerador6";
-import SessionEditor from "./pages/etapa3/components/a6/SessionEditor";
+import Acelerador7 from "./pages/etapa3/Acelerador7";
+import Acelerador8 from "./pages/etapa3/Acelerador8";
 import Documentos from "./pages/Documentos";
 import Ayuda from "./pages/Ayuda";
 import Admin from "./pages/Admin";
@@ -52,8 +53,8 @@ const App = () => (
                     <Route path="/etapa2/acelerador5" element={<Acelerador5 />} />
                     <Route path="/etapa3" element={<Etapa3 />} />
                     <Route path="/etapa3/acelerador6" element={<Acelerador6 />} />
-                    <Route path="/etapa3/acelerador6/:sessionId" element={<Acelerador6 />} />
-                    <Route path="/etapa3/sesion/:sessionId/editar" element={<SessionEditor />} />
+                    <Route path="/etapa3/acelerador7" element={<Acelerador7 />} />
+                    <Route path="/etapa3/acelerador8" element={<Acelerador8 />} />
                     <Route path="/documentos" element={<Documentos />} />
                     <Route path="/ayuda" element={<Ayuda />} />
                     <Route path="/administracion" element={<Admin />} />
