@@ -176,6 +176,14 @@ export function useEtapa3V2() {
   const saveUnidad = async (unidadData: Partial<UnidadAprendizaje>, options?: SaveOptions) => {
     if (!user) return null;
 
+    console.log('[ETAPA3V2:SAVE_UNIDAD]', {
+      silent: options?.silent,
+      payloadKeys: Object.keys(unidadData),
+      estadoBefore: unidad?.estado,
+      estadoAfter: unidadData.estado,
+      closed_at: unidadData.closed_at
+    });
+
     try {
       setSaving(true);
 
@@ -204,6 +212,13 @@ export function useEtapa3V2() {
 
       if (error) throw error;
 
+      console.log('[ETAPA3V2:SAVE_SUCCESS]', {
+        silent: options?.silent,
+        newEstado: data.estado,
+        closed_at: data.closed_at,
+        id: data.id
+      });
+
       setUnidad(data as UnidadAprendizaje);
       
       // Only show toast if not silent
@@ -216,6 +231,7 @@ export function useEtapa3V2() {
 
       return data;
     } catch (error: any) {
+      console.error('[ETAPA3V2:SAVE_ERROR]', error);
       toast({
         title: "Error",
         description: error.message,

@@ -48,8 +48,8 @@ export default function Acelerador6() {
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastAutoSaveAt, setLastAutoSaveAt] = useState(0);
   
-  // Debounced form data for auto-save (optimized to 3s)
-  const debouncedFormData = useDebounce(formData, 3000);
+  // Debounced form data for auto-save (5s debounce + 10s throttle)
+  const debouncedFormData = useDebounce(formData, 5000);
 
   // Helper functions and computed values
   const isFormValid = () => {
@@ -90,7 +90,7 @@ export default function Acelerador6() {
   // Silent auto-save functionality with debounce and throttle
   useEffect(() => {
     const now = Date.now();
-    const THROTTLE_MS = 5000; // 5s minimum between auto-saves
+    const THROTTLE_MS = 10000; // 10s minimum between auto-saves
     
     if (
       !isClosed && // NO auto-save if closed
@@ -109,6 +109,13 @@ export default function Acelerador6() {
   const handleAutoSave = async () => {
     if (!formData.titulo || !formData.area_curricular) return;
     
+    console.log('[A6:AUTOSAVE]', { 
+      timestamp: new Date().toISOString(),
+      silent: true, 
+      payloadKeys: ['titulo', 'area_curricular', 'grado', 'numero_sesiones', 'duracion_min', 'proposito', 'evidencias', 'diagnostico_text', 'diagnostico_pdf_url', 'ia_recomendaciones', 'competencias_ids'],
+      estadoBefore: unidad?.estado 
+    });
+    
     try {
       setAutoSaving(true);
       await saveUnidad({
@@ -123,10 +130,12 @@ export default function Acelerador6() {
         diagnostico_pdf_url: formData.diagnostico_pdf_url,
         ia_recomendaciones: formData.ia_recomendaciones,
         competencias_ids: formData.competencias_ids,
-      }, { silent: true }); // Silent auto-save
+      }, { silent: true }); // Silent auto-save - NO toast
+      
+      console.log('[A6:AUTOSAVE_SUCCESS]', { timestamp: new Date().toISOString() });
     } catch (error) {
-      console.error('Auto-save failed:', error);
-      // Only show error toast for auto-save failures
+      console.error('[A6:AUTOSAVE_ERROR]', error);
+      // Only show error toast for auto-save failures (no success toast)
       toast({
         title: "Error en guardado automático",
         description: "No se pudieron guardar los cambios automáticamente",
@@ -281,14 +290,34 @@ export default function Acelerador6() {
   };
 
   const handleAnalyzeCoherence = async () => {
-    if (!formData.diagnostico_text || !isFormValid()) {
+    if (!formData.diagnostico_text || formData.diagnostico_text.length < 300) {
       toast({
         title: "Error",
-        description: "Complete todos los campos requeridos y el texto del diagnóstico",
+        description: "El diagnóstico debe tener al menos 300 caracteres",
         variant: "destructive",
       });
       return;
     }
+
+    if (!isFormValid()) {
+      toast({
+        title: "Error",
+        description: "Complete todos los campos requeridos antes del análisis",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const requestId = crypto.randomUUID();
+    console.log('[A6:AI_REQUEST]', {
+      request_id: requestId,
+      chars_diagnostico: formData.diagnostico_text.length,
+      titulo: formData.titulo,
+      area: formData.area_curricular,
+      grado: formData.grado,
+      sesiones: formData.numero_sesiones,
+      duracion_min: formData.duracion_min
+    });
 
     try {
       setIsAnalyzing(true);
@@ -300,24 +329,49 @@ export default function Acelerador6() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[A6:AI_ERROR]', { request_id: requestId, error });
+        throw error;
+      }
+
+      console.log('[A6:AI_RESPONSE]', {
+        request_id: requestId,
+        success: data?.success,
+        has_analysis: !!data?.analysis,
+        response_preview: JSON.stringify(data).substring(0, 200)
+      });
 
       if (data.success && data.analysis) {
-        handleInputChange('ia_recomendaciones', JSON.stringify(data.analysis, null, 2));
-        
-        toast({
-          title: "Análisis completado",
-          description: "El análisis de coherencia se ha generado exitosamente",
-        });
+        // Validate JSON structure
+        try {
+          JSON.parse(JSON.stringify(data.analysis));
+          const analysisString = JSON.stringify(data.analysis, null, 2);
+          
+          console.log('[A6:AI_VALID]', {
+            request_id: requestId,
+            analysis_preview: analysisString.substring(0, 200),
+            analysis_length: analysisString.length
+          });
+          
+          handleInputChange('ia_recomendaciones', analysisString);
+          
+          toast({
+            title: "Análisis completado",
+            description: "El análisis de coherencia se ha generado exitosamente",
+          });
+        } catch (jsonError) {
+          console.error('[A6:INVALID_JSON]', { request_id: requestId, jsonError });
+          throw new Error('Respuesta de IA con formato inválido');
+        }
       } else {
         throw new Error(data.error || 'Error en el análisis');
       }
 
     } catch (error: any) {
-      console.error('Analysis error:', error);
+      console.error('[A6:AI_FINAL_ERROR]', { request_id: requestId, error: error.message });
       toast({
         title: "Error en el análisis",
-        description: "No se pudo completar el análisis. Puede continuar editando manualmente.",
+        description: "No se pudo completar el análisis. Intente nuevamente o continúe editando manualmente.",
         variant: "destructive",
       });
     } finally {
@@ -326,6 +380,12 @@ export default function Acelerador6() {
   };
 
   const handleSave = async () => {
+    console.log('[A6:SAVE]', { 
+      silent: false, 
+      payloadKeys: Object.keys(formData), 
+      estadoBefore: unidad?.estado 
+    });
+    
     try {
       await saveUnidad({
         titulo: formData.titulo,
@@ -346,7 +406,12 @@ export default function Acelerador6() {
         description: "La unidad de aprendizaje se ha guardado exitosamente",
       });
     } catch (error) {
-      console.error('Save error:', error);
+      console.error('[A6:SAVE_ERROR]', error);
+      toast({
+        title: "Error al guardar",
+        description: "No se pudo guardar la unidad",
+        variant: "destructive",
+      });
     }
   };
 
@@ -360,11 +425,38 @@ export default function Acelerador6() {
       return;
     }
 
-    await handleSave();
-    await closeAccelerator('A6');
+    console.log('[A6:CLOSE]', { 
+      newEstado: 'CERRADO', 
+      closed_at: true,
+      formValid: isFormValid(),
+      analysisComplete
+    });
+
+    try {
+      await handleSave();
+      await closeAccelerator('A6');
+      
+      toast({
+        title: "A6 cerrado exitosamente",
+        description: "La unidad está lista. Ahora puede continuar a A7.",
+      });
+    } catch (error) {
+      console.error('[A6:CLOSE_ERROR]', error);
+      toast({
+        title: "Error al cerrar",
+        description: "No se pudo cerrar A6",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleReopen = async () => {
+    console.log('[A6:REOPEN]', { 
+      estadoBefore: unidad?.estado,
+      newEstado: 'BORRADOR', 
+      closed_at: null 
+    });
+    
     try {
       await saveUnidad({
         ...formData,
@@ -372,15 +464,14 @@ export default function Acelerador6() {
         closed_at: null
       });
       
-      // This will invalidate A7 and A8 through needs_review logic
       toast({
-        title: "Acelerador reabierto",
+        title: "A6 reabierto exitosamente",
         description: "La unidad se ha reabierto para edición. A7 y A8 requerirán revisión.",
       });
       
       setShowReopenDialog(false);
     } catch (error) {
-      console.error('Reopen error:', error);
+      console.error('[A6:REOPEN_ERROR]', error);
       toast({
         title: "Error al reabrir",
         description: "No se pudo reabrir la unidad",
@@ -389,8 +480,20 @@ export default function Acelerador6() {
     }
   };
 
-  // Debug logging for A6 runtime state
-  console.log('A6 Debug:', {
+  // JSON validation check
+  useEffect(() => {
+    if (formData.ia_recomendaciones) {
+      try { 
+        JSON.parse(formData.ia_recomendaciones);
+        console.log('[A6:JSON_VALID]', { length: formData.ia_recomendaciones.length });
+      } catch(e) { 
+        console.error('[A6:INVALID_JSON]', e, { preview: formData.ia_recomendaciones.substring(0, 100) });
+      }
+    }
+  }, [formData.ia_recomendaciones]);
+
+  // Debug logging for A6 runtime state (UI conditions)
+  console.log('[A6:UI]', {
     isClosed,
     diagnosticoLength: formData.diagnostico_text?.length || 0,
     hasRecs: !!formData.ia_recomendaciones,
@@ -399,7 +502,8 @@ export default function Acelerador6() {
     progress,
     analysisComplete,
     autoSaving,
-    lastAutoSaveAt: new Date(lastAutoSaveAt).toLocaleTimeString()
+    lastAutoSaveAt: new Date(lastAutoSaveAt).toLocaleTimeString(),
+    canProceedToA7
   });
 
   if (loading) {
