@@ -13,11 +13,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { supabase } from '@/integrations/supabase/client';
 import { useEtapa3V2, SesionClase } from '@/hooks/useEtapa3V2';
+import { useUnidadHash } from '@/hooks/useUnidadHash';
 
 export default function Acelerador8() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { unidad, sesiones, loading, saving, saveSesiones, closeAccelerator, progress } = useEtapa3V2();
+  const unidadHash = useUnidadHash(unidad);
   
   const [sesionesData, setSesionesData] = useState<SesionClase[]>([]);
   const [generationLoading, setGenerationLoading] = useState(false);
@@ -145,6 +147,7 @@ export default function Acelerador8() {
       });
       
       setGenerationLoading(true);
+      setAutoSaveEnabled(false);
       setLastGenerationTime(Date.now());
 
       const { data, error } = await supabase.functions.invoke('generate-session-structure', {
@@ -166,20 +169,29 @@ export default function Acelerador8() {
       });
 
       if (data.success && data.sessions) {
-        // Validation
-        const hasValidSessions = Array.isArray(data.sessions);
-        const sessionCount = data.sessions.length;
+        // Enhanced validation
+        const hasValidSessions = Array.isArray(data.sessions) && data.sessions.length > 0;
+        const allSessionsHaveContent = data.sessions.every((session: any) => 
+          session.titulo || session.inicio || session.desarrollo || session.cierre
+        );
+        const allSessionsHaveValidRubric = data.sessions.every((session: any) => 
+          session.rubrica_sesion?.criteria && 
+          Array.isArray(session.rubrica_sesion.criteria) &&
+          session.rubrica_sesion.criteria.length >= 2 && 
+          session.rubrica_sesion.criteria.length <= 8
+        );
         
         console.log('[A8:GEN_VALID]', {
-          hasLevels: false, // A8 doesn't use levels
-          hasCriteria: sessionCount > 0,
-          hasTools: hasValidSessions,
-          sessions: sessionCount,
+          hasValidSessions,
+          allSessionsHaveContent,
+          allSessionsHaveValidRubric,
+          levels: ['Inicio', 'Proceso', 'Logro'], // Standard levels
+          sessions: data.sessions.length,
           expected: unidad.numero_sesiones
         });
 
-        if (!hasValidSessions || sessionCount === 0) {
-          throw new Error('Invalid session structure');
+        if (!hasValidSessions || !allSessionsHaveContent || !allSessionsHaveValidRubric) {
+          throw new Error('Estructura de sesiones inválida');
         }
 
         const generatedSessions = data.sessions.map((session: any, index: number) => ({
@@ -193,6 +205,8 @@ export default function Acelerador8() {
           cierre: session.cierre || '',
           evidencias: session.evidencias || [],
           rubrica_json: session.rubrica_sesion || { criteria: [] },
+          source_hash: unidadHash?.hash,
+          source_snapshot: unidadHash?.snapshot,
           estado: 'BORRADOR' as const,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -200,6 +214,9 @@ export default function Acelerador8() {
         
         setSesionesData(generatedSessions);
         setGenerationComplete(true);
+        
+        // Silent save with hash/snapshot
+        await saveSesiones(generatedSessions);
         
         toast({
           title: "Sesiones generadas",
@@ -218,11 +235,12 @@ export default function Acelerador8() {
       
       toast({
         title: "Error en la generación",
-        description: "No se pudo generar las sesiones. Puede editarlas manualmente.",
+        description: error.message || "No se pudo generar las sesiones. Puede editarlas manualmente.",
         variant: "destructive",
       });
     } finally {
       setGenerationLoading(false);
+      setAutoSaveEnabled(true);
     }
   };
 
@@ -235,6 +253,22 @@ export default function Acelerador8() {
   const handleRegenerateSessions = async () => {
     if (regenerationLoading) {
       console.log('[A8:REGEN_GUARD]', { timestamp: new Date().toISOString() });
+      return;
+    }
+
+    // Check if regeneration is needed based on hash
+    const existingHash = sesiones.length > 0 ? (sesiones[0] as any)?.source_hash : null;
+    if (existingHash && unidadHash?.hash && existingHash === unidadHash.hash) {
+      console.log('[A8:REGEN_SKIPPED]', {
+        reason: 'NO_CHANGE',
+        existing_hash: existingHash,
+        current_hash: unidadHash.hash
+      });
+      toast({
+        title: "Nada que regenerar",
+        description: "Las sesiones ya están actualizadas con la versión actual de la unidad.",
+      });
+      setShowRegenerateDialog(false);
       return;
     }
 
@@ -254,15 +288,19 @@ export default function Acelerador8() {
         request_id: requestId,
         unidad_id: unidad?.id,
         titulo: unidad?.titulo,
+        source_hash: unidadHash?.hash,
         sessions_before: sesionesData.length,
-        criteria_before: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0)
+        criteria_before: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0),
+        previous_sessions_ids: sesionesData.map(s => s.id)
       });
 
       const { data, error } = await supabase.functions.invoke('generate-session-structure', {
         body: {
           request_id: requestId,
           unidad_data: unidad,
-          force: true
+          force: true,
+          source_hash: unidadHash?.hash,
+          previous_sessions_ids: sesionesData.map(s => s.id)
         }
       });
 
@@ -271,15 +309,36 @@ export default function Acelerador8() {
       console.log('[A8:REGEN_RESPONSE]', {
         request_id: requestId,
         success: data?.success || false,
+        error_code: data?.error_code,
         sessions_count: data?.sessions?.length || 0,
         criteria_count: data?.sessions?.reduce((acc: number, s: any) => acc + (s?.rubrica_sesion?.criteria?.length || 0), 0) || 0,
         preview: data?.sessions ? JSON.stringify(data.sessions).slice(0, 200)+'...' : null
       });
 
+      if (!data.success && data.error_code === 'NO_CHANGE') {
+        console.log('[A8:REGEN_SKIPPED]', { reason: data.error_code });
+        toast({
+          title: "Nada que regenerar",
+          description: data.message || "Unidad sin cambios. Regeneración omitida.",
+        });
+        return;
+      }
+
       if (data.success && data.sessions) {
-        // Validation for regeneration
-        if (!Array.isArray(data.sessions) || data.sessions.length === 0) {
-          throw new Error('Invalid regenerated session structure');
+        // Enhanced validation for regeneration
+        const hasValidSessions = Array.isArray(data.sessions) && data.sessions.length > 0;
+        const allSessionsHaveContent = data.sessions.every((session: any) => 
+          session.titulo || session.inicio || session.desarrollo || session.cierre
+        );
+        const allSessionsHaveValidRubric = data.sessions.every((session: any) => 
+          session.rubrica_sesion?.criteria && 
+          Array.isArray(session.rubrica_sesion.criteria) &&
+          session.rubrica_sesion.criteria.length >= 2 && 
+          session.rubrica_sesion.criteria.length <= 8
+        );
+
+        if (!hasValidSessions || !allSessionsHaveContent || !allSessionsHaveValidRubric) {
+          throw new Error('Estructura de sesiones inválida');
         }
 
         const regeneratedSessions = data.sessions.map((session: any, index: number) => ({
@@ -293,12 +352,17 @@ export default function Acelerador8() {
           cierre: session.cierre || '',
           evidencias: session.evidencias || [],
           rubrica_json: session.rubrica_sesion || { criteria: [] },
+          source_hash: unidadHash?.hash,
+          source_snapshot: unidadHash?.snapshot,
+          regenerated_at: new Date().toISOString(),
+          needs_review: false,
           estado: 'BORRADOR' as const,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }));
         
         setSesionesData(regeneratedSessions);
+        setGenerationComplete(true);
         
         console.log('[A8:REGEN_APPLY]', {
           request_id: requestId,
@@ -306,7 +370,7 @@ export default function Acelerador8() {
           criteria_after: regeneratedSessions.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0)
         });
 
-        // Silent save
+        // Silent save with new hash/snapshot
         await saveSesiones(regeneratedSessions);
         console.log('[A8:REGEN_SAVE]', { request_id: requestId, silent: true });
         
@@ -327,7 +391,7 @@ export default function Acelerador8() {
       
       toast({
         title: "Error en la regeneración",
-        description: `No se pudieron regenerar las sesiones. ${error.message}`,
+        description: error.message || "No se pudieron regenerar las sesiones.",
         variant: "destructive",
       });
     } finally {
@@ -453,6 +517,11 @@ export default function Acelerador8() {
 
     await handleSave();
     await closeAccelerator('A8');
+    
+    toast({
+      title: "A8 cerrado",
+      description: "Las sesiones han sido guardadas y el acelerador se ha cerrado exitosamente.",
+    });
   };
 
   const handleReopen = async () => {
@@ -486,19 +555,14 @@ export default function Acelerador8() {
   useEffect(() => {
     const debugData = {
       isClosed: areSessionsClosed,
-      canAccessA8,
-      canProceedToFinish: areSessionsClosed && formValid,
-      needsReview: false,
       generationLoading,
       regenLoading: regenerationLoading,
       autoSaving,
       saving,
-      criteriaCount: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0),
-      toolsCount: sesionesData.length, // sessions themselves are the "tools"
+      sessionsCount: sesionesData.length,
+      criteriaTotal: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0),
       lastAutoSaveAt: lastAutoSaveTime ? new Date(lastAutoSaveTime).toISOString() : null,
       unidadId: unidad?.id || null,
-      rubricaId: null, // A8 doesn't have a single rubric
-      instrumentosId: null, // A8 doesn't have instrumentos
       autoSaveEnabled,
       formValid
     };
@@ -551,9 +615,9 @@ export default function Acelerador8() {
     // Button visibility logging
     const buttonStates = {
       generateVisible: !generationComplete && !areSessionsClosed,
-      regenerateVisible: generationComplete && !areSessionsClosed && !regenerationLoading,
-      saveVisible: !areSessionsClosed,
-      closeVisible: !areSessionsClosed,
+      regenerateVisible: generationComplete && !areSessionsClosed && sesionesData.length > 0,
+      saveVisible: !areSessionsClosed && formValid,
+      closeVisible: !areSessionsClosed && formValid,
       continueVisible: false // A8 is final
     };
     

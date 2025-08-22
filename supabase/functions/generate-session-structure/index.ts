@@ -10,38 +10,79 @@ serve(async (req) => {
   }
 
   try {
-    const { unidad_data_min } = await req.json();
+    const { unidad_data, unidad_data_min, request_id, force, source_hash, previous_sessions_ids } = await req.json();
+    
+    // Accept either format for backward compatibility
+    const unidadData = unidad_data || unidad_data_min;
 
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
     }
 
-    if (!unidad_data_min) {
-      throw new Error('Missing required parameter: unidad_data_min');
+    if (!unidadData) {
+      throw new Error('Missing required parameter: unidad_data');
     }
 
-    console.log('Generating session structure for:', {
-      titulo: unidad_data_min.titulo,
-      numero_sesiones: unidad_data_min.numero_sesiones,
-      duracion: unidad_data_min.duracion_min
+    console.log('[A8:EDGE_INPUT]', {
+      request_id,
+      titulo: unidadData.titulo,
+      numero_sesiones: unidadData.numero_sesiones,
+      duracion: unidadData.duracion_min,
+      force: !!force,
+      source_hash: source_hash || 'none',
+      previous_sessions_count: previous_sessions_ids?.length || 0
     });
 
-    const systemPrompt = `Eres un diseñador curricular que crea plantillas de sesiones para secundaria en Perú. 
-Diseñas estructuras generales por momentos pedagógicos (inicio, desarrollo, cierre) que reflejen el proceso estándar (activación, conflicto cognitivo, aprendizaje activo, evaluación formativa, cierre reflexivo). 
-No diseñes sesiones completas individuales, solo plantillas reutilizables. 
-Agrega una mini-rúbrica observacional simple (2–4 criterios). 
-Responde SIEMPRE en JSON válido, sin markdown.`;
+    // Check if regeneration is needed (only if not forced)
+    if (!force && source_hash && previous_sessions_ids?.length > 0) {
+      // In real implementation, you would check if existing sessions have same source_hash
+      // For now, simulate hash-based skipping
+      console.log('[A8:EDGE_NOCHANGE]', { 
+        request_id,
+        source_hash,
+        message: 'Hash comparison logic would go here'
+      });
+    }
 
-    const userPrompt = `Diseña plantillas pedagógicas generales para una unidad de ${unidad_data_min.numero_sesiones} sesiones de ${unidad_data_min.duracion_min} minutos. 
-Incluye una mini-rúbrica observacional con 2–4 criterios simples. 
-Si detectas posibles ajustes a la unidad (ej. reducir sesiones, modificar propósito), sugiérelos solo como comentarios en un campo aparte.
+    const systemPrompt = `Eres un diseñador curricular experto que crea sesiones de aprendizaje para secundaria en Perú. 
+Generas sesiones completas con estructura pedagógica (inicio, desarrollo, cierre) siguiendo los momentos estándar: activación de saberes previos, conflicto cognitivo, construcción del aprendizaje, evaluación formativa, y metacognición.
+Cada sesión debe incluir una mini-rúbrica observacional con exactamente 3 niveles (Inicio, Proceso, Logro) y entre 2-8 criterios observables.
+Responde SIEMPRE en formato JSON válido, sin markdown ni comentarios adicionales.
+
+Estructura JSON requerida:
+{
+  "sessions": [
+    {
+      "titulo": "string",
+      "inicio": "string (actividades de motivación y saberes previos)",
+      "desarrollo": "string (construcción del aprendizaje)",
+      "cierre": "string (consolidación y evaluación)",
+      "evidencias": ["string array de productos observables"],
+      "rubrica_sesion": {
+        "levels": ["Inicio", "Proceso", "Logro"],
+        "criteria": ["criterio 1", "criterio 2", ...] // 2-8 criterios observables
+      }
+    }
+  ]
+}`;
+
+    console.log('[A8:EDGE_CALL]', { request_id, model: 'gpt-5-2025-08-07' });
+
+    const userPrompt = `Diseña ${unidadData.numero_sesiones} sesiones completas de ${unidadData.duracion_min} minutos cada una para la siguiente unidad de aprendizaje:
 
 DATOS DE LA UNIDAD:
-Título: ${unidad_data_min.titulo}
-Área: ${unidad_data_min.area_curricular} 
-Grado: ${unidad_data_min.grado}
-Propósito: ${unidad_data_min.proposito}
-Competencias: ${unidad_data_min.competencias_ids}`;
+Título: ${unidadData.titulo}
+Área: ${unidadData.area_curricular} 
+Grado: ${unidadData.grado}
+Propósito: ${unidadData.proposito}
+Competencias: ${unidadData.competencias_ids}
+
+Cada sesión debe:
+- Tener un título específico y descriptivo
+- Incluir actividades concretas para inicio, desarrollo y cierre
+- Proporcionar evidencias observables del aprendizaje
+- Tener una mini-rúbrica con 2-8 criterios específicos y observables
+- Seguir la secuencia pedagógica apropiada para el área y grado`;;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -77,36 +118,77 @@ Competencias: ${unidad_data_min.competencias_ids}`;
       throw new Error('Invalid AI response format');
     }
 
-    // Validate response structure
-    if (!sessionStructure.plantilla_inicio || !sessionStructure.plantilla_desarrollo || !sessionStructure.plantilla_cierre) {
-      throw new Error('AI response missing required template fields');
+    // Enhanced validation for expected structure
+    if (!sessionStructure.sessions || !Array.isArray(sessionStructure.sessions)) {
+      console.log('[A8:EDGE_INVALID]', { 
+        request_id,
+        error: 'Missing or invalid sessions array',
+        received: Object.keys(sessionStructure)
+      });
+      throw new Error('AI response missing sessions array');
     }
 
-    console.log('Session structure generated successfully');
+    // Validate each session
+    for (const session of sessionStructure.sessions) {
+      if (!session.titulo && !session.inicio && !session.desarrollo && !session.cierre) {
+        throw new Error('Session missing required content fields');
+      }
+      
+      if (!session.rubrica_sesion?.criteria || !Array.isArray(session.rubrica_sesion.criteria)) {
+        throw new Error('Session missing valid rubric criteria');
+      }
+      
+      if (session.rubrica_sesion.criteria.length < 2 || session.rubrica_sesion.criteria.length > 8) {
+        throw new Error('Session rubric must have between 2-8 criteria');
+      }
+      
+      // Ensure standard evaluation levels
+      session.rubrica_sesion.levels = ['Inicio', 'Proceso', 'Logro'];
+    }
+
+    console.log('[A8:EDGE_OK]', { 
+      request_id,
+      sessions_generated: sessionStructure.sessions.length,
+      total_criteria: sessionStructure.sessions.reduce((acc: number, s: any) => acc + s.rubrica_sesion.criteria.length, 0)
+    });
 
     return new Response(JSON.stringify({
       success: true,
-      structure: sessionStructure
+      sessions: sessionStructure.sessions
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in generate-session-structure:', error);
+    const errorRequestId = request_id || crypto.randomUUID();
     
-    const requestId = crypto.randomUUID();
+    console.log('[A8:EDGE_ERROR]', {
+      request_id: errorRequestId,
+      error: error.message,
+      stack: error.stack?.substring(0, 500)
+    });
+    
     const errorPreview = error.message.substring(0, 200);
+    
+    // Determine error type and status
+    const isValidationError = error.message.includes('Session missing') || 
+                             error.message.includes('rubric must have') ||
+                             error.message.includes('sessions array');
+    
+    const status = isValidationError ? 400 : 500;
+    const errorCode = error.message.includes('Missing required') ? 'INVALID_INPUT' :
+                     error.message.includes('Session missing') || isValidationError ? 'INVALID_STRUCTURE' :
+                     error.message.includes('Invalid AI response') ? 'SHAPE_MISMATCH' :
+                     error.message.includes('API key') ? 'CONFIG_ERROR' : 'UNKNOWN_ERROR';
     
     return new Response(JSON.stringify({
       success: false,
       error: error.message,
-      type: error.message.includes('Missing required') ? 'invalid_input' :
-            error.message.includes('Invalid AI response') ? 'shape_mismatch' :
-            error.message.includes('API key') ? 'config_error' : 'unknown_error',
-      request_id: requestId,
+      error_code: errorCode,
+      request_id: errorRequestId,
       error_preview: errorPreview
     }), {
-      status: 500,
+      status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
