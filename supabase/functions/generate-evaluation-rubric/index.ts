@@ -78,15 +78,16 @@ serve(async (req) => {
       });
     }
     
-    const { unidad_data, request_id, force, previous_rubric_id } = await req.json();
+    const { unidad_data, request_id, force, previous_rubric_id, source_hash } = await req.json();
     
-    console.log('[A7:INPUT_VALIDATION]', { 
+    console.log('[A7:EDGE_INPUT]', { 
       requestId: request_id || requestId,
       hasApiKey: !!openAIApiKey,
       hasUnidadData: !!unidad_data,
       unidadFields: unidad_data ? Object.keys(unidad_data) : [],
       force: !!force,
-      previous_rubric_id: previous_rubric_id || null
+      previous_rubric_id: previous_rubric_id || null,
+      source_hash: source_hash || null
     });
     
     if (!openAIApiKey) {
@@ -115,6 +116,24 @@ serve(async (req) => {
       });
     }
 
+    // Check for no-change scenario (skip AI call if not forced and same hash)
+    if (!force && source_hash && previous_rubric_id) {
+      console.log('[A7:EDGE_NOCHANGE]', { 
+        requestId, 
+        source_hash,
+        message: 'Unidad unchanged, skipping AI generation'
+      });
+      
+      return new Response(JSON.stringify({
+        success: false,
+        error_code: 'NO_CHANGE',
+        message: 'Unidad sin cambios. Regeneración omitida.',
+        request_id: requestId
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Validate required fields
     if (!unidad_data.proposito || !unidad_data.evidencias) {
       const faltantes = [
@@ -122,7 +141,7 @@ serve(async (req) => {
         !unidad_data.evidencias ? "evidencias" : null
       ].filter(Boolean);
       
-      console.log('[A7:FN_ERROR]', { requestId, error: 'INVALID_INPUT', faltantes });
+      console.log('[A7:EDGE_ERROR]', { requestId, error: 'INVALID_INPUT', faltantes });
       return new Response(JSON.stringify({
         success: false,
         error_code: 'INVALID_INPUT',
@@ -185,7 +204,7 @@ REQUISITOS ESPECÍFICOS:
 
 Genera la rúbrica ahora:`;
 
-    console.log('[A7:OPENAI_REQ]', { 
+    console.log('[A7:EDGE_CALL]', { 
       requestId,
       model: 'gpt-4o-mini',
       systemPromptLength: systemPrompt.length,
@@ -212,7 +231,7 @@ Genera la rúbrica ahora:`;
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.log('[A7:FN_ERROR]', { 
+      console.log('[A7:EDGE_ERROR]', { 
         requestId, 
         error: 'OPENAI_ERROR', 
         status: response.status,
@@ -241,7 +260,7 @@ Genera la rúbrica ahora:`;
     });
 
     if (!aiResponse) {
-      console.log('[A7:FN_ERROR]', { requestId, error: 'INVALID_AI_JSON', message: 'No content in AI response' });
+      console.log('[A7:EDGE_ERROR]', { requestId, error: 'INVALID_AI_JSON', message: 'No content in AI response' });
       return new Response(JSON.stringify({
         success: false,
         error_code: 'INVALID_AI_JSON',
@@ -263,7 +282,7 @@ Genera la rúbrica ahora:`;
         criteriaCount: Array.isArray(rubricResult.criteria) ? rubricResult.criteria.length : 0
       });
     } catch (parseError) {
-      console.log('[A7:FN_ERROR]', { 
+      console.log('[A7:EDGE_ERROR]', { 
         requestId, 
         error: 'INVALID_AI_JSON', 
         parseError: parseError.message,
@@ -315,34 +334,28 @@ Genera la rúbrica ahora:`;
     }
     
     if (validationErrors.length > 0) {
-      console.log('[A7:FN_ERROR]', { 
+      console.log('[A7:EDGE_INVALID]', { 
         requestId, 
-        error: 'VALIDATION_FAIL', 
+        error: 'INVALID_STRUCTURE', 
         validationErrors,
         criteriaCount: rubricResult.criteria?.length || 0
       });
       return new Response(JSON.stringify({
         success: false,
-        error_code: 'VALIDATION_FAIL',
-        message: 'Validation failed for generated rubric',
+        error_code: 'INVALID_STRUCTURE',
+        message: 'Invalid rubric structure generated',
         details: { validationErrors },
         request_id: requestId
       }), {
-        status: 200,
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('[A7:VALIDATION]', { 
+    console.log('[A7:EDGE_OK]', { 
       requestId,
       criteriaCount: rubricResult.criteria.length,
       levelsCount: rubricResult.levels.length,
-      allCriteriaValid: true
-    });
-
-    console.log('[A7:FN_SUCCESS]', { 
-      requestId,
-      criteriaCount: rubricResult.criteria.length,
       totalDescriptors: rubricResult.criteria.length * 3,
       timestamp: new Date().toISOString()
     });
@@ -361,7 +374,7 @@ Genera la rúbrica ahora:`;
     });
 
   } catch (error) {
-    console.log('[A7:FN_ERROR]', { 
+    console.log('[A7:EDGE_ERROR]', { 
       requestId: requestId || crypto.randomUUID(),
       error: 'UNEXPECTED',
       message: error.message,

@@ -63,6 +63,7 @@ export default function Acelerador7() {
         !isClosed && 
         !regenerationLoading && 
         !generationLoading && 
+        !showRegenerateDialog &&
         autoSaveEnabled &&
         rubrica) {
       
@@ -74,7 +75,7 @@ export default function Acelerador7() {
         handleAutoSave();
       }
     }
-  }, [debouncedRubricaData, saving, autoSaving, isClosed, regenerationLoading, generationLoading, autoSaveEnabled, rubrica, lastAutoSaveTime]);
+  }, [debouncedRubricaData, saving, autoSaving, isClosed, regenerationLoading, generationLoading, showRegenerateDialog, autoSaveEnabled, rubrica, lastAutoSaveTime]);
 
   const handleAutoSave = async () => {
     const timestamp = new Date().toISOString();
@@ -220,25 +221,6 @@ export default function Acelerador7() {
     // Pause auto-save during regeneration
     setAutoSaveEnabled(false);
 
-    // Check if source hash is the same (no changes in unidad)
-    if (rubrica?.source_hash === unidadHash.hash) {
-      console.log('[A7:REGEN_SKIPPED]', {
-        request_id: requestId,
-        source_hash: unidadHash.hash,
-        previous_hash: rubrica.source_hash,
-        message: 'No changes in unidad data'
-      });
-      
-      toast({
-        title: "Nada que regenerar",
-        description: "La unidad no cambió desde la última generación",
-      });
-      
-      setShowRegenerateDialog(false);
-      setAutoSaveEnabled(true);
-      return;
-    }
-
     if (!checkGenerationThrottle()) {
       setShowRegenerateDialog(false);
       setAutoSaveEnabled(true);
@@ -267,7 +249,8 @@ export default function Acelerador7() {
           request_id: requestId,
           unidad_data: unidad,
           force: true,
-          previous_rubric_id: rubrica?.id
+          previous_rubric_id: rubrica?.id,
+          source_hash: unidadHash?.hash
         }
       });
 
@@ -275,6 +258,7 @@ export default function Acelerador7() {
       console.log('[A7:REGEN_RESPONSE]', {
         request_id: requestId,
         success: data?.success || false,
+        error_code: data?.error_code || null,
         criteria_count: data?.estructura?.criteria?.length || 0,
         levels_count: data?.estructura?.levels?.length || 0,
         preview: data?.estructura ? JSON.stringify(data.estructura).substring(0, 200) + '...' : 'null',
@@ -283,17 +267,26 @@ export default function Acelerador7() {
 
       if (error || !data?.success) {
         const errorMessage = data?.message || error?.message || 'Error desconocido';
+        const errorCode = data?.error_code || 'UNKNOWN_ERROR';
+        
         console.log('[A7:REGEN_ERROR]', {
           request_id: requestId,
           message: errorMessage,
-          error_code: data?.error_code
+          error_code: errorCode
         });
-        
-        toast({
-          title: "Error en la regeneración",
-          description: `${errorMessage} (ID: ${requestId})`,
-          variant: "destructive",
-        });
+
+        if (errorCode === 'NO_CHANGE') {
+          toast({
+            title: "Nada que regenerar",
+            description: "La unidad no cambió desde la última generación",
+          });
+        } else {
+          toast({
+            title: "Error en la regeneración",
+            description: `${errorMessage} (ID: ${requestId})`,
+            variant: "destructive",
+          });
+        }
         return;
       }
 
@@ -307,12 +300,12 @@ export default function Acelerador7() {
         
         console.log('[A7:REGEN_ERROR]', {
           request_id: requestId,
-          message: 'Invalid structure received',
+          message: 'Invalid rubric structure',
           criteria_count: estructura.criteria?.length || 0,
           levels: estructura.levels || []
         });
         
-        throw new Error('Estructura de rúbrica inválida recibida de la IA');
+        throw new Error('Invalid rubric structure');
       }
 
       // Apply new rubric data (complete replacement)
@@ -328,7 +321,7 @@ export default function Acelerador7() {
         levels_after: levelsAfter
       });
       
-      // Save immediately with new hash
+      // Save in silence with new hash
       await saveRubrica({
         estructura: estructura,
         source_hash: unidadHash.hash,
@@ -346,11 +339,6 @@ export default function Acelerador7() {
         description: `Rúbrica actualizada con ${criteriaAfter} criterios`,
       });
 
-      console.log('[A7:REGEN_DONE]', { 
-        request_id: requestId,
-        timestamp: new Date().toISOString()
-      });
-
     } catch (error: any) {
       console.log('[A7:REGEN_ERROR]', {
         request_id: requestId,
@@ -366,8 +354,12 @@ export default function Acelerador7() {
     } finally {
       setRegenerationLoading(false);
       setShowRegenerateDialog(false);
-      // Resume auto-save
       setAutoSaveEnabled(true);
+      
+      console.log('[A7:REGEN_DONE]', { 
+        request_id: requestId,
+        timestamp: new Date().toISOString()
+      });
     }
   };
 
@@ -388,6 +380,20 @@ export default function Acelerador7() {
     });
     setShowRegenerateDialog(false);
   };
+
+  // Watch for unidad changes to set needs_review flag
+  useEffect(() => {
+    if (!rubrica || !unidadHash?.hash) return;
+    
+    const changed = rubrica.source_hash && rubrica.source_hash !== unidadHash.hash;
+    if (changed && rubrica.needs_review !== true) {
+      console.log('[A7:NEEDS_REVIEW]', { 
+        prev: rubrica.source_hash, 
+        current: unidadHash.hash 
+      });
+      saveRubrica({ needs_review: true });
+    }
+  }, [rubrica?.source_hash, unidadHash?.hash]);
 
   const addCriterion = () => {
     if (rubricaData.criteria.length >= 8) {
@@ -545,29 +551,31 @@ export default function Acelerador7() {
     rubricaData.criteria.every(c => 
       c.criterio.trim() && Object.values(c.descriptores).every(d => d.trim())
     );
-  const analysisComplete = generationComplete && hasRubricas && formValid;
+  const analysisComplete = generationComplete && hasRubricas && formValid && !rubrica?.needs_review;
 
   // Expose debug data to window
   useEffect(() => {
     const debugData = {
-      isClosed,
-      generationLoading,
+      autoSaveEnabled,
+      lastAutoSaveAt: lastAutoSaveTime ? new Date(lastAutoSaveTime).toISOString() : null,
       regenLoading: regenerationLoading,
-      autoSaving,
-      saving,
+      generationLoading,
       criteriaCount: rubricaData?.criteria?.length || 0,
       levelsCount: rubricaData?.levels?.length || 0,
-      lastAutoSaveAt: lastAutoSaveTime ? new Date(lastAutoSaveTime).toISOString() : null,
+      formValid,
+      isClosed,
+      autoSaving,
+      saving,
+      needsReview,
       unidadId: unidad?.id || null,
       rubricaId: rubrica?.id || null,
-      autoSaveEnabled,
-      needsReview,
-      formValid
+      showRegenerateDialog
     };
     
     (window as any).__A7_DEBUG = debugData;
-  }, [isClosed, generationLoading, regenerationLoading, autoSaving, saving, 
-      rubricaData, lastAutoSaveTime, unidad?.id, rubrica?.id, autoSaveEnabled, needsReview, formValid]);
+  }, [autoSaveEnabled, lastAutoSaveTime, regenerationLoading, generationLoading, 
+      rubricaData, formValid, isClosed, autoSaving, saving, needsReview, 
+      unidad?.id, rubrica?.id, showRegenerateDialog]);
 
   // Validation errors
   const validationErrors = [];
@@ -715,15 +723,26 @@ export default function Acelerador7() {
         {needsReview && (
           <Card className="border-yellow-300 bg-yellow-50">
             <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-yellow-800">Tu unidad cambió</h3>
-                  <p className="text-yellow-700 text-sm">
-                    Los datos de la unidad de aprendizaje han sido modificados. 
-                    Te sugerimos <strong>regenerar con IA</strong> o ajustar manualmente la rúbrica.
-                  </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-yellow-800">Tu unidad cambió</h3>
+                    <p className="text-yellow-700 text-sm">
+                      Los datos de la unidad de aprendizaje han sido modificados. 
+                      Te sugerimos <strong>regenerar con IA</strong> o ajustar manualmente la rúbrica.
+                    </p>
+                  </div>
                 </div>
+                <Button
+                  onClick={handleRegenerateClick}
+                  disabled={regenerationLoading || !unidad}
+                  size="sm"
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Regenerar con IA
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -937,7 +956,7 @@ export default function Acelerador7() {
               </Button>
             )}
 
-            {!isClosed && analysisComplete && (
+            {!isClosed && analysisComplete && !needsReview && (
               <Button
                 onClick={handleClose}
                 disabled={saving}
@@ -957,7 +976,7 @@ export default function Acelerador7() {
               </Button>
             )}
 
-            {canProceedToA8 && (
+            {isClosed && progress.a7_completed && !rubrica?.needs_review && (
               <Button
                 onClick={() => navigate('/etapa3/acelerador8')}
                 className="bg-green-600 hover:bg-green-700 text-white"
@@ -1006,6 +1025,7 @@ export default function Acelerador7() {
             <AlertDialogAction 
               onClick={handleRegenerateRubric}
               disabled={regenerationLoading}
+              data-testid="regen-confirm"
             >
               {regenerationLoading ? (
                 <>
