@@ -284,6 +284,8 @@ export type Database = {
           estructura: Json
           id: string
           needs_review: boolean | null
+          source_hash: string | null
+          source_snapshot: Json | null
           unidad_id: string
           updated_at: string
           user_id: string
@@ -295,6 +297,8 @@ export type Database = {
           estructura?: Json
           id?: string
           needs_review?: boolean | null
+          source_hash?: string | null
+          source_snapshot?: Json | null
           unidad_id: string
           updated_at?: string
           user_id: string
@@ -306,6 +310,8 @@ export type Database = {
           estructura?: Json
           id?: string
           needs_review?: boolean | null
+          source_hash?: string | null
+          source_snapshot?: Json | null
           unidad_id?: string
           updated_at?: string
           user_id?: string
@@ -760,6 +766,10 @@ export type Database = {
       acquire_unit_lock: {
         Args: { unidad_id_param: string }
         Returns: boolean
+      }
+      calculate_unidad_hash: {
+        Args: { unidad_data: Json }
+        Returns: string
       }
       check_a7_data_exists: {
         Args: { unidad_id_param: string; user_id_param: string }
