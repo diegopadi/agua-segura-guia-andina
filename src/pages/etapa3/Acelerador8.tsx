@@ -115,9 +115,15 @@ export default function Acelerador8() {
       clearTimeout(lastAutoSaveRef.current);
     }
     
-    // Check conditions to pause auto-save
+    // Check conditions to pause auto-save - CRITICAL: block during regeneration
     const shouldPause = !autoSaveEnabled || areSessionsClosed || generationLoading || 
                        regenerationLoading || !generationComplete || saving || autoSaving;
+    
+    // Additional guard: never auto-save during regeneration
+    if (regenerationLoading) {
+      console.log('[A8:AUTOSAVE_BLOCKED]', { reason: 'regeneration_loading' });
+      return;
+    }
     
     if (debouncedSesionesData.length > 0 && !shouldPause && sesiones.length > 0) {
       lastAutoSaveRef.current = setTimeout(() => {
@@ -308,10 +314,18 @@ export default function Acelerador8() {
         });
         setLastNetworkError(error.message);
       } else {
+        console.log('[A8:GEN_ERROR]', { 
+          request_id: requestId, 
+          message: error.message, 
+          code: error.code || 'UNKNOWN',
+          http_status: lastHttpStatus 
+        });
+        
         toast({
           title: `Error en A8 (ID: ${requestId})`,
           description: `${error.code || 'UNKNOWN_ERROR'} - ${error.message}`,
           variant: "destructive",
+          duration: 7000 // 7 seconds to avoid interference
         });
       }
     } finally {
@@ -354,6 +368,16 @@ export default function Acelerador8() {
       
       setRegenerationLoading(true);
       setAutoSaveEnabled(false);
+
+      // Sanitize payload for regeneration too
+      const sanitizedUnidad = sanitizeUnidadForPayload(unidad);
+      const payloadSize = new TextEncoder().encode(JSON.stringify({
+        request_id: requestId,
+        unidad_data: sanitizedUnidad,
+        force: true,
+        source_hash: unidadHash?.hash,
+        previous_sessions_ids: sesionesData.map(s => s.id)
+      })).length;
       
       console.log('[A8:REGEN_REQUEST]', {
         request_id: requestId,
@@ -362,23 +386,40 @@ export default function Acelerador8() {
         source_hash: unidadHash?.hash,
         sessions_before: sesionesData.length,
         criteria_before: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0),
-        previous_sessions_ids: sesionesData.map(s => s.id)
+        previous_sessions_ids: sesionesData.map(s => s.id),
+        payload_size_bytes: payloadSize
       });
+
+      setPayloadBytes(payloadSize);
+      setLastHttpStatus(null);
+      setLastNetworkError(null);
 
       const { data, error } = await supabase.functions.invoke('generate-session-structure', {
         body: {
           request_id: requestId,
-          unidad_data: unidad,
+          unidad_data: sanitizedUnidad,
           force: true,
           source_hash: unidadHash?.hash,
           previous_sessions_ids: sesionesData.map(s => s.id)
         }
       });
 
-      if (error) throw error;
+      setLastHttpStatus(data ? 200 : (error ? 500 : 0));
+
+      if (error) {
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          console.log('[A8:REGEN_NETWORK_ERROR]', { 
+            request_id: requestId, 
+            message: error.message 
+          });
+          setLastNetworkError(error.message);
+        }
+        throw error;
+      }
 
       console.log('[A8:REGEN_RESPONSE]', {
         request_id: requestId,
+        http_status: data ? 200 : (error ? 500 : 0),
         success: data?.success || false,
         error_code: data?.error_code,
         sessions_count: data?.sessions?.length || 0,
@@ -386,13 +427,8 @@ export default function Acelerador8() {
         preview: data?.sessions ? JSON.stringify(data.sessions).slice(0, 200)+'...' : null
       });
 
-      if (!data.success && data.error_code === 'NO_CHANGE') {
-        console.log('[A8:REGEN_SKIPPED]', { reason: data.error_code });
-        toast({
-          title: "Nada que regenerar",
-          description: data.message || "Unidad sin cambios. Regeneración omitida.",
-        });
-        return;
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to regenerate sessions');
       }
 
       if (data.success && data.sessions) {
@@ -457,13 +493,16 @@ export default function Acelerador8() {
       console.log('[A8:REGEN_ERROR]', { 
         request_id: requestId, 
         message: error.message, 
-        error_code: error.code || 'UNKNOWN'
+        error_code: error.code || 'UNKNOWN',
+        http_status: lastHttpStatus
       });
       
+      // Enhanced error toast that persists longer
       toast({
         title: `Error en A8 (ID: ${requestId})`,
         description: `${error.code || 'REGEN_ERROR'} - ${error.message || "No se pudieron regenerar las sesiones."}`,
         variant: "destructive",
+        duration: 7000 // 7 seconds to avoid auto-save interference
       });
     } finally {
       setRegenerationLoading(false);
@@ -864,7 +903,7 @@ export default function Acelerador8() {
               {generationComplete && !areSessionsClosed && (
                 <Button 
                   onClick={handleRegenerateClick}
-                  disabled={regenerationLoading || !unidad}
+                  disabled={regenerationLoading || generationLoading || !unidad}
                   variant="outline"
                   data-testid="regen-sessions-btn"
                 >

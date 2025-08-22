@@ -108,7 +108,13 @@ Estructura JSON requerida:
       : JSON.stringify(unidadData.ia_recomendaciones || {});
 
     console.log('[A8:EDGE_CONTEXT]', { tema, diag_len: diag.length, has_recs: !!recs });
-    console.log('[A8:EDGE_CALL]', { request_id, model: 'gpt-5-2025-08-07' });
+
+    // Add variation for regeneration
+    const variationPrompt = force ? 
+      `\n\nVARIACIÓN: Explora enfoques alternativos y nuevos ejemplos manteniendo el mismo tema. Usa diferentes estrategias pedagógicas, materiales distintos, y actividades variadas. Cambia los ejemplos específicos pero mantén la coherencia temática con "${tema}".` 
+      : '';
+
+    console.log('[A8:EDGE_CALL]', { request_id, model: 'gpt-5-2025-08-07', has_variation: !!force });
 
     const userPrompt = `Diseña ${unidadData.numero_sesiones} sesiones completas de ${unidadData.duracion_min} minutos cada una para la siguiente unidad de aprendizaje:
 
@@ -132,7 +138,17 @@ Cada sesión debe:
 - Proporcionar evidencias observables del aprendizaje vinculadas a ${tema}
 - Tener una mini-rúbrica con 2-8 criterios específicos y observables sobre ${tema}
 - Seguir la secuencia pedagógica apropiada para el área y grado
-- Incorporar ejemplos, materiales y situaciones específicos de ${tema}`;
+- Incorporar ejemplos, materiales y situaciones específicos de ${tema}${variationPrompt}`;
+
+    const fullPrompt = systemPrompt + `\n\nContextualiza TODAS las actividades a la temática central: «${tema}». Usa el diagnóstico y recomendaciones provistas para aterrizar ejemplos, materiales, situaciones y evaluación.${variationPrompt}`;
+    
+    console.log('[A8:EDGE_AI_PROMPT]', { 
+      request_id, 
+      tema, 
+      has_diagnostico: diag.length > 0,
+      has_recomendaciones: !!recs,
+      prompt_preview: fullPrompt.slice(0, 300) + '...'
+    });
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -145,7 +161,7 @@ Cada sesión debe:
         messages: [
           { 
             role: 'system', 
-            content: systemPrompt + `\n\nContextualiza TODAS las actividades a la temática central: «${tema}». Usa el diagnóstico y recomendaciones provistas para aterrizar ejemplos, materiales, situaciones y evaluación.`
+            content: fullPrompt
           },
           { role: 'user', content: userPrompt }
         ],
@@ -156,12 +172,22 @@ Cada sesión debe:
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('OpenAI API error:', errorData);
+      console.log('[A8:EDGE_AI_ERROR]', {
+        request_id,
+        status: response.status,
+        error: errorData.slice(0, 500)
+      });
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
+
+    console.log('[A8:EDGE_AI_RESPONSE]', {
+      request_id,
+      response_length: aiResponse?.length || 0,
+      response_preview: aiResponse?.slice(0, 200) + '...' || 'empty'
+    });
 
     let sessionStructure;
     try {
@@ -237,13 +263,16 @@ Cada sesión debe:
     // Determine error type and status
     const isValidationError = error.message.includes('Session missing') || 
                              error.message.includes('rubric must have') ||
-                             error.message.includes('sessions array');
+                             error.message.includes('sessions array') ||
+                             error.message.includes('INVALID_CONTEXT');
     
     const status = isValidationError ? 400 : 500;
     const errorCode = error.message.includes('Missing required') ? 'INVALID_INPUT' :
                      error.message.includes('Session missing') || isValidationError ? 'INVALID_STRUCTURE' :
                      error.message.includes('Invalid AI response') ? 'SHAPE_MISMATCH' :
-                     error.message.includes('API key') ? 'CONFIG_ERROR' : 'UNKNOWN_ERROR';
+                     error.message.includes('INVALID_CONTEXT') ? 'INVALID_CONTEXT' :
+                     error.message.includes('API key') ? 'CONFIG_ERROR' : 
+                     error.message.includes('Parse') ? 'PARSE_ERROR' : 'UNKNOWN_ERROR';
     
     return new Response(JSON.stringify({
       success: false,
