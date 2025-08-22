@@ -332,21 +332,16 @@ export default function Acelerador8() {
       return;
     }
 
-    // Check if regeneration is needed based on hash
+    // Check if there are changes but don't block regeneration
     const existingHash = sesiones.length > 0 ? (sesiones[0] as any)?.source_hash : null;
-    if (existingHash && unidadHash?.hash && existingHash === unidadHash.hash) {
-      console.log('[A8:REGEN_SKIPPED]', {
-        reason: 'NO_CHANGE',
-        existing_hash: existingHash,
-        current_hash: unidadHash.hash
-      });
-      toast({
-        title: "Nada que regenerar",
-        description: "Las sesiones ya están actualizadas con la versión actual de la unidad.",
-      });
-      setShowRegenerateDialog(false);
-      return;
-    }
+    const hasChanges = !existingHash || !unidadHash?.hash || existingHash !== unidadHash.hash;
+    
+    console.log('[A8:REGEN_STATUS]', {
+      has_changes: hasChanges,
+      existing_hash: existingHash,
+      current_hash: unidadHash?.hash,
+      force_regeneration: true
+    });
 
     const requestId = crypto.randomUUID();
     
@@ -1050,9 +1045,10 @@ export default function Acelerador8() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>¿Regenerar sesiones con IA?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción reemplazará completamente todas las sesiones actuales con nuevas versiones generadas por IA. 
-                Los cambios manuales se perderán. ¿Está seguro de que desea continuar?
+              <AlertDialogDescription className="space-y-2">
+                <p>Esta acción reemplazará completamente todas las sesiones actuales con nuevas versiones generadas por IA.</p>
+                <p className="text-orange-600 font-medium">⚠️ Los cambios manuales se perderán.</p>
+                <p>¿Está seguro de que desea continuar?</p>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
