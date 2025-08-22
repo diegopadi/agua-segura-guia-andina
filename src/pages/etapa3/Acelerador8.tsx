@@ -32,11 +32,43 @@ export default function Acelerador8() {
   const [lastAutoSaveTime, setLastAutoSaveTime] = useState<number>(0);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   
+  // Ping connectivity test
+  const [pingOk, setPingOk] = useState<boolean | null>(null);
+  const [lastHttpStatus, setLastHttpStatus] = useState<number | null>(null);
+  const [lastNetworkError, setLastNetworkError] = useState<string | null>(null);
+  const [payloadBytes, setPayloadBytes] = useState<number>(0);
+  
   const lastAutoSaveRef = useRef<NodeJS.Timeout>();
   const throttleRef = useRef<NodeJS.Timeout>();
   
   // Debounced sesiones data for auto-save (5s debounce)
   const debouncedSesionesData = useDebounce(sesionesData, 5000);
+
+  // Test connectivity on mount
+  useEffect(() => {
+    const testConnectivity = async () => {
+      try {
+        console.log('[A8:PING]', { timestamp: new Date().toISOString() });
+        
+        const { data, error } = await supabase.functions.invoke('a8-ping', {
+          body: {}
+        });
+        
+        if (error) {
+          console.log('[A8:PING_FAIL]', { error: error.message });
+          setPingOk(false);
+        } else {
+          console.log('[A8:PING_OK]', { response: data });
+          setPingOk(true);
+        }
+      } catch (err: any) {
+        console.log('[A8:PING_FAIL]', { error: err.message });
+        setPingOk(false);
+      }
+    };
+
+    testConnectivity();
+  }, []);
 
   // Load existing sessions data
   useEffect(() => {
@@ -121,123 +153,158 @@ export default function Acelerador8() {
     }
   }, [sesionesData, lastAutoSaveTime, saveSesiones]);
 
+  // Payload sanitizer to avoid size limits
+  const sanitizeUnidadForPayload = (unidad: any) => {
+    return {
+      id: unidad.id,
+      user_id: unidad.user_id,
+      titulo: unidad.titulo,
+      area_curricular: unidad.area_curricular,
+      grado: unidad.grado,
+      numero_sesiones: unidad.numero_sesiones,
+      duracion_min: unidad.duracion_min,
+      proposito: unidad.proposito,
+      competencias_ids: unidad.competencias_ids,
+      evidencias: unidad.evidencias,
+      diagnostico_text: unidad.diagnostico_text?.substring(0, 2000) // Limit diagnostico text
+    };
+  };
+
   const handleGenerateSessions = async () => {
-    if (!unidad) {
-      toast({
-        title: "Error",
-        description: "Debe completar los aceleradores anteriores primero",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!unidad || generationLoading) return;
 
     const requestId = crypto.randomUUID();
-    
+    setGenerationLoading(true);
+    setAutoSaveEnabled(false);
+
     try {
+      const sanitizedUnidad = sanitizeUnidadForPayload(unidad);
+      const payloadSize = new TextEncoder().encode(JSON.stringify({ request_id: requestId, unidad_data: sanitizedUnidad })).length;
+      
+      setPayloadBytes(payloadSize);
+      setLastHttpStatus(null);
+      setLastNetworkError(null);
+
+      console.log('[A8:GEN_PAYLOAD]', {
+        payload_size_bytes: payloadSize,
+        sanitized_fields: Object.keys(sanitizedUnidad)
+      });
+
       console.log('[A8:GEN_REQUEST]', {
         request_id: requestId,
-        unidad_id: unidad?.id, 
-        titulo: unidad?.titulo, 
+        endpoint: 'generate-session-structure',
+        unidad_id: unidad?.id,
+        payload_size_bytes: payloadSize,
+        titulo: unidad?.titulo,
         area: unidad?.area_curricular,
         prereq: { 
-          a6_completed: progress.a6_completed, 
-          a7_completed: progress.a7_completed 
-        },
-        endpoint: 'generate-session-structure'
+          a6_completed: progress.a6_completed,
+          a7_completed: progress.a7_completed
+        }
       });
-      
-      setGenerationLoading(true);
-      setAutoSaveEnabled(false);
-      setLastGenerationTime(Date.now());
 
       const { data, error } = await supabase.functions.invoke('generate-session-structure', {
         body: {
           request_id: requestId,
-          unidad_data: unidad
+          unidad_data: sanitizedUnidad
         }
       });
-
-      if (error) throw error;
 
       console.log('[A8:GEN_RESPONSE]', {
         request_id: requestId,
+        http_status: data ? 200 : (error ? 500 : 0),
         success: data?.success || false,
-        instruments_count: 0, // A8 doesn't use instruments
-        criteria_count: data?.sessions?.reduce((acc: number, s: any) => acc + (s?.rubrica_sesion?.criteria?.length || 0), 0) || 0,
         sessions_count: data?.sessions?.length || 0,
-        preview: data?.sessions ? JSON.stringify(data.sessions).slice(0, 200)+'...' : null
+        preview: data?.sessions ? JSON.stringify(data.sessions).slice(0, 200) + '...' : null
       });
 
-      if (data.success && data.sessions) {
-        // Enhanced validation
-        const hasValidSessions = Array.isArray(data.sessions) && data.sessions.length > 0;
-        const allSessionsHaveContent = data.sessions.every((session: any) => 
-          session.titulo || session.inicio || session.desarrollo || session.cierre
-        );
-        const allSessionsHaveValidRubric = data.sessions.every((session: any) => 
-          session.rubrica_sesion?.criteria && 
-          Array.isArray(session.rubrica_sesion.criteria) &&
-          session.rubrica_sesion.criteria.length >= 2 && 
-          session.rubrica_sesion.criteria.length <= 8
-        );
-        
-        console.log('[A8:GEN_VALID]', {
-          hasValidSessions,
-          allSessionsHaveContent,
-          allSessionsHaveValidRubric,
-          levels: ['Inicio', 'Proceso', 'Logro'], // Standard levels
-          sessions: data.sessions.length,
-          expected: unidad.numero_sesiones
-        });
+      setLastHttpStatus(data ? 200 : (error ? 500 : 0));
 
-        if (!hasValidSessions || !allSessionsHaveContent || !allSessionsHaveValidRubric) {
-          throw new Error('Estructura de sesiones inválida');
-        }
-
-        const generatedSessions = data.sessions.map((session: any, index: number) => ({
-          id: crypto.randomUUID(),
-          unidad_id: unidad.id,
-          user_id: unidad.user_id,
-          session_index: index + 1,
-          titulo: session.titulo || `Sesión ${index + 1}`,
-          inicio: session.inicio || '',
-          desarrollo: session.desarrollo || '',
-          cierre: session.cierre || '',
-          evidencias: session.evidencias || [],
-          rubrica_json: session.rubrica_sesion || { criteria: [] },
-          source_hash: unidadHash?.hash,
-          source_snapshot: unidadHash?.snapshot,
-          estado: 'BORRADOR' as const,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }));
-        
-        setSesionesData(generatedSessions);
-        setGenerationComplete(true);
-        
-        // Silent save with hash/snapshot
-        await saveSesiones(generatedSessions);
-        
-        toast({
-          title: "Sesiones generadas",
-          description: "Las sesiones se han generado exitosamente",
-        });
-      } else {
-        throw new Error(data.error || 'Error en la generación');
+      if (error) {
+        throw error;
       }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate sessions');
+      }
+
+      // Validate structure
+      if (!Array.isArray(data.sessions) || data.sessions.length === 0) {
+        console.log('[A8:GEN_INVALID]', { 
+          hasSessionsArray: Array.isArray(data.sessions),
+          sessionsLength: data.sessions?.length || 0
+        });
+        throw new Error('Estructura de sesiones inválida');
+      }
+
+      // Validate each session
+      for (const session of data.sessions) {
+        const hasContent = session.titulo || session.inicio || session.desarrollo || session.cierre;
+        const criteriaCount = session.rubrica_sesion?.criteria?.length || 0;
+        
+        if (!hasContent) {
+          throw new Error('Sesión sin contenido detectada');
+        }
+        
+        if (criteriaCount < 4 || criteriaCount > 8) {
+          throw new Error(`Sesión con criterios inválidos: ${criteriaCount} (debe ser 4-8)`);
+        }
+      }
+
+      console.log('[A8:GEN_VALID]', {
+        hasLevels: true,
+        hasCriteria: true,
+        hasTools: true,
+        sessions_count: data.sessions.length,
+        total_criteria: data.sessions.reduce((acc: number, s: any) => acc + (s.rubrica_sesion?.criteria?.length || 0), 0)
+      });
+
+      // Apply sessions data
+      setSesionesData(data.sessions.map((session: any, index: number) => ({
+        id: crypto.randomUUID(),
+        session_index: index + 1,
+        titulo: session.titulo || `Sesión ${index + 1}`,
+        inicio: session.inicio || '',
+        desarrollo: session.desarrollo || '',
+        cierre: session.cierre || '',
+        evidencias: session.evidencias || [],
+        rubrica_json: session.rubrica_sesion || { levels: ['Inicio', 'Proceso', 'Logro'], criteria: [] },
+        unidad_id: unidad.id,
+        user_id: unidad.user_id,
+        is_active: true,
+        estado: 'ABIERTO',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })));
+
+      setGenerationComplete(true);
+      toast({
+        title: "Sesiones generadas",
+        description: "Las sesiones se han generado exitosamente",
+      });
 
     } catch (error: any) {
       console.log('[A8:GEN_ERROR]', { 
         request_id: requestId, 
         message: error.message, 
-        code: error.code 
+        code: error.code || 'UNKNOWN' 
       });
       
-      toast({
-        title: "Error en la generación",
-        description: error.message || "No se pudo generar las sesiones. Puede editarlas manualmente.",
-        variant: "destructive",
-      });
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.log('[A8:GEN_NETWORK_ERROR]', { message: error.message });
+        toast({
+          title: "Error de conectividad",
+          description: "No se pudo contactar la función de Edge (A8). Revise CORS/nombre/estado de despliegue.",
+          variant: "destructive",
+        });
+        setLastNetworkError(error.message);
+      } else {
+        toast({
+          title: "Error generando sesiones",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setGenerationLoading(false);
       setAutoSaveEnabled(true);
@@ -564,7 +631,14 @@ export default function Acelerador8() {
       lastAutoSaveAt: lastAutoSaveTime ? new Date(lastAutoSaveTime).toISOString() : null,
       unidadId: unidad?.id || null,
       autoSaveEnabled,
-      formValid
+      formValid,
+      // Connectivity debug
+      pingOk,
+      functionName: 'generate-session-structure',
+      corsOkGuess: pingOk === true,
+      lastHttpStatus,
+      lastNetworkError,
+      payloadBytes
     };
 
     (window as any).__A8_DEBUG = debugData;
@@ -626,7 +700,8 @@ export default function Acelerador8() {
     areSessionsClosed, formValid, analysisComplete, hasSesiones, canAccessA8,
     progress, unidad?.estado, sesionesData, unidad?.numero_sesiones,
     generationLoading, regenerationLoading, generationComplete, autoSaving, saving, 
-    showReopenDialog, lastAutoSaveTime, autoSaveEnabled
+    showReopenDialog, lastAutoSaveTime, autoSaveEnabled,
+    pingOk, lastHttpStatus, lastNetworkError, payloadBytes
   ]);
 
   if (loading) {
@@ -728,27 +803,37 @@ export default function Acelerador8() {
         {!generationComplete && !areSessionsClosed && (
           <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-4">
-                  Genere sugerencias de sesiones basadas en su unidad de aprendizaje
-                </p>
-                <Button 
-                  onClick={handleGenerateSessions}
-                  disabled={generationLoading || !unidad}
-                  size="lg"
-                >
-                  {generationLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Generando sesiones...
-                    </>
-                  ) : (
-                    <>
-                      <Bot className="h-4 w-4 mr-2" />
-                      Generar Sesiones con IA
-                    </>
-                  )}
-                </Button>
+              <div className="space-y-4">
+                {/* Connectivity warning */}
+                {pingOk === false && (
+                  <div className="bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded-lg text-sm">
+                    ⚠️ Conectividad con funciones no disponible
+                  </div>
+                )}
+
+                <div className="text-center">
+                  <p className="text-muted-foreground mb-4">
+                    Genere sugerencias de sesiones basadas en su unidad de aprendizaje
+                  </p>
+                  <Button 
+                    onClick={handleGenerateSessions}
+                    disabled={generationLoading || regenerationLoading || !unidad}
+                    aria-busy={generationLoading || regenerationLoading}
+                    size="lg"
+                  >
+                    {generationLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Generando sesiones...
+                      </>
+                    ) : (
+                      <>
+                        <Bot className="h-4 w-4 mr-2" />
+                        Generar Sesiones con IA
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -5,19 +5,42 @@ import { corsHeaders } from "../_shared/cors.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 204,
+      headers: {
+        ...corsHeaders,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      }
+    });
   }
 
   try {
-    const { unidad_data, unidad_data_min, request_id, force, source_hash, previous_sessions_ids } = await req.json();
+    // Parse JSON with error handling
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      console.log('[A8:EDGE_PARSE_ERROR]', { 
+        error: parseError.message,
+        timestamp: new Date().toISOString() 
+      });
+      
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid JSON',
+        error_code: 'PARSE_ERROR'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { unidad_data, unidad_data_min, request_id, force, source_hash, previous_sessions_ids } = requestBody;
     
     // Accept either format for backward compatibility
     const unidadData = unidad_data || unidad_data_min;
-
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
 
     if (!unidadData) {
       throw new Error('Missing required parameter: unidad_data');
@@ -25,13 +48,25 @@ serve(async (req) => {
 
     console.log('[A8:EDGE_INPUT]', {
       request_id,
-      titulo: unidadData.titulo,
-      numero_sesiones: unidadData.numero_sesiones,
-      duracion: unidadData.duracion_min,
+      hasUnidadData: !!unidadData,
+      titulo: unidadData?.titulo || 'N/A',
+      numero_sesiones: unidadData?.numero_sesiones || 0,
+      duracion: unidadData?.duracion_min || 0,
       force: !!force,
       source_hash: source_hash || 'none',
-      previous_sessions_count: previous_sessions_ids?.length || 0
+      previous_sessions_count: previous_sessions_ids?.length || 0,
+      timestamp: new Date().toISOString()
     });
+
+    // Check API key
+    if (!openAIApiKey) {
+      console.log('[A8:EDGE_MISSING_API_KEY]', { 
+        request_id,
+        timestamp: new Date().toISOString() 
+      });
+      
+      throw new Error('OpenAI API key not configured');
+    }
 
     // Check if regeneration is needed (only if not forced)
     if (!force && source_hash && previous_sessions_ids?.length > 0) {
