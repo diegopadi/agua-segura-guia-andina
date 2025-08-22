@@ -257,12 +257,144 @@ RÚBRICA DE SESIÓN:`);
                   <CardDescription>Sugerencias basadas en el análisis inicial</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-sm whitespace-pre-wrap bg-muted p-4 rounded-lg">
-                    {typeof unidad.ia_recomendaciones === 'string' 
-                      ? unidad.ia_recomendaciones.slice(0, 1500)
-                      : JSON.stringify(unidad.ia_recomendaciones, null, 2).slice(0, 1500)
+                  {(() => {
+                    try {
+                      const recomendacionesStr = typeof unidad.ia_recomendaciones === 'string' 
+                        ? unidad.ia_recomendaciones 
+                        : JSON.stringify(unidad.ia_recomendaciones);
+                      
+                      const parsed = JSON.parse(recomendacionesStr);
+                      
+                      if (parsed.recomendaciones && Array.isArray(parsed.recomendaciones) && parsed.recomendaciones.length > 0) {
+                        return (
+                          <div className="space-y-4">
+                            {/* Coherencia Global */}
+                            <div className="p-3 bg-muted/50 rounded-lg">
+                              <div className="text-sm font-medium mb-2">
+                                Coherencia Global: {parsed.coherencia_global || 'No especificada'}%
+                              </div>
+                              {parsed.hallazgos_clave && (
+                                <div className="text-xs text-muted-foreground">
+                                  {Array.isArray(parsed.hallazgos_clave) ? parsed.hallazgos_clave.length : 0} hallazgos identificados
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Recomendaciones */}
+                            <div className="space-y-3">
+                              {parsed.recomendaciones.map((rec: any, index: number) => (
+                                <div key={index} className="border rounded-lg p-4 bg-card">
+                                  <div className="flex items-start justify-between mb-3">
+                                    <h4 className="font-medium text-sm flex-1">{rec.titulo || `Recomendación ${index + 1}`}</h4>
+                                    <div className="flex gap-2 ml-3">
+                                      {rec.impacto && (
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                          rec.impacto === 'alto' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' :
+                                          rec.impacto === 'medio' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
+                                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                                        }`}>
+                                          Impacto: {rec.impacto}
+                                        </span>
+                                      )}
+                                      {rec.esfuerzo && (
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                          rec.esfuerzo === 'alto' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' :
+                                          rec.esfuerzo === 'medio' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
+                                          'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                                        }`}>
+                                          Esfuerzo: {rec.esfuerzo}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {rec.vinculo_diagnostico && (
+                                    <p className="text-xs text-muted-foreground mb-3 italic">
+                                      Vínculo: {rec.vinculo_diagnostico}
+                                    </p>
+                                  )}
+                                  
+                                  <div className="space-y-3 text-sm">
+                                    {rec.por_que && (
+                                      <div>
+                                        <h5 className="font-medium text-blue-700 dark:text-blue-300 mb-1">¿Por qué es importante?</h5>
+                                        <p className="text-muted-foreground">{rec.por_que}</p>
+                                      </div>
+                                    )}
+                                    
+                                    {rec.como && (
+                                      <div>
+                                        <h5 className="font-medium text-green-700 dark:text-green-300 mb-1">¿Cómo implementarlo?</h5>
+                                        {Array.isArray(rec.como) ? (
+                                          <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                                            {rec.como.map((paso: string, pasoIndex: number) => (
+                                              <li key={pasoIndex}>{paso}</li>
+                                            ))}
+                                          </ol>
+                                        ) : (
+                                          <p className="text-muted-foreground">{rec.como}</p>
+                                        )}
+                                      </div>
+                                    )}
+                                    
+                                    {rec.ejemplo && (
+                                      <div>
+                                        <h5 className="font-medium text-purple-700 dark:text-purple-300 mb-1">Ejemplo</h5>
+                                        <p className="text-muted-foreground italic">{rec.ejemplo}</p>
+                                      </div>
+                                    )}
+                                    
+                                    {rec.recursos && rec.recursos.length > 0 && (
+                                      <div>
+                                        <h5 className="font-medium text-orange-700 dark:text-orange-300 mb-1">Recursos</h5>
+                                        <ul className="list-disc list-inside text-muted-foreground">
+                                          {rec.recursos.map((recurso: string, recursoIndex: number) => (
+                                            <li key={recursoIndex}>{recurso}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      } else {
+                        // Fallback for non-structured JSON
+                        return (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-orange-600 text-sm">
+                              <AlertCircle className="h-4 w-4" />
+                              <span>Formato de recomendaciones no estructurado</span>
+                            </div>
+                            <div className="text-sm whitespace-pre-wrap bg-muted p-4 rounded-lg">
+                              {recomendacionesStr.slice(0, 1500)}
+                              {recomendacionesStr.length > 1500 && '...'}
+                            </div>
+                          </div>
+                        );
+                      }
+                    } catch (error) {
+                      // Fallback for invalid JSON
+                      const recomendacionesStr = typeof unidad.ia_recomendaciones === 'string' 
+                        ? unidad.ia_recomendaciones 
+                        : String(unidad.ia_recomendaciones);
+                      
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-orange-600 text-sm">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>Error parseando recomendaciones - mostrando texto plano</span>
+                          </div>
+                          <div className="text-sm whitespace-pre-wrap bg-muted p-4 rounded-lg">
+                            {recomendacionesStr.slice(0, 1500)}
+                            {recomendacionesStr.length > 1500 && '...'}
+                          </div>
+                        </div>
+                      );
                     }
-                  </div>
+                  })()}
                 </CardContent>
               </Card>
             )}
