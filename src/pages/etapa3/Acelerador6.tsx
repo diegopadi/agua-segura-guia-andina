@@ -492,20 +492,18 @@ export default function Acelerador6() {
     }
   }, [formData.ia_recomendaciones]);
 
-  // Helper function to format IA recommendations for display
-  const formatIARecommendations = (iaRecommendations: string): string => {
-    if (!iaRecommendations) return '';
+  // Helper function to parse IA recommendations
+  const parseIARecommendations = (iaRecommendations: string): string[] | null => {
+    if (!iaRecommendations) return null;
     
     try {
       const parsed = JSON.parse(iaRecommendations);
       if (parsed.ajustes_sugeridos_unidad && Array.isArray(parsed.ajustes_sugeridos_unidad)) {
-        return parsed.ajustes_sugeridos_unidad
-          .map((item: string) => `• ${item}`)
-          .join('\n\n');
+        return parsed.ajustes_sugeridos_unidad;
       }
-      return iaRecommendations; // Fall back to original if no ajustes_sugeridos_unidad
+      return null;
     } catch (e) {
-      return iaRecommendations; // Fall back to original if not valid JSON
+      return null;
     }
   };
 
@@ -865,13 +863,34 @@ export default function Acelerador6() {
                   </div>
                   
                   <div>
-                    <Label>Recomendaciones de IA (editable)</Label>
-                    <Textarea
-                      value={formatIARecommendations(formData.ia_recomendaciones)}
-                      onChange={(e) => handleInputChange('ia_recomendaciones', e.target.value)}
-                      className="min-h-[150px] mt-2"
-                      disabled={isClosed}
-                    />
+                    <Label>Recomendaciones de IA</Label>
+                    {(() => {
+                      const recommendations = parseIARecommendations(formData.ia_recomendaciones);
+                      
+                      if (recommendations && recommendations.length > 0) {
+                        return (
+                          <div className="mt-2 p-3 bg-background border rounded-md">
+                            <ul className="space-y-2">
+                              {recommendations.map((rec, index) => (
+                                <li key={index} className="flex items-start gap-2">
+                                  <span className="text-primary mt-1">•</span>
+                                  <span className="text-sm">{rec}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <Textarea
+                          value="No se generaron recomendaciones"
+                          onChange={(e) => handleInputChange('ia_recomendaciones', e.target.value)}
+                          className="min-h-[150px] mt-2"
+                          disabled={isClosed}
+                        />
+                      );
+                    })()}
                   </div>
                 </div>
               )}
