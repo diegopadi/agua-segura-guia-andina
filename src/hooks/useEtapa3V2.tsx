@@ -36,11 +36,14 @@ export interface RubricaEvaluacion {
     levels: string[];
     criteria: Array<{
       criterio: string;
+      descripcion?: string;
       descriptores: Record<string, string>;
     }>;
   };
   estado: 'BORRADOR' | 'CERRADO';
   needs_review?: boolean;
+  source_hash?: string;
+  source_snapshot?: any;
   created_at: string;
   updated_at: string;
   closed_at?: string;
@@ -243,7 +246,7 @@ export function useEtapa3V2() {
     }
   };
 
-  const saveRubrica = async (rubricaData: Partial<RubricaEvaluacion>) => {
+  const saveRubrica = async (rubricaData: Partial<RubricaEvaluacion & { source_hash?: string; source_snapshot?: any; }>) => {
     if (!user || !unidad) return null;
 
     try {
@@ -268,7 +271,7 @@ export function useEtapa3V2() {
 
       if (error) throw error;
 
-      setRubrica(data as RubricaEvaluacion);
+      setRubrica(data as any as RubricaEvaluacion);
       
       toast({
         title: "Guardado",

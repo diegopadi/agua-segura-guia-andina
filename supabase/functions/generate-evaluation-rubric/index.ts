@@ -138,19 +138,23 @@ serve(async (req) => {
       area: unidad_data.area_curricular
     });
 
-    const systemPrompt = `Eres un especialista en evaluación educativa en Perú. 
+    const systemPrompt = `Eres un especialista en evaluación educativa en Perú especializado en seguridad hídrica y pertinencia local. 
 Genera una rúbrica de evaluación con exactamente 4-8 criterios, cada uno con exactamente 3 niveles de desempeño.
 Los niveles SIEMPRE deben ser: "Inicio", "Proceso", "Logro".
+Cada descriptor DEBE incluir: verbo de desempeño + condición/contexto + evidencia observable.
 Responde SIEMPRE en JSON válido con la estructura exacta requerida.`;
 
-    const userPrompt = `Genera una rúbrica de evaluación para esta unidad de aprendizaje.
+    const userPrompt = `Genera una rúbrica de evaluación para esta unidad de aprendizaje enfocada en seguridad hídrica y pertinencia local.
 
 DATOS DE LA UNIDAD:
 - Título: ${unidad_data.titulo}
 - Área: ${unidad_data.area_curricular}
 - Grado: ${unidad_data.grado}
+- Número de sesiones: ${unidad_data.numero_sesiones}
+- Duración: ${unidad_data.duracion_min} minutos
 - Propósito: ${unidad_data.proposito}
 - Evidencias: ${unidad_data.evidencias}
+- Competencias: ${Array.isArray(unidad_data.competencias_ids) ? unidad_data.competencias_ids.join(', ') : 'N/A'}
 
 ESTRUCTURA JSON REQUERIDA:
 {
@@ -158,22 +162,24 @@ ESTRUCTURA JSON REQUERIDA:
   "criteria": [
     {
       "criterio": "Nombre del criterio de evaluación",
-      "descripcion": "Breve descripción del criterio",
+      "descripcion": "Descripción del criterio enfocado en seguridad hídrica y contexto local",
       "descriptores": {
-        "Inicio": "Descripción para nivel inicial",
-        "Proceso": "Descripción para nivel en proceso",
-        "Logro": "Descripción para nivel de logro"
+        "Inicio": "VERBO + análisis básico con apoyo + evidencia observable específica",
+        "Proceso": "VERBO + análisis autónomo parcial + evidencia verificable con datos locales",
+        "Logro": "VERBO + análisis crítico completo + sustentación con múltiples evidencias locales"
       }
     }
   ]
 }
 
-REQUISITOS:
-- Incluye entre 4 y 8 criterios de evaluación
-- Cada criterio debe tener exactamente 3 descriptores (uno por cada nivel)
-- Los criterios deben evaluar aspectos clave de las evidencias de la unidad
+REQUISITOS ESPECÍFICOS:
+- Entre 4 y 8 criterios de evaluación
+- Cada descriptor debe incluir: VERBO DE DESEMPEÑO + CONDICIÓN/CONTEXTO + EVIDENCIA OBSERVABLE
+- Incorpora conceptos de seguridad hídrica cuando sea relevante (disponibilidad, accesibilidad, calidad, sostenibilidad)
+- Incluye pertinencia local (referencias a la comunidad, contexto regional, datos locales)
 - Los descriptores deben ser progresivos y específicos
-- Incluye una descripción breve para cada criterio
+- Usa verbos como: analiza, evalúa, propone, sustenta, compara, diseña, explica
+- Ejemplos de evidencias observables: "con dos datos verificables", "mediante esquema completo", "sustentando con tres fuentes locales"
 
 Genera la rúbrica ahora:`;
 
