@@ -423,10 +423,16 @@ export default function Acelerador6() {
       return;
     }
 
+    // Truncate diagnostic text if too long (max ~15000 chars to stay under token limit)
+    const truncatedText = diagnosticText.length > 15000 
+      ? diagnosticText.substring(0, 15000) + '...[texto truncado para análisis]'
+      : diagnosticText;
+
     const requestId = crypto.randomUUID();
     console.log('[A6:AI_REQUEST]', {
       request_id: requestId,
       chars_diagnostico: diagnosticText.length,
+      chars_truncated: truncatedText.length,
       source: extractedPdfText ? 'PDF' : 'Manual',
       titulo: formData.titulo,
       area: formData.area_curricular,
@@ -441,7 +447,7 @@ export default function Acelerador6() {
       const { data, error } = await supabase.functions.invoke('analyze-unit-coherence', {
         body: {
           unidad_data: formData,
-          diagnostico_text: diagnosticText
+          diagnostico_text: truncatedText
         }
       });
 
@@ -964,28 +970,43 @@ export default function Acelerador6() {
                  </p>
                </div>
 
-               {/* Show analysis button if we have PDF text OR sufficient manual text */}
-               {((extractedPdfText && extractedPdfText.length >= 300) || 
-                 (formData.diagnostico_text && formData.diagnostico_text.length >= 300)) && 
-                 !isClosed && (
-                 <Button 
-                   onClick={handleAnalyzeCoherence}
-                   disabled={isAnalyzing || !isFormValid()}
-                   className="w-full"
-                 >
-                   {isAnalyzing ? (
-                     <>
-                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                       Analizando coherencia...
-                     </>
-                   ) : (
-                     <>
-                       <Bot className="h-4 w-4 mr-2" />
-                       {extractedPdfText ? 'Analizar Coherencia con PDF' : 'Analizar Coherencia con IA'}
-                     </>
-                   )}
-                 </Button>
-               )}
+                {/* Show analysis button if we have PDF text OR sufficient manual text */}
+                {((extractedPdfText && extractedPdfText.length >= 300) || 
+                  (formData.diagnostico_text && formData.diagnostico_text.length >= 300)) && 
+                  !isClosed && (
+                  <Button 
+                    onClick={handleAnalyzeCoherence}
+                    disabled={isAnalyzing || !isFormValid()}
+                    className="w-full"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Analizando coherencia...
+                      </>
+                    ) : (
+                      <>
+                        <Bot className="h-4 w-4 mr-2" />
+                        {extractedPdfText ? 'Analizar Coherencia con PDF' : 'Analizar Coherencia con IA'}
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {/* Show missing fields warning if form is invalid but we have diagnosis text */}
+                {((extractedPdfText && extractedPdfText.length >= 300) || 
+                  (formData.diagnostico_text && formData.diagnostico_text.length >= 300)) && 
+                  !isClosed && !isFormValid() && (
+                  <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-orange-800">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="text-sm font-medium">Campos requeridos faltantes</span>
+                    </div>
+                    <p className="text-sm text-orange-700 mt-1">
+                      Complete los siguientes campos para activar el análisis: {getMissingFields().join(', ')}
+                    </p>
+                  </div>
+                )}
 
               {formData.ia_recomendaciones && (
                 <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">

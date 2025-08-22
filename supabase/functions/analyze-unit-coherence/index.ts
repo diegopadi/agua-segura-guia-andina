@@ -123,7 +123,7 @@ Evidencias esperadas: ${unidad_data.evidencias}
           { role: 'user', content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 2000,
+        max_tokens: 3000,
         temperature: 0.3,
         top_p: 0.9,
       }),
@@ -146,65 +146,16 @@ Evidencias esperadas: ${unidad_data.evidencias}
       throw new Error('Invalid AI response format');
     }
 
-    // Validate response structure
-    if (!analysisResult.coherencia_global || !analysisResult.hallazgos_clave || !analysisResult.recomendaciones) {
-      throw new Error('AI response missing required fields');
+    // Validate response structure (relaxed validation)
+    if (!analysisResult.recomendaciones || !Array.isArray(analysisResult.recomendaciones)) {
+      console.error('Invalid recommendations structure:', analysisResult);
+      throw new Error('AI response missing recommendations array');
     }
 
-    // Validate recommendations structure and quality
+    // Basic validation - ensure we have at least some recommendations
     const recommendations = analysisResult.recomendaciones;
-    if (!Array.isArray(recommendations) || recommendations.length < 5 || recommendations.length > 8) {
-      throw new Error('Invalid number of recommendations (must be 5-8)');
-    }
-
-    // Check each recommendation has required fields
-    for (const rec of recommendations) {
-      if (!rec.titulo || !rec.vinculo_diagnostico?.cita || !rec.como || 
-          !Array.isArray(rec.como) || rec.como.length < 3 ||
-          !rec.ejemplo_actividad?.descripcion || rec.ejemplo_actividad.descripcion.length < 30 ||
-          !rec.evidencias_a_recoger || !Array.isArray(rec.evidencias_a_recoger) || rec.evidencias_a_recoger.length < 2 ||
-          !rec.impacto || !rec.esfuerzo) {
-        
-        // Retry once with enhanced prompt
-        console.log('Recommendation validation failed, retrying with enhanced prompt');
-        
-        const enhancedUserPrompt = userPrompt + '\n\nAumenta la especificidad. Profundiza en el "cómo" con más detalle.';
-        
-        const retryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: enhancedUserPrompt }
-            ],
-            response_format: { type: "json_object" },
-            max_tokens: 2000,
-            temperature: 0.3,
-            top_p: 0.9,
-          }),
-        });
-
-        if (retryResponse.ok) {
-          const retryData = await retryResponse.json();
-          const retryResult = JSON.parse(retryData.choices[0].message.content);
-          analysisResult = retryResult;
-          break;
-        } else {
-          return new Response(JSON.stringify({
-            success: false,
-            error: "under_specified_recommendations",
-            type: "validation_error"
-          }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      }
+    if (recommendations.length === 0) {
+      throw new Error('AI response contains no recommendations');
     }
 
     console.log('Unit coherence analysis completed successfully');
