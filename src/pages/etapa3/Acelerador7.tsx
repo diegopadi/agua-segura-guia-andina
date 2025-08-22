@@ -258,6 +258,63 @@ export default function Acelerador7() {
   const isClosed = rubrica?.estado === 'CERRADO';
   const canProceedToA8 = progress.a7_completed;
   const canAccessA7 = progress.a6_completed;
+  const hasRubricas = rubricaData.criteria.length > 0;
+  const formValid = rubricaData.criteria.length > 0 && rubricaData.criteria.every(c => 
+    c.criterio.trim() && Object.values(c.descriptores).every(d => d.trim())
+  );
+  const analysisComplete = generationComplete || hasRubricas;
+
+  // Comprehensive A7 Diagnostic
+  useEffect(() => {
+    const diagnosticData = {
+      // Core state variables
+      isClosed,
+      formValid,
+      analysisComplete,
+      hasRubricas,
+      canProceedToA8,
+      canAccessA7,
+      
+      // Progress flags
+      progress: {
+        a6_completed: progress.a6_completed,
+        a7_completed: progress.a7_completed,
+        a8_completed: progress.a8_completed,
+        overall_progress: progress.overall_progress
+      },
+      
+      // Unit state
+      unidadEstado: unidad?.estado || 'N/A',
+      
+      // Rubrica details
+      rubricaEstado: rubrica?.estado || 'N/A',
+      criteriaCount: rubricaData.criteria.length,
+      levelsCount: rubricaData.levels.length,
+      
+      // Generation state
+      generationLoading,
+      generationComplete,
+      autoSaving,
+      saving,
+      
+      // Button visibility
+      buttons: {
+        generateRubricVisible: !generationComplete && !isClosed,
+        saveVisible: !isClosed,
+        saveAndCloseVisible: !isClosed,
+        continueToA8Visible: canProceedToA8,
+        editVisible: isClosed,
+        reopenDialogOpen: showReopenDialog
+      }
+    };
+    
+    console.log('[A7:DIAGNOSTIC]', diagnosticData);
+  }, [
+    isClosed, formValid, analysisComplete, hasRubricas, canProceedToA8, canAccessA7,
+    progress, unidad?.estado, rubrica?.estado, rubricaData.criteria.length, 
+    rubricaData.levels.length, generationLoading, generationComplete, autoSaving, 
+    saving, showReopenDialog
+  ]);
 
   if (loading) {
     return (

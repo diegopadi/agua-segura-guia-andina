@@ -272,6 +272,63 @@ export default function Acelerador8() {
 
   const areSessionsClosed = sesiones.length > 0 && sesiones.every(s => s.estado === 'CERRADO');
   const canAccessA8 = progress.a7_completed;
+  const hasSesiones = sesionesData.length > 0;
+  const formValid = sesionesData.some(sesion => 
+    sesion.titulo.trim() || sesion.inicio.trim() || sesion.desarrollo.trim() || sesion.cierre.trim()
+  );
+  const analysisComplete = generationComplete;
+
+  // Comprehensive A8 Diagnostic
+  useEffect(() => {
+    const diagnosticData = {
+      // Core state variables
+      isClosed: areSessionsClosed,
+      formValid,
+      analysisComplete,
+      hasSesiones,
+      canProceedToNext: false, // A8 is final
+      canAccessA8,
+      
+      // Progress flags
+      progress: {
+        a6_completed: progress.a6_completed,
+        a7_completed: progress.a7_completed,
+        a8_completed: progress.a8_completed,
+        overall_progress: progress.overall_progress
+      },
+      
+      // Unit state
+      unidadEstado: unidad?.estado || 'N/A',
+      
+      // Sessions details
+      sesionesCount: sesionesData.length,
+      expectedSesiones: unidad?.numero_sesiones || 0,
+      sesionesWithContent: sesionesData.filter(s => 
+        s.titulo.trim() || s.inicio.trim() || s.desarrollo.trim() || s.cierre.trim()
+      ).length,
+      
+      // Generation state
+      generationLoading,
+      generationComplete,
+      autoSaving,
+      saving,
+      
+      // Button visibility
+      buttons: {
+        generateSessionsVisible: !generationComplete && !areSessionsClosed,
+        saveVisible: !areSessionsClosed,
+        saveAndCloseVisible: !areSessionsClosed,
+        editVisible: areSessionsClosed,
+        reopenDialogOpen: showReopenDialog
+      }
+    };
+    
+    console.log('[A8:DIAGNOSTIC]', diagnosticData);
+  }, [
+    areSessionsClosed, formValid, analysisComplete, hasSesiones, canAccessA8,
+    progress, unidad?.estado, sesionesData.length, unidad?.numero_sesiones,
+    generationLoading, generationComplete, autoSaving, saving, showReopenDialog
+  ]);
 
   if (loading) {
     return (
