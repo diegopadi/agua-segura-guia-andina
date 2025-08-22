@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Bot, CheckCircle, Save, Lock, Plus, Trash2, Edit3, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Bot, CheckCircle, Save, Lock, Plus, Trash2, Edit3, RefreshCw, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { supabase } from '@/integrations/supabase/client';
@@ -158,15 +158,17 @@ export default function Acelerador8() {
     return {
       id: unidad.id,
       user_id: unidad.user_id,
-      titulo: unidad.titulo,
+      titulo: unidad.titulo,                       // ej. Seguridad hídrica
       area_curricular: unidad.area_curricular,
       grado: unidad.grado,
       numero_sesiones: unidad.numero_sesiones,
       duracion_min: unidad.duracion_min,
       proposito: unidad.proposito,
-      competencias_ids: unidad.competencias_ids,
+      competencias_ids: unidad.competencias_ids,   // o array/cadenas
       evidencias: unidad.evidencias,
-      diagnostico_text: unidad.diagnostico_text?.substring(0, 2000) // Limit diagnostico text
+      diagnostico_text: unidad.diagnostico_text?.slice(0, 12000) || "", // subir límite sin romper payload
+      ia_recomendaciones: unidad.ia_recomendaciones || null,            // del A6 (JSON/string)
+      tema_transversal: unidad.tema_transversal || unidad.titulo || "",       // anchor temático
     };
   };
 
@@ -184,6 +186,13 @@ export default function Acelerador8() {
       setPayloadBytes(payloadSize);
       setLastHttpStatus(null);
       setLastNetworkError(null);
+
+      console.log('[A8:GEN_CONTEXT]', {
+        titulo: sanitizedUnidad.titulo,
+        tema_transversal: sanitizedUnidad.tema_transversal,
+        diag_len: sanitizedUnidad.diagnostico_text.length,
+        has_recs: !!sanitizedUnidad.ia_recomendaciones
+      });
 
       console.log('[A8:GEN_PAYLOAD]', {
         payload_size_bytes: payloadSize,
@@ -300,8 +309,8 @@ export default function Acelerador8() {
         setLastNetworkError(error.message);
       } else {
         toast({
-          title: "Error generando sesiones",
-          description: error.message,
+          title: `Error en A8 (ID: ${requestId})`,
+          description: `${error.code || 'UNKNOWN_ERROR'} - ${error.message}`,
           variant: "destructive",
         });
       }
@@ -457,8 +466,8 @@ export default function Acelerador8() {
       });
       
       toast({
-        title: "Error en la regeneración",
-        description: error.message || "No se pudieron regenerar las sesiones.",
+        title: `Error en A8 (ID: ${requestId})`,
+        description: `${error.code || 'REGEN_ERROR'} - ${error.message || "No se pudieron regenerar las sesiones."}`,
         variant: "destructive",
       });
     } finally {
@@ -747,31 +756,41 @@ export default function Acelerador8() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {autoSaving && (
-              <Badge variant="outline" className="gap-2">
-                <div className="animate-spin rounded-full h-3 w-3 border-b border-muted-foreground"></div>
-                Guardando...
-              </Badge>
-            )}
-            {areSessionsClosed && (
-              <Badge variant="default" className="gap-2">
-                <Lock className="h-4 w-4" />
-                Cerrado
-              </Badge>
-            )}
-            {areSessionsClosed ? (
-              <Button onClick={() => setShowReopenDialog(true)} variant="outline">
-                <Edit3 className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
-            ) : (
-              <Button onClick={handleSave} disabled={saving || autoSaving}>
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? "Guardando..." : "Guardar"}
-              </Button>
-            )}
-          </div>
+            <div className="flex items-center gap-3">
+              {progress.a7_completed && sesionesData.length > 0 && (
+                <Button 
+                  onClick={() => navigate('/etapa3/acelerador8/visor')}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Ver documento completo
+                </Button>
+              )}
+              {autoSaving && (
+                <Badge variant="outline" className="gap-2">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b border-muted-foreground"></div>
+                  Guardando...
+                </Badge>
+              )}
+              {areSessionsClosed && (
+                <Badge variant="default" className="gap-2">
+                  <Lock className="h-4 w-4" />
+                  Cerrado
+                </Badge>
+              )}
+              {areSessionsClosed ? (
+                <Button onClick={() => setShowReopenDialog(true)} variant="outline">
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              ) : (
+                <Button onClick={handleSave} disabled={saving || autoSaving}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? "Guardando..." : "Guardar"}
+                </Button>
+              )}
+            </div>
         </div>
 
         {/* Unit Context */}

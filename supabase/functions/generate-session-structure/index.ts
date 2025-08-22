@@ -101,6 +101,13 @@ Estructura JSON requerida:
   ]
 }`;
 
+    const tema = unidadData.tema_transversal || unidadData.titulo || '';
+    const diag = unidadData.diagnostico_text || '';
+    const recs = typeof unidadData.ia_recomendaciones === 'string'
+      ? unidadData.ia_recomendaciones
+      : JSON.stringify(unidadData.ia_recomendaciones || {});
+
+    console.log('[A8:EDGE_CONTEXT]', { tema, diag_len: diag.length, has_recs: !!recs });
     console.log('[A8:EDGE_CALL]', { request_id, model: 'gpt-5-2025-08-07' });
 
     const userPrompt = `Diseña ${unidadData.numero_sesiones} sesiones completas de ${unidadData.duracion_min} minutos cada una para la siguiente unidad de aprendizaje:
@@ -112,12 +119,20 @@ Grado: ${unidadData.grado}
 Propósito: ${unidadData.proposito}
 Competencias: ${unidadData.competencias_ids}
 
+CONTEXTO TEMÁTICO:
+- Tema central: ${tema}
+- Síntesis de diagnóstico (texto del docente): ${diag.slice(0, 1500)}
+- Recomendaciones previas (IA/A6): ${recs.slice(0, 800)}
+
+Alinea cada sesión (inicio, desarrollo, cierre, evidencias y mini-rúbrica) a «${tema}». Incluye ejemplos, problemas, recursos y evaluaciones relacionados explícitamente con ${tema}.
+
 Cada sesión debe:
-- Tener un título específico y descriptivo
-- Incluir actividades concretas para inicio, desarrollo y cierre
-- Proporcionar evidencias observables del aprendizaje
-- Tener una mini-rúbrica con 2-8 criterios específicos y observables
-- Seguir la secuencia pedagógica apropiada para el área y grado`;;
+- Tener un título específico y descriptivo contextualizado a ${tema}
+- Incluir actividades concretas para inicio, desarrollo y cierre relacionadas con ${tema}
+- Proporcionar evidencias observables del aprendizaje vinculadas a ${tema}
+- Tener una mini-rúbrica con 2-8 criterios específicos y observables sobre ${tema}
+- Seguir la secuencia pedagógica apropiada para el área y grado
+- Incorporar ejemplos, materiales y situaciones específicos de ${tema}`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -128,7 +143,10 @@ Cada sesión debe:
       body: JSON.stringify({
         model: 'gpt-5-2025-08-07',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { 
+            role: 'system', 
+            content: systemPrompt + `\n\nContextualiza TODAS las actividades a la temática central: «${tema}». Usa el diagnóstico y recomendaciones provistas para aterrizar ejemplos, materiales, situaciones y evaluación.`
+          },
           { role: 'user', content: userPrompt }
         ],
         response_format: { type: "json_object" },
@@ -179,6 +197,17 @@ Cada sesión debe:
       
       // Ensure standard evaluation levels
       session.rubrica_sesion.levels = ['Inicio', 'Proceso', 'Logro'];
+    }
+
+    // Validate thematic contextualization
+    const allMentionTema = sessionStructure.sessions.every(
+      s => JSON.stringify(s).toLowerCase().includes((tema||'').toLowerCase())
+    );
+    
+    console.log('[A8:EDGE_VALID_CONTEXT]', { allMentionTema });
+    
+    if (!allMentionTema) {
+      throw new Error('INVALID_CONTEXT: sesiones sin mención explícita al tema transversal/central');
     }
 
     console.log('[A8:EDGE_OK]', { 

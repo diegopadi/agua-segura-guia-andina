@@ -19,6 +19,7 @@ import Etapa3 from "./pages/Etapa3";
 import Acelerador6 from "./pages/etapa3/Acelerador6";
 import Acelerador7 from "./pages/etapa3/Acelerador7";
 import Acelerador8 from "./pages/etapa3/Acelerador8";
+import A8FinalViewer from "./pages/etapa3/A8FinalViewer";
 import Documentos from "./pages/Documentos";
 import Ayuda from "./pages/Ayuda";
 import Admin from "./pages/Admin";
@@ -55,6 +56,7 @@ const App = () => (
                     <Route path="/etapa3/acelerador6" element={<Acelerador6 />} />
                     <Route path="/etapa3/acelerador7" element={<Acelerador7 />} />
                     <Route path="/etapa3/acelerador8" element={<Acelerador8 />} />
+                    <Route path="/etapa3/acelerador8/visor" element={<A8FinalViewer />} />
                     <Route path="/documentos" element={<Documentos />} />
                     <Route path="/ayuda" element={<Ayuda />} />
                     <Route path="/administracion" element={<Admin />} />
