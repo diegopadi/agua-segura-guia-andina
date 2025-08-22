@@ -161,8 +161,8 @@ export default function Acelerador8() {
       return;
     }
     
-    // Skip autosave toast if regeneration dialog is open with error
-    const skipToast = showRegenerateDialog && regenerationError;
+    // Skip autosave toast if regeneration dialog is open and loading
+    const skipToast = showRegenerateDialog && regenerationLoading;
     
     try {
       console.log('[A8:AUTOSAVE]', { timestamp: new Date().toISOString() });
