@@ -344,16 +344,34 @@ RÚBRICA DE SESIÓN:`);
                                       </div>
                                     )}
                                     
-                                    {rec.recursos && rec.recursos.length > 0 && (
-                                      <div>
-                                        <h5 className="font-medium text-orange-700 dark:text-orange-300 mb-1">Recursos</h5>
-                                        <ul className="list-disc list-inside text-muted-foreground">
-                                          {rec.recursos.map((recurso: string, recursoIndex: number) => (
-                                            <li key={recursoIndex}>{recurso}</li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
+                                     {rec.recursos && rec.recursos.length > 0 && (
+                                       <div>
+                                         <h5 className="font-medium text-orange-700 dark:text-orange-300 mb-1">Recursos</h5>
+                                         <ul className="list-disc list-inside text-muted-foreground">
+                                           {rec.recursos.map((recurso: any, recursoIndex: number) => (
+                                             <li key={recursoIndex}>
+                                               {typeof recurso === 'string' ? (
+                                                 recurso
+                                               ) : typeof recurso === 'object' && recurso !== null ? (
+                                                 <div>
+                                                   {recurso.cita && <span className="font-medium">"{recurso.cita}"</span>}
+                                                   {recurso.ubicacion && (
+                                                     <span className="text-xs text-muted-foreground ml-2">
+                                                       ({recurso.ubicacion})
+                                                     </span>
+                                                   )}
+                                                   {!recurso.cita && !recurso.ubicacion && (
+                                                     <span>{JSON.stringify(recurso)}</span>
+                                                   )}
+                                                 </div>
+                                               ) : (
+                                                 String(recurso)
+                                               )}
+                                             </li>
+                                           ))}
+                                         </ul>
+                                       </div>
+                                     )}
                                   </div>
                                 </div>
                               ))}
