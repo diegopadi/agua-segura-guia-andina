@@ -53,6 +53,21 @@ export default function Acelerador6() {
   const debouncedFormData = useDebounce(formData, 5000);
 
   // Helper functions and computed values
+  const getCombinedDiagnosticText = () => {
+    const parts = [];
+    if (extractedPdfText) {
+      parts.push(`=== DIAGNÓSTICO DESDE PDF ===\n${extractedPdfText}`);
+    }
+    if (formData.diagnostico_text?.trim()) {
+      parts.push(`=== INFORMACIÓN ADICIONAL ===\n${formData.diagnostico_text.trim()}`);
+    }
+    return parts.join('\n\n');
+  };
+
+  const getTotalDiagnosticCharacters = () => {
+    return getCombinedDiagnosticText().length;
+  };
+
   const isFormValid = () => {
     return !!(
       formData.titulo?.trim() &&
@@ -247,7 +262,7 @@ export default function Acelerador6() {
           
           toast({
             title: "PDF procesado exitosamente",
-            description: `Texto extraído (${extractedText.length} caracteres). Ejecutando análisis automático...`,
+            description: `Texto extraído (${extractedText.length} caracteres). ${formData.diagnostico_text?.trim() ? 'Se combinará con su texto adicional.' : 'Puede agregar información adicional en el campo de texto.'}`,
           });
           
           // Telemetry event for successful extraction
@@ -257,11 +272,6 @@ export default function Acelerador6() {
             text_length: extractedText.length,
             timestamp: new Date().toISOString()
           });
-
-          // Auto-trigger AI analysis after successful PDF extraction
-          setTimeout(() => {
-            handleAnalyzeCoherenceWithPdfText(extractedText);
-          }, 1000);
           
         } else {
           toast({
@@ -316,98 +326,26 @@ export default function Acelerador6() {
     }
   };
 
-  // Helper function for AI analysis with PDF text
-  const handleAnalyzeCoherenceWithPdfText = async (pdfText: string) => {
-    if (!isFormValid()) {
-      const missingFields = getMissingFields();
-      toast({
-        title: "Campos requeridos faltantes",
-        description: `Complete los siguientes campos: ${missingFields.join(', ')}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const requestId = crypto.randomUUID();
-    console.log('[A6:AI_REQUEST_PDF]', {
-      request_id: requestId,
-      chars_diagnostico: pdfText.length,
-      source: 'PDF',
-      titulo: formData.titulo,
-      area: formData.area_curricular,
-      grado: formData.grado,
-      sesiones: formData.numero_sesiones,
-      duracion_min: formData.duracion_min
-    });
-
-    try {
-      setIsAnalyzing(true);
-
-      const { data, error } = await supabase.functions.invoke('analyze-unit-coherence', {
-        body: {
-          unidad_data: formData,
-          diagnostico_text: pdfText
-        }
-      });
-
-      if (error) {
-        console.error('[A6:AI_ERROR]', { request_id: requestId, error });
-        throw error;
-      }
-
-      console.log('[A6:AI_RESPONSE]', {
-        request_id: requestId,
-        success: data?.success,
-        has_analysis: !!data?.analysis,
-        response_preview: JSON.stringify(data).substring(0, 200)
-      });
-
-      if (data.success && data.analysis) {
-        // Validate JSON structure
-        try {
-          JSON.parse(JSON.stringify(data.analysis));
-          const analysisString = JSON.stringify(data.analysis, null, 2);
-          
-          console.log('[A6:AI_VALID]', {
-            request_id: requestId,
-            analysis_preview: analysisString.substring(0, 200),
-            analysis_length: analysisString.length
-          });
-          
-          handleInputChange('ia_recomendaciones', analysisString);
-          
-          toast({
-            title: "Análisis completado",
-            description: "El análisis de coherencia con el PDF se ha generado exitosamente",
-          });
-        } catch (jsonError) {
-          console.error('[A6:INVALID_JSON]', { request_id: requestId, jsonError });
-          throw new Error('Respuesta de IA con formato inválido');
-        }
-      } else {
-        throw new Error(data.error || 'Error en el análisis');
-      }
-
-    } catch (error: any) {
-      console.error('[A6:AI_FINAL_ERROR]', { request_id: requestId, error: error.message });
-      toast({
-        title: "Error en el análisis",
-        description: "No se pudo completar el análisis. Intente nuevamente o ingrese el texto manualmente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
   const handleAnalyzeCoherence = async () => {
-    // Use PDF text if available, otherwise use textarea text
-    const diagnosticText = extractedPdfText || formData.diagnostico_text;
+    // Combine PDF text and manual text for comprehensive analysis
+    const combinedText = getCombinedDiagnosticText();
     
-    if (!diagnosticText || diagnosticText.length < 300) {
+    if (!combinedText || combinedText.length < 300) {
+      const hasText = formData.diagnostico_text?.trim();
+      const hasPdf = extractedPdfText;
+      let description = "El diagnóstico debe tener al menos 300 caracteres";
+      
+      if (!hasText && !hasPdf) {
+        description = "Suba un PDF o escriba al menos 300 caracteres en el campo de diagnóstico";
+      } else if (hasText && !hasPdf) {
+        description = "El texto del diagnóstico debe tener al menos 300 caracteres";
+      } else if (!hasText && hasPdf) {
+        description = "El PDF debe contener al menos 300 caracteres de texto";
+      }
+      
       toast({
-        title: "Error",
-        description: `${extractedPdfText ? 'Error procesando PDF' : 'El diagnóstico debe tener al menos 300 caracteres'}`,
+        title: "Texto insuficiente",
+        description,
         variant: "destructive",
       });
       return;
@@ -423,17 +361,20 @@ export default function Acelerador6() {
       return;
     }
 
-    // Truncate diagnostic text if too long (max ~15000 chars to stay under token limit)
-    const truncatedText = diagnosticText.length > 15000 
-      ? diagnosticText.substring(0, 15000) + '...[texto truncado para análisis]'
-      : diagnosticText;
+    // Truncate combined text if too long (max ~15000 chars to stay under token limit)
+    const truncatedText = combinedText.length > 15000 
+      ? combinedText.substring(0, 15000) + '...[texto truncado para análisis]'
+      : combinedText;
 
     const requestId = crypto.randomUUID();
     console.log('[A6:AI_REQUEST]', {
       request_id: requestId,
-      chars_diagnostico: diagnosticText.length,
+      chars_pdf: extractedPdfText?.length || 0,
+      chars_manual: formData.diagnostico_text?.length || 0,
+      chars_combined: combinedText.length,
       chars_truncated: truncatedText.length,
-      source: extractedPdfText ? 'PDF' : 'Manual',
+      source: extractedPdfText && formData.diagnostico_text?.trim() ? 'PDF+Manual' 
+            : extractedPdfText ? 'PDF' : 'Manual',
       titulo: formData.titulo,
       area: formData.area_curricular,
       grado: formData.grado,
@@ -479,7 +420,7 @@ export default function Acelerador6() {
           
           toast({
             title: "Análisis completado",
-            description: "El análisis de coherencia se ha generado exitosamente",
+            description: "El análisis de coherencia se ha generado exitosamente usando todos los insumos disponibles",
           });
         } catch (jsonError) {
           console.error('[A6:INVALID_JSON]', { request_id: requestId, jsonError });
@@ -719,13 +660,15 @@ export default function Acelerador6() {
                {/* Step 2 - Diagnosis */}
                <div className="flex items-center">
                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                   (extractedPdfText?.length >= 300) || (formData.diagnostico_text?.length >= 300)
+                   getTotalDiagnosticCharacters() >= 300
                      ? 'bg-primary text-primary-foreground' 
                      : 'bg-muted text-muted-foreground'
                  }`}>
                    2
                  </div>
-                 <span className="ml-2 text-sm font-medium">Diagnóstico</span>
+                 <span className="ml-2 text-sm font-medium">
+                   Diagnóstico ({getTotalDiagnosticCharacters()} caracteres)
+                 </span>
                </div>
               
               {/* Connector */}
@@ -943,10 +886,10 @@ export default function Acelerador6() {
 
                <div>
                  <Label htmlFor="diagnostico">
-                   Texto del Diagnóstico
+                   Información Adicional del Diagnóstico
                    {extractedPdfText && (
-                     <span className="text-sm text-green-600 ml-2">
-                       (PDF cargado - campo opcional)
+                     <span className="text-sm text-muted-foreground ml-2">
+                       (Complementa el PDF cargado - {extractedPdfText.length} caracteres)
                      </span>
                    )}
                  </Label>
@@ -956,24 +899,34 @@ export default function Acelerador6() {
                    onChange={(e) => handleInputChange('diagnostico_text', e.target.value)}
                    placeholder={
                      extractedPdfText 
-                       ? "Campo opcional: el PDF ya fue procesado. Solo complete si desea agregar información adicional..."
-                       : "Pegue aquí el texto del diagnóstico pedagógico o escriba un resumen..."
+                       ? "Agregue información adicional que complemente el PDF: contexto específico, observaciones recientes, detalles particulares del grupo, etc."
+                       : "Pegue aquí el texto del diagnóstico pedagógico o escriba un resumen detallado (mínimo 300 caracteres)..."
                    }
                    className="min-h-[120px]"
                    disabled={isClosed}
                  />
-                 <p className="text-sm text-muted-foreground mt-1">
-                   {extractedPdfText 
-                     ? `PDF procesado con ${extractedPdfText.length} caracteres. Análisis disponible.`
-                     : "Mínimo 300 caracteres para el análisis de IA"
-                   }
-                 </p>
+                 <div className="flex justify-between items-center mt-1">
+                   <p className="text-sm text-muted-foreground">
+                     Total disponible para análisis: {getTotalDiagnosticCharacters()} caracteres
+                     {getTotalDiagnosticCharacters() < 300 && (
+                       <span className="text-orange-600"> (mínimo 300 requeridos)</span>
+                     )}
+                   </p>
+                   {(extractedPdfText || formData.diagnostico_text?.trim()) && (
+                     <span className="text-xs text-muted-foreground">
+                       {extractedPdfText && formData.diagnostico_text?.trim() 
+                         ? `PDF: ${extractedPdfText.length} + Manual: ${formData.diagnostico_text.length}`
+                         : extractedPdfText 
+                           ? `Solo PDF: ${extractedPdfText.length}` 
+                           : `Solo Manual: ${formData.diagnostico_text.length}`
+                       }
+                     </span>
+                   )}
+                 </div>
                </div>
 
-                {/* Show analysis button if we have PDF text OR sufficient manual text */}
-                {((extractedPdfText && extractedPdfText.length >= 300) || 
-                  (formData.diagnostico_text && formData.diagnostico_text.length >= 300)) && 
-                  !isClosed && (
+                {/* Show analysis button if we have enough combined text */}
+                {getTotalDiagnosticCharacters() >= 300 && !isClosed && (
                   <Button 
                     onClick={handleAnalyzeCoherence}
                     disabled={isAnalyzing || !isFormValid()}
@@ -987,16 +940,19 @@ export default function Acelerador6() {
                     ) : (
                       <>
                         <Bot className="h-4 w-4 mr-2" />
-                        {extractedPdfText ? 'Analizar Coherencia con PDF' : 'Analizar Coherencia con IA'}
+                        {extractedPdfText && formData.diagnostico_text?.trim() 
+                          ? 'Analizar Coherencia (PDF + Información Adicional)'
+                          : extractedPdfText 
+                            ? 'Analizar Coherencia con PDF' 
+                            : 'Analizar Coherencia con IA'
+                        }
                       </>
                     )}
                   </Button>
                 )}
 
                 {/* Show missing fields warning if form is invalid but we have diagnosis text */}
-                {((extractedPdfText && extractedPdfText.length >= 300) || 
-                  (formData.diagnostico_text && formData.diagnostico_text.length >= 300)) && 
-                  !isClosed && !isFormValid() && (
+                {getTotalDiagnosticCharacters() >= 300 && !isClosed && !isFormValid() && (
                   <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
                     <div className="flex items-center gap-2 text-orange-800">
                       <AlertCircle className="h-4 w-4" />
