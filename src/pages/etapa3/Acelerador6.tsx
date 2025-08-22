@@ -48,8 +48,8 @@ export default function Acelerador6() {
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastAutoSaveAt, setLastAutoSaveAt] = useState(0);
   
-  // Debounced form data for auto-save (increased to 10s)
-  const debouncedFormData = useDebounce(formData, 10000);
+  // Debounced form data for auto-save (optimized to 3s)
+  const debouncedFormData = useDebounce(formData, 3000);
 
   // Helper functions and computed values
   const isFormValid = () => {
@@ -65,8 +65,8 @@ export default function Acelerador6() {
   };
 
   const isClosed = unidad?.estado === 'CERRADO';
-  const canProceedToA7 = progress.a6_completed;
   const analysisComplete = !!formData.ia_recomendaciones;
+  const canProceedToA7 = progress.a6_completed && isClosed && analysisComplete && isFormValid();
 
   // Load existing data
   useEffect(() => {
@@ -90,7 +90,7 @@ export default function Acelerador6() {
   // Silent auto-save functionality with debounce and throttle
   useEffect(() => {
     const now = Date.now();
-    const THROTTLE_MS = 30000; // 30s minimum between auto-saves
+    const THROTTLE_MS = 5000; // 5s minimum between auto-saves
     
     if (
       !isClosed && // NO auto-save if closed
