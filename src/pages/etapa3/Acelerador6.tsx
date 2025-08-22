@@ -865,29 +865,134 @@ export default function Acelerador6() {
                   <div>
                     <Label>Recomendaciones de IA</Label>
                     {(() => {
-                      const recommendations = parseIARecommendations(formData.ia_recomendaciones);
-                      
-                      if (recommendations && recommendations.length > 0) {
+                      if (!formData.ia_recomendaciones) {
                         return (
-                          <div className="mt-2 p-3 bg-background border rounded-md">
-                            <ul className="space-y-2">
-                              {recommendations.map((rec, index) => (
-                                <li key={index} className="flex items-start gap-2">
-                                  <span className="text-primary mt-1">•</span>
-                                  <span className="text-sm">{rec}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
+                          <Textarea
+                            value="No se generaron recomendaciones"
+                            onChange={(e) => handleInputChange('ia_recomendaciones', e.target.value)}
+                            className="min-h-[150px] mt-2"
+                            disabled={isClosed}
+                            placeholder="Las recomendaciones aparecerán aquí después del análisis..."
+                          />
                         );
+                      }
+
+                      try {
+                        const parsed = JSON.parse(formData.ia_recomendaciones);
+                        
+                        if (parsed.recomendaciones && Array.isArray(parsed.recomendaciones) && parsed.recomendaciones.length > 0) {
+                          return (
+                            <div className="mt-2 space-y-4">
+                              <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                                <div className="text-sm font-medium mb-2">
+                                  Coherencia Global: {parsed.coherencia_global}%
+                                </div>
+                                {parsed.hallazgos_clave && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {parsed.hallazgos_clave.length} hallazgos identificados
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="space-y-3">
+                                {parsed.recomendaciones.map((rec: any, index: number) => (
+                                  <div key={index} className="border rounded-lg p-4 bg-card">
+                                    <div className="flex items-start justify-between mb-3">
+                                      <h4 className="font-medium text-sm flex-1">{rec.titulo}</h4>
+                                      <div className="flex gap-2 ml-3">
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                          rec.impacto === 'alto' ? 'bg-green-100 text-green-800' :
+                                          rec.impacto === 'medio' ? 'bg-yellow-100 text-yellow-800' :
+                                          'bg-gray-100 text-gray-800'
+                                        }`}>
+                                          Impacto: {rec.impacto}
+                                        </span>
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                          rec.esfuerzo === 'alto' ? 'bg-red-100 text-red-800' :
+                                          rec.esfuerzo === 'medio' ? 'bg-yellow-100 text-yellow-800' :
+                                          'bg-green-100 text-green-800'
+                                        }`}>
+                                          Esfuerzo: {rec.esfuerzo}
+                                        </span>
+                                        {rec.requiere_dato_faltante && (
+                                          <span className="px-2 py-1 rounded text-xs bg-orange-100 text-orange-800">
+                                            ⚠️ Requiere datos
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    {rec.vinculo_diagnostico?.cita && (
+                                      <div className="text-xs text-muted-foreground mb-3 italic">
+                                        "Vinculado a: {rec.vinculo_diagnostico.cita}"
+                                      </div>
+                                    )}
+                                    
+                                    <div className="space-y-3 text-sm">
+                                      {rec.por_que && (
+                                        <div>
+                                          <span className="font-medium">Por qué:</span> {rec.por_que}
+                                        </div>
+                                      )}
+                                      
+                                      {rec.como && Array.isArray(rec.como) && (
+                                        <div>
+                                          <span className="font-medium">Cómo:</span>
+                                          <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
+                                            {rec.como.map((step: string, stepIndex: number) => (
+                                              <li key={stepIndex}>{step}</li>
+                                            ))}
+                                          </ol>
+                                        </div>
+                                      )}
+                                      
+                                      {rec.ejemplo_actividad && (
+                                        <div>
+                                          <span className="font-medium">Ejemplo:</span> {rec.ejemplo_actividad.nombre}
+                                          <div className="ml-4 mt-1 text-xs text-muted-foreground">
+                                            {rec.ejemplo_actividad.descripcion}
+                                            {rec.ejemplo_actividad.duracion_min && (
+                                              <span className="block mt-1">Duración: {rec.ejemplo_actividad.duracion_min} min</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                      
+                                      {rec.recursos && Array.isArray(rec.recursos) && (
+                                        <div>
+                                          <span className="font-medium">Recursos:</span> {rec.recursos.join(', ')}
+                                        </div>
+                                      )}
+                                      
+                                      {rec.tiempo_estimado && (
+                                        <div>
+                                          <span className="font-medium">Cuándo:</span> {rec.tiempo_estimado}
+                                        </div>
+                                      )}
+                                      
+                                      {rec.requiere_dato_faltante && rec.como_levantar_dato && (
+                                        <div className="bg-orange-50 p-2 rounded text-xs">
+                                          <span className="font-medium">⚠️ Cómo obtener el dato faltante:</span> {rec.como_levantar_dato}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                      } catch (e) {
+                        // Fall back to editable textarea for invalid JSON
                       }
                       
                       return (
                         <Textarea
-                          value="No se generaron recomendaciones"
+                          value={formData.ia_recomendaciones}
                           onChange={(e) => handleInputChange('ia_recomendaciones', e.target.value)}
                           className="min-h-[150px] mt-2"
                           disabled={isClosed}
+                          placeholder="Contenido de recomendaciones (editable)..."
                         />
                       );
                     })()}

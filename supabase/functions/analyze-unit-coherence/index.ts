@@ -38,38 +38,77 @@ serve(async (req) => {
       diagnostico_length: diagnostico_text.length
     });
 
-    const systemPrompt = `Eres un experto pedagógico que analiza la coherencia entre diagnósticos escolares y unidades de aprendizaje para educación secundaria en Perú. 
-Tu tarea es: 
-1) Verificar si el diagnóstico contiene elementos clave (problemas priorizados, pertinencia cultural/bilingüe, condiciones institucionales, etc.). 
-2) Evaluar si el diagnóstico sustenta la unidad propuesta. 
-3) Identificar vacíos y, si algo no está presente en el diagnóstico, recomendar explícitamente cómo debería incorporarse. 
-Responde SIEMPRE en JSON válido, sin markdown. 
-Si el diagnóstico tiene menos de 300 caracteres, devuelve error tipado.`;
+    const systemPrompt = `Eres un experto pedagógico en secundaria (Perú, es-PE) que analiza la **coherencia** entre un diagnóstico institucional y una unidad de aprendizaje.
+Tu salida debe ser **útil, accionable y específica** para el contexto descrito.
+Responde **SIEMPRE en JSON válido** (sin markdown) y en **castellano peruano**.
+Prohibido devolver generalidades ("profundizar", "fomentar", "motivar") sin **cómo** hacerlo.
+Cada recomendación debe:
 
-    const userPrompt = `Analiza la coherencia entre el siguiente diagnóstico y la unidad de aprendizaje. Evalúa si el diagnóstico sustenta las competencias, el propósito y las evidencias de la unidad. 
-Si no encuentras información cultural, bilingüe o institucional relevante, indícalo y sugiere cómo debería incorporarse.
+* **Vincularse** a una evidencia concreta del diagnóstico (cita corta/paráfrasis + ubicación si existe).
+* Incluir **qué** (acción), **por qué** (justificación desde el diagnóstico), **cómo** (pasos detallados), **ejemplo** concreto listo para usar, **recursos** (preferir bajo costo), **evidencias** a recoger, **pertinencia cultural/lingüística**, **impacto**, **esfuerzo**, **riesgo si no se aplica**, y **tiempo estimado**.
+Si faltan datos en el diagnóstico, **indica con claridad** cómo obtenerlos (mini‑instrumento sugerido) y marca la recomendación con \`requiere_dato_faltante: true\`.
 
-DIAGNÓSTICO:
+Valida antes de responder:
+
+* Mínimo **5** recomendaciones; máximo **8**.
+* Cada recomendación con **≥100 palabras** distribuidas en sus campos (no texto de una sola línea).
+* No repitas la misma idea con palabras distintas.
+* No inventes datos; si algo no está en el diagnóstico, dilo y propone cómo levantarlo.`;
+
+    const userPrompt = `Analiza la coherencia entre este DIAGNÓSTICO y la UNIDAD. Devuelve un JSON con el **esquema** definido abajo.
+
+### DIAGNÓSTICO (texto crudo)
+
 ${diagnostico_text}
 
-UNIDAD:
+### UNIDAD
+
 Título: ${unidad_data.titulo}
 Área: ${unidad_data.area_curricular}
 Grado: ${unidad_data.grado}
-Sesiones: ${unidad_data.numero_sesiones}
-Duración: ${unidad_data.duracion_min} minutos
+N.º sesiones: ${unidad_data.numero_sesiones}
+Duración por sesión (min): ${unidad_data.duracion_min}
 Propósito: ${unidad_data.proposito}
-Competencias: ${unidad_data.competencias_ids}
-Capacidades: ${unidad_data.capacidades}
-Evidencias: ${unidad_data.evidencias}
+Competencias CNEB: ${unidad_data.competencias_ids}
+Capacidades (si las hay): ${unidad_data.capacidades}
+Evidencias esperadas: ${unidad_data.evidencias}
 
-Devuelve un JSON con:
-- coherencia_global (0-100) 
-- hallazgos 
-- recomendaciones 
-- riesgos 
-- acciones_priorizadas (con impacto/esfuerzo) 
-- ajustes_sugeridos_unidad (máx. 3)`;
+### ESQUEMA DE RESPUESTA (JSON)
+
+{
+"coherencia_global": 0-100,
+"hallazgos_clave": [
+{"evidencia": "frase/paráfrasis breve del diagnóstico", "implicancia": "qué significa para la unidad"}
+],
+"recomendaciones": [
+{
+"titulo": "acción concreta (imperativo)",
+"vinculo_diagnostico": {"cita": "texto breve", "ubicacion": "si aplica"},
+"por_que": "justificación alineada al diagnóstico y a la unidad",
+"como": ["Paso 1 ...", "Paso 2 ...", "Paso 3 ..."],
+"ejemplo_actividad": {
+"nombre": "título breve",
+"descripcion": "qué harán docentes y estudiantes",
+"duracion_min": 10-30
+},
+"recursos": ["material A", "material B (bajo costo)"],
+"evidencias_a_recoger": ["lista de evidencias observables"],
+"pertinencia_cultural": "adaptaciones para lengua/cultura/contexto local",
+"impacto": "alto|medio|bajo",
+"esfuerzo": "alto|medio|bajo",
+"riesgo_si_no_se_aplica": "riesgo concreto",
+"tiempo_estimado": "en qué sesión o semana encaja",
+"requiere_dato_faltante": true|false,
+"como_levantar_dato": "si falta, mini-instrumento o pregunta guía"
+}
+],
+"acciones_priorizadas": [
+{"accion": "nombre breve", "impacto": "alto|medio|bajo", "esfuerzo": "alto|medio|bajo"}
+],
+"notas_para_docente": [
+"observaciones útiles, breves y accionables"
+]
+}`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -78,13 +117,15 @@ Devuelve un JSON con:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 2000,
+        max_tokens: 2000,
+        temperature: 0.3,
+        top_p: 0.9,
       }),
     });
 
@@ -106,8 +147,64 @@ Devuelve un JSON con:
     }
 
     // Validate response structure
-    if (!analysisResult.coherencia_global || !analysisResult.hallazgos || !analysisResult.recomendaciones) {
+    if (!analysisResult.coherencia_global || !analysisResult.hallazgos_clave || !analysisResult.recomendaciones) {
       throw new Error('AI response missing required fields');
+    }
+
+    // Validate recommendations structure and quality
+    const recommendations = analysisResult.recomendaciones;
+    if (!Array.isArray(recommendations) || recommendations.length < 5 || recommendations.length > 8) {
+      throw new Error('Invalid number of recommendations (must be 5-8)');
+    }
+
+    // Check each recommendation has required fields
+    for (const rec of recommendations) {
+      if (!rec.titulo || !rec.vinculo_diagnostico?.cita || !rec.como || 
+          !Array.isArray(rec.como) || rec.como.length < 3 ||
+          !rec.ejemplo_actividad?.descripcion || rec.ejemplo_actividad.descripcion.length < 30 ||
+          !rec.evidencias_a_recoger || !Array.isArray(rec.evidencias_a_recoger) || rec.evidencias_a_recoger.length < 2 ||
+          !rec.impacto || !rec.esfuerzo) {
+        
+        // Retry once with enhanced prompt
+        console.log('Recommendation validation failed, retrying with enhanced prompt');
+        
+        const enhancedUserPrompt = userPrompt + '\n\nAumenta la especificidad. Profundiza en el "cómo" con más detalle.';
+        
+        const retryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: enhancedUserPrompt }
+            ],
+            response_format: { type: "json_object" },
+            max_tokens: 2000,
+            temperature: 0.3,
+            top_p: 0.9,
+          }),
+        });
+
+        if (retryResponse.ok) {
+          const retryData = await retryResponse.json();
+          const retryResult = JSON.parse(retryData.choices[0].message.content);
+          analysisResult = retryResult;
+          break;
+        } else {
+          return new Response(JSON.stringify({
+            success: false,
+            error: "under_specified_recommendations",
+            type: "validation_error"
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
     }
 
     console.log('Unit coherence analysis completed successfully');
