@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Bot, CheckCircle, Save, Lock, Plus, Trash2, Edit3 } from 'lucide-react';
+import { ArrowLeft, Bot, CheckCircle, Save, Lock, Plus, Trash2, Edit3, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,12 +21,20 @@ export default function Acelerador8() {
   
   const [sesionesData, setSesionesData] = useState<SesionClase[]>([]);
   const [generationLoading, setGenerationLoading] = useState(false);
+  const [regenerationLoading, setRegenerationLoading] = useState(false);
   const [generationComplete, setGenerationComplete] = useState(false);
   const [showReopenDialog, setShowReopenDialog] = useState(false);
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [lastGenerationTime, setLastGenerationTime] = useState<number>(0);
+  const [lastAutoSaveTime, setLastAutoSaveTime] = useState<number>(0);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   
-  // Debounced sesiones data for auto-save
-  const debouncedSesionesData = useDebounce(sesionesData, 3000);
+  const lastAutoSaveRef = useRef<NodeJS.Timeout>();
+  const throttleRef = useRef<NodeJS.Timeout>();
+  
+  // Debounced sesiones data for auto-save (5s debounce)
+  const debouncedSesionesData = useDebounce(sesionesData, 5000);
 
   // Load existing sessions data
   useEffect(() => {
@@ -57,28 +65,59 @@ export default function Acelerador8() {
     }
   }, [sesiones, unidad]);
 
-  // Silent auto-save functionality with debounce
-  useEffect(() => {
-    if (debouncedSesionesData.length > 0 && !saving && !autoSaving && generationComplete && sesiones.length > 0) {
-      handleAutoSave();
-    }
-  }, [debouncedSesionesData, saving, autoSaving, generationComplete, sesiones]);
+  // Computed values
+  const areSessionsClosed = sesiones.length > 0 && sesiones.every(s => s.estado === 'CERRADO');
+  const canAccessA8 = progress.a7_completed;
+  const hasSesiones = sesionesData.length > 0;
+  const formValid = sesionesData.some(sesion => 
+    sesion.titulo.trim() || sesion.inicio.trim() || sesion.desarrollo.trim() || sesion.cierre.trim()
+  );
+  const analysisComplete = generationComplete;
 
-  const handleAutoSave = async () => {
+  // Enhanced auto-save with debounce (5s) + throttle (20s)
+  useEffect(() => {
+    // Clear existing timeouts
+    if (lastAutoSaveRef.current) {
+      clearTimeout(lastAutoSaveRef.current);
+    }
+    
+    // Check conditions to pause auto-save
+    const shouldPause = !autoSaveEnabled || areSessionsClosed || generationLoading || 
+                       regenerationLoading || !generationComplete || saving || autoSaving;
+    
+    if (debouncedSesionesData.length > 0 && !shouldPause && sesiones.length > 0) {
+      lastAutoSaveRef.current = setTimeout(() => {
+        handleAutoSave();
+      }, 100); // Small delay to batch rapid changes
+    }
+  }, [debouncedSesionesData, autoSaveEnabled, areSessionsClosed, generationLoading, 
+      regenerationLoading, generationComplete, saving, autoSaving, sesiones]);
+
+  const handleAutoSave = useCallback(async () => {
+    const now = Date.now();
+    
+    // Throttle: don't save more than once every 20 seconds
+    if (lastAutoSaveTime && (now - lastAutoSaveTime) < 20000) {
+      return;
+    }
+    
     try {
+      console.log('[A8:AUTOSAVE]', { timestamp: new Date().toISOString() });
       setAutoSaving(true);
+      setLastAutoSaveTime(now);
+      
       await saveSesiones(sesionesData);
-    } catch (error) {
-      console.error('Auto-save failed:', error);
-      toast({
-        title: "Error en guardado automático",
-        description: "No se pudieron guardar los cambios automáticamente",
-        variant: "destructive",
+      
+      console.log('[A8:AUTOSAVE_SUCCESS]', { timestamp: new Date().toISOString() });
+    } catch (error: any) {
+      console.log('[A8:AUTOSAVE_ERROR]', { 
+        message: error.message, 
+        timestamp: new Date().toISOString() 
       });
     } finally {
       setAutoSaving(false);
     }
-  };
+  }, [sesionesData, lastAutoSaveTime, saveSesiones]);
 
   const handleGenerateSessions = async () => {
     if (!unidad) {
@@ -90,18 +129,59 @@ export default function Acelerador8() {
       return;
     }
 
+    const requestId = crypto.randomUUID();
+    
     try {
+      console.log('[A8:GEN_REQUEST]', {
+        request_id: requestId,
+        unidad_id: unidad?.id, 
+        titulo: unidad?.titulo, 
+        area: unidad?.area_curricular,
+        prereq: { 
+          a6_completed: progress.a6_completed, 
+          a7_completed: progress.a7_completed 
+        },
+        endpoint: 'generate-session-structure'
+      });
+      
       setGenerationLoading(true);
+      setLastGenerationTime(Date.now());
 
       const { data, error } = await supabase.functions.invoke('generate-session-structure', {
         body: {
+          request_id: requestId,
           unidad_data: unidad
         }
       });
 
       if (error) throw error;
 
+      console.log('[A8:GEN_RESPONSE]', {
+        request_id: requestId,
+        success: data?.success || false,
+        instruments_count: 0, // A8 doesn't use instruments
+        criteria_count: data?.sessions?.reduce((acc: number, s: any) => acc + (s?.rubrica_sesion?.criteria?.length || 0), 0) || 0,
+        sessions_count: data?.sessions?.length || 0,
+        preview: data?.sessions ? JSON.stringify(data.sessions).slice(0, 200)+'...' : null
+      });
+
       if (data.success && data.sessions) {
+        // Validation
+        const hasValidSessions = Array.isArray(data.sessions);
+        const sessionCount = data.sessions.length;
+        
+        console.log('[A8:GEN_VALID]', {
+          hasLevels: false, // A8 doesn't use levels
+          hasCriteria: sessionCount > 0,
+          hasTools: hasValidSessions,
+          sessions: sessionCount,
+          expected: unidad.numero_sesiones
+        });
+
+        if (!hasValidSessions || sessionCount === 0) {
+          throw new Error('Invalid session structure');
+        }
+
         const generatedSessions = data.sessions.map((session: any, index: number) => ({
           id: crypto.randomUUID(),
           unidad_id: unidad.id,
@@ -130,7 +210,12 @@ export default function Acelerador8() {
       }
 
     } catch (error: any) {
-      console.error('Generation error:', error);
+      console.log('[A8:GEN_ERROR]', { 
+        request_id: requestId, 
+        message: error.message, 
+        code: error.code 
+      });
+      
       toast({
         title: "Error en la generación",
         description: "No se pudo generar las sesiones. Puede editarlas manualmente.",
@@ -138,6 +223,118 @@ export default function Acelerador8() {
       });
     } finally {
       setGenerationLoading(false);
+    }
+  };
+
+  const handleRegenerateClick = () => {
+    console.log('[A8:REGEN_CLICK]', { timestamp: new Date().toISOString() });
+    setShowRegenerateDialog(true);
+    console.log('[A8:REGEN_CONFIRM_OPEN]', { timestamp: new Date().toISOString() });
+  };
+
+  const handleRegenerateSessions = async () => {
+    if (regenerationLoading) {
+      console.log('[A8:REGEN_GUARD]', { timestamp: new Date().toISOString() });
+      return;
+    }
+
+    const requestId = crypto.randomUUID();
+    
+    try {
+      console.log('[A8:REGEN_CONFIRM]', { 
+        accepted: true, 
+        request_id: requestId,
+        timestamp: new Date().toISOString() 
+      });
+      
+      setRegenerationLoading(true);
+      setAutoSaveEnabled(false);
+      
+      console.log('[A8:REGEN_REQUEST]', {
+        request_id: requestId,
+        unidad_id: unidad?.id,
+        titulo: unidad?.titulo,
+        sessions_before: sesionesData.length,
+        criteria_before: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0)
+      });
+
+      const { data, error } = await supabase.functions.invoke('generate-session-structure', {
+        body: {
+          request_id: requestId,
+          unidad_data: unidad,
+          force: true
+        }
+      });
+
+      if (error) throw error;
+
+      console.log('[A8:REGEN_RESPONSE]', {
+        request_id: requestId,
+        success: data?.success || false,
+        sessions_count: data?.sessions?.length || 0,
+        criteria_count: data?.sessions?.reduce((acc: number, s: any) => acc + (s?.rubrica_sesion?.criteria?.length || 0), 0) || 0,
+        preview: data?.sessions ? JSON.stringify(data.sessions).slice(0, 200)+'...' : null
+      });
+
+      if (data.success && data.sessions) {
+        // Validation for regeneration
+        if (!Array.isArray(data.sessions) || data.sessions.length === 0) {
+          throw new Error('Invalid regenerated session structure');
+        }
+
+        const regeneratedSessions = data.sessions.map((session: any, index: number) => ({
+          id: crypto.randomUUID(),
+          unidad_id: unidad.id,
+          user_id: unidad.user_id,
+          session_index: index + 1,
+          titulo: session.titulo || `Sesión ${index + 1}`,
+          inicio: session.inicio || '',
+          desarrollo: session.desarrollo || '',
+          cierre: session.cierre || '',
+          evidencias: session.evidencias || [],
+          rubrica_json: session.rubrica_sesion || { criteria: [] },
+          estado: 'BORRADOR' as const,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }));
+        
+        setSesionesData(regeneratedSessions);
+        
+        console.log('[A8:REGEN_APPLY]', {
+          request_id: requestId,
+          sessions_after: regeneratedSessions.length,
+          criteria_after: regeneratedSessions.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0)
+        });
+
+        // Silent save
+        await saveSesiones(regeneratedSessions);
+        console.log('[A8:REGEN_SAVE]', { request_id: requestId, silent: true });
+        
+        toast({
+          title: "Sesiones regeneradas",
+          description: "Las sesiones se han regenerado exitosamente",
+        });
+      } else {
+        throw new Error(data.error || 'Error en la regeneración');
+      }
+
+    } catch (error: any) {
+      console.log('[A8:REGEN_ERROR]', { 
+        request_id: requestId, 
+        message: error.message, 
+        error_code: error.code || 'UNKNOWN'
+      });
+      
+      toast({
+        title: "Error en la regeneración",
+        description: `No se pudieron regenerar las sesiones. ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setRegenerationLoading(false);
+      setAutoSaveEnabled(true);
+      setShowRegenerateDialog(false);
+      console.log('[A8:REGEN_DONE]', { timestamp: new Date().toISOString() });
     }
   };
 
@@ -219,6 +416,15 @@ export default function Acelerador8() {
 
   const handleSave = async () => {
     try {
+      console.log('[A8:SAVE]', { 
+        items: { 
+          sessions: sesionesData.length, 
+          criteria: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0) 
+        }, 
+        is_closed: false, 
+        timestamp: new Date().toISOString() 
+      });
+      
       await saveSesiones(sesionesData);
     } catch (error) {
       console.error('Save error:', error);
@@ -238,6 +444,12 @@ export default function Acelerador8() {
       });
       return;
     }
+
+    console.log('[A8:CLOSE]', { 
+      form_valid: formValid, 
+      analysis_complete: analysisComplete, 
+      timestamp: new Date().toISOString() 
+    });
 
     await handleSave();
     await closeAccelerator('A8');
@@ -270,16 +482,29 @@ export default function Acelerador8() {
     }
   };
 
-  const areSessionsClosed = sesiones.length > 0 && sesiones.every(s => s.estado === 'CERRADO');
-  const canAccessA8 = progress.a7_completed;
-  const hasSesiones = sesionesData.length > 0;
-  const formValid = sesionesData.some(sesion => 
-    sesion.titulo.trim() || sesion.inicio.trim() || sesion.desarrollo.trim() || sesion.cierre.trim()
-  );
-  const analysisComplete = generationComplete;
-
-  // Comprehensive A8 Diagnostic
+  // Enhanced Debug and State Exposure
   useEffect(() => {
+    const debugData = {
+      isClosed: areSessionsClosed,
+      canAccessA8,
+      canProceedToFinish: areSessionsClosed && formValid,
+      needsReview: false,
+      generationLoading,
+      regenLoading: regenerationLoading,
+      autoSaving,
+      saving,
+      criteriaCount: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0),
+      toolsCount: sesionesData.length, // sessions themselves are the "tools"
+      lastAutoSaveAt: lastAutoSaveTime ? new Date(lastAutoSaveTime).toISOString() : null,
+      unidadId: unidad?.id || null,
+      rubricaId: null, // A8 doesn't have a single rubric
+      instrumentosId: null, // A8 doesn't have instrumentos
+      autoSaveEnabled,
+      formValid
+    };
+
+    (window as any).__A8_DEBUG = debugData;
+
     const diagnosticData = {
       // Core state variables
       isClosed: areSessionsClosed,
@@ -309,25 +534,35 @@ export default function Acelerador8() {
       
       // Generation state
       generationLoading,
+      regenerationLoading,
       generationComplete,
       autoSaving,
       saving,
       
-      // Button visibility
-      buttons: {
-        generateSessionsVisible: !generationComplete && !areSessionsClosed,
-        saveVisible: !areSessionsClosed,
-        saveAndCloseVisible: !areSessionsClosed,
-        editVisible: areSessionsClosed,
-        reopenDialogOpen: showReopenDialog
+      counts: {
+        criterios: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0),
+        niveles: 3, // Standard evaluation levels
+        tools: sesionesData.length
       }
     };
     
     console.log('[A8:DIAGNOSTIC]', diagnosticData);
+
+    // Button visibility logging
+    const buttonStates = {
+      generateVisible: !generationComplete && !areSessionsClosed,
+      regenerateVisible: generationComplete && !areSessionsClosed && !regenerationLoading,
+      saveVisible: !areSessionsClosed,
+      closeVisible: !areSessionsClosed,
+      continueVisible: false // A8 is final
+    };
+    
+    console.log('[A8:BUTTONS]', buttonStates);
   }, [
     areSessionsClosed, formValid, analysisComplete, hasSesiones, canAccessA8,
-    progress, unidad?.estado, sesionesData.length, unidad?.numero_sesiones,
-    generationLoading, generationComplete, autoSaving, saving, showReopenDialog
+    progress, unidad?.estado, sesionesData, unidad?.numero_sesiones,
+    generationLoading, regenerationLoading, generationComplete, autoSaving, saving, 
+    showReopenDialog, lastAutoSaveTime, autoSaveEnabled
   ]);
 
   if (loading) {
@@ -458,9 +693,31 @@ export default function Acelerador8() {
         {/* Sessions Editor */}
         {sesionesData.length > 0 && (
           <div className="space-y-6">
-            <div className="flex items-center gap-2 mb-4">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <h2 className="text-lg font-semibold">Editor de Sesiones</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <h2 className="text-lg font-semibold">Editor de Sesiones</h2>
+              </div>
+              {generationComplete && !areSessionsClosed && (
+                <Button 
+                  onClick={handleRegenerateClick}
+                  disabled={regenerationLoading || !unidad}
+                  variant="outline"
+                  data-testid="regen-sessions-btn"
+                >
+                  {regenerationLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                      Regenerando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Regenerar con IA
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
 
             {sesionesData.map((sesion, index) => (
@@ -619,6 +876,61 @@ export default function Acelerador8() {
             </Button>
           )}
         </div>
+
+        {/* Regenerate Confirmation Dialog */}
+        <AlertDialog open={showRegenerateDialog} onOpenChange={setShowRegenerateDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Regenerar sesiones con IA?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción reemplazará completamente todas las sesiones actuales con nuevas versiones generadas por IA. 
+                Los cambios manuales se perderán. ¿Está seguro de que desea continuar?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel 
+                onClick={() => {
+                  console.log('[A8:REGEN_CONFIRM]', { accepted: false, timestamp: new Date().toISOString() });
+                  setShowRegenerateDialog(false);
+                }}
+              >
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleRegenerateSessions}
+                disabled={regenerationLoading}
+                data-testid="regen-confirm"
+              >
+                {regenerationLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Regenerando...
+                  </>
+                ) : (
+                  'Regenerar'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Reopen Dialog */}
+        <AlertDialog open={showReopenDialog} onOpenChange={setShowReopenDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Reabrir para edición?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción permitirá editar las sesiones nuevamente. Podrá cerrar el acelerador cuando termine.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleReopen}>
+                Reabrir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
