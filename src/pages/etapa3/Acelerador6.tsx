@@ -65,6 +65,18 @@ export default function Acelerador6() {
     );
   };
 
+  const getMissingFields = () => {
+    const missing = [];
+    if (!formData.titulo?.trim()) missing.push('Título');
+    if (!formData.area_curricular) missing.push('Área Curricular');
+    if (!formData.grado) missing.push('Grado');
+    if (!formData.proposito?.trim()) missing.push('Propósito');
+    if (!formData.evidencias?.trim()) missing.push('Evidencias');
+    if (!formData.numero_sesiones) missing.push('Número de Sesiones');
+    if (!formData.duracion_min) missing.push('Duración');
+    return missing;
+  };
+
   const isClosed = unidad?.estado === 'CERRADO';
   const analysisComplete = !!formData.ia_recomendaciones;
   const canProceedToA7 = progress.a6_completed && isClosed && analysisComplete && isFormValid();
@@ -307,9 +319,10 @@ export default function Acelerador6() {
   // Helper function for AI analysis with PDF text
   const handleAnalyzeCoherenceWithPdfText = async (pdfText: string) => {
     if (!isFormValid()) {
+      const missingFields = getMissingFields();
       toast({
-        title: "Error",
-        description: "Complete todos los campos requeridos antes del análisis",
+        title: "Campos requeridos faltantes",
+        description: `Complete los siguientes campos: ${missingFields.join(', ')}`,
         variant: "destructive",
       });
       return;
@@ -401,9 +414,10 @@ export default function Acelerador6() {
     }
 
     if (!isFormValid()) {
+      const missingFields = getMissingFields();
       toast({
-        title: "Error",
-        description: "Complete todos los campos requeridos antes del análisis",
+        title: "Campos requeridos faltantes",
+        description: `Complete los siguientes campos: ${missingFields.join(', ')}`,
         variant: "destructive",
       });
       return;
