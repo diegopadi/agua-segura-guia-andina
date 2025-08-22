@@ -171,7 +171,9 @@ export function useEtapa3V2() {
     }
   };
 
-  const saveUnidad = async (unidadData: Partial<UnidadAprendizaje>) => {
+  type SaveOptions = { silent?: boolean };
+
+  const saveUnidad = async (unidadData: Partial<UnidadAprendizaje>, options?: SaveOptions) => {
     if (!user) return null;
 
     try {
@@ -204,10 +206,13 @@ export function useEtapa3V2() {
 
       setUnidad(data as UnidadAprendizaje);
       
-      toast({
-        title: "Guardado",
-        description: "Unidad de aprendizaje guardada correctamente",
-      });
+      // Only show toast if not silent
+      if (!options?.silent) {
+        toast({
+          title: "Guardado",
+          description: "Unidad de aprendizaje guardada correctamente",
+        });
+      }
 
       return data;
     } catch (error: any) {

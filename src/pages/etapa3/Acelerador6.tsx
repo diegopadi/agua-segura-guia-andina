@@ -46,9 +46,10 @@ export default function Acelerador6() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showReopenDialog, setShowReopenDialog] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [lastAutoSaveAt, setLastAutoSaveAt] = useState(0);
   
-  // Debounced form data for auto-save
-  const debouncedFormData = useDebounce(formData, 3000);
+  // Debounced form data for auto-save (increased to 10s)
+  const debouncedFormData = useDebounce(formData, 10000);
 
   // Load existing data
   useEffect(() => {
@@ -69,12 +70,40 @@ export default function Acelerador6() {
     }
   }, [unidad]);
 
-  // Silent auto-save functionality with debounce
+  const isFormValid = () => {
+    return !!(
+      formData.titulo?.trim() &&
+      formData.area_curricular &&
+      formData.grado &&
+      formData.proposito?.trim() &&
+      formData.evidencias?.trim() &&
+      formData.numero_sesiones &&
+      formData.duracion_min
+    );
+  };
+
+  const isClosed = unidad?.estado === 'CERRADO';
+  const canProceedToA7 = progress.a6_completed;
+  const analysisComplete = !!formData.ia_recomendaciones;
+
+  // Silent auto-save functionality with debounce and throttle
   useEffect(() => {
-    if (debouncedFormData.titulo && debouncedFormData.area_curricular && !saving && !autoSaving && unidad) {
+    const now = Date.now();
+    const THROTTLE_MS = 30000; // 30s minimum between auto-saves
+    
+    if (
+      !isClosed && // NO auto-save if closed
+      !saving &&
+      !autoSaving &&
+      unidad &&
+      debouncedFormData.titulo &&
+      debouncedFormData.area_curricular &&
+      now - lastAutoSaveAt >= THROTTLE_MS
+    ) {
       handleAutoSave();
+      setLastAutoSaveAt(now);
     }
-  }, [debouncedFormData, saving, autoSaving, unidad]);
+  }, [debouncedFormData, isClosed, saving, autoSaving, unidad, lastAutoSaveAt]);
 
   const handleAutoSave = async () => {
     if (!formData.titulo || !formData.area_curricular) return;
@@ -93,9 +122,10 @@ export default function Acelerador6() {
         diagnostico_pdf_url: formData.diagnostico_pdf_url,
         ia_recomendaciones: formData.ia_recomendaciones,
         competencias_ids: formData.competencias_ids,
-      });
+      }, { silent: true }); // Silent auto-save
     } catch (error) {
       console.error('Auto-save failed:', error);
+      // Only show error toast for auto-save failures
       toast({
         title: "Error en guardado automático",
         description: "No se pudieron guardar los cambios automáticamente",
@@ -358,20 +388,18 @@ export default function Acelerador6() {
     }
   };
 
-  const isFormValid = () => {
-    return !!(
-      formData.titulo?.trim() &&
-      formData.area_curricular &&
-      formData.grado &&
-      formData.proposito?.trim() &&
-      formData.evidencias?.trim() &&
-      formData.numero_sesiones &&
-      formData.duracion_min
-    );
-  };
-
-  const isClosed = unidad?.estado === 'CERRADO';
-  const canProceedToA7 = progress.a6_completed;
+  // Debug logging for A6 runtime state
+  console.log('A6 Debug:', {
+    isClosed,
+    diagnosticoLength: formData.diagnostico_text?.length || 0,
+    hasRecs: !!formData.ia_recomendaciones,
+    formValid: isFormValid(),
+    unidadEstado: unidad?.estado,
+    progress,
+    analysisComplete,
+    autoSaving,
+    lastAutoSaveAt: new Date(lastAutoSaveAt).toLocaleTimeString()
+  });
 
   if (loading) {
     return (
@@ -424,6 +452,55 @@ export default function Acelerador6() {
                 {saving ? "Guardando..." : "Guardar"}
               </Button>
             )}
+          </div>
+        </div>
+
+        {/* Progress Stepper */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              {/* Step 1 - Basic Info */}
+              <div className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  formData.titulo && formData.area_curricular 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  1
+                </div>
+                <span className="ml-2 text-sm font-medium">Información Básica</span>
+              </div>
+              
+              {/* Connector */}
+              <div className="w-8 h-px bg-border" />
+              
+              {/* Step 2 - Diagnosis */}
+              <div className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  formData.diagnostico_text?.length >= 300 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  2
+                </div>
+                <span className="ml-2 text-sm font-medium">Diagnóstico</span>
+              </div>
+              
+              {/* Connector */}
+              <div className="w-8 h-px bg-border" />
+              
+              {/* Step 3 - AI Analysis */}
+              <div className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  analysisComplete 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  3
+                </div>
+                <span className="ml-2 text-sm font-medium">Análisis IA</span>
+              </div>
+            </div>
           </div>
         </div>
 
