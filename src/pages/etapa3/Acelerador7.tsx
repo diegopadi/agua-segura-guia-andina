@@ -32,12 +32,18 @@ export default function Acelerador7() {
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastGenerationTime, setLastGenerationTime] = useState<number>(0);
+  const [lastAutoSaveTime, setLastAutoSaveTime] = useState<number>(0);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   
   // Calculate hash of current unidad for cache management
   const unidadHash = useUnidadHash(unidad);
   
-  // Debounced rubrica data for auto-save
-  const debouncedRubricaData = useDebounce(rubricaData, 3000);
+  // State calculations (moved up to prevent hoisting issues)
+  const isClosed = rubrica?.estado === 'CERRADO';
+  const needsReview = rubrica?.needs_review === true;
+  
+  // Debounced rubrica data for auto-save (5s debounce)
+  const debouncedRubricaData = useDebounce(rubricaData, 5000);
 
   // Load existing rubrica data
   useEffect(() => {
@@ -49,24 +55,48 @@ export default function Acelerador7() {
     }
   }, [rubrica]);
 
-  // Silent auto-save functionality with debounce
+  // Silent auto-save functionality with debounce + throttle
   useEffect(() => {
-    if (debouncedRubricaData.criteria.length > 0 && !saving && !autoSaving && rubrica) {
-      handleAutoSave();
+    if (debouncedRubricaData.criteria.length > 0 && 
+        !saving && 
+        !autoSaving && 
+        !isClosed && 
+        !regenerationLoading && 
+        !generationLoading && 
+        autoSaveEnabled &&
+        rubrica) {
+      
+      const now = Date.now();
+      const timeSinceLastAutoSave = now - lastAutoSaveTime;
+      const throttleTime = 20000; // 20 seconds throttle
+      
+      if (timeSinceLastAutoSave >= throttleTime) {
+        handleAutoSave();
+      }
     }
-  }, [debouncedRubricaData, saving, autoSaving, rubrica]);
+  }, [debouncedRubricaData, saving, autoSaving, isClosed, regenerationLoading, generationLoading, autoSaveEnabled, rubrica, lastAutoSaveTime]);
 
   const handleAutoSave = async () => {
+    const timestamp = new Date().toISOString();
+    console.log('[A7:AUTOSAVE]', { timestamp });
+    
     try {
       setAutoSaving(true);
+      setLastAutoSaveTime(Date.now());
+      
       await saveRubrica({ 
         estructura: rubricaData,
         source_hash: unidadHash?.hash,
         source_snapshot: unidadHash?.snapshot,
         needs_review: false
       });
-    } catch (error) {
-      console.error('Auto-save failed:', error);
+      
+      console.log('[A7:AUTOSAVE_SUCCESS]', { timestamp });
+    } catch (error: any) {
+      console.log('[A7:AUTOSAVE_ERROR]', { 
+        message: error.message || 'Unknown error',
+        timestamp 
+      });
     } finally {
       setAutoSaving(false);
     }
@@ -173,11 +203,27 @@ export default function Acelerador7() {
   };
 
   const handleRegenerateRubric = async () => {
-    if (!unidad || !unidadHash) return;
+    // Guard: prevent multiple executions
+    if (regenerationLoading) {
+      console.log('[A7:REGEN_GUARD]', { message: 'Already regenerating, ignoring request' });
+      return;
+    }
+
+    if (!unidad || !unidadHash) {
+      console.log('[A7:REGEN_ERROR]', { message: 'Missing unidad or hash' });
+      return;
+    }
+
+    const requestId = crypto.randomUUID();
+    console.log('[A7:REGEN_CONFIRM]', { accepted: true, request_id: requestId });
+
+    // Pause auto-save during regeneration
+    setAutoSaveEnabled(false);
 
     // Check if source hash is the same (no changes in unidad)
     if (rubrica?.source_hash === unidadHash.hash) {
       console.log('[A7:REGEN_SKIPPED]', {
+        request_id: requestId,
         source_hash: unidadHash.hash,
         previous_hash: rubrica.source_hash,
         message: 'No changes in unidad data'
@@ -189,19 +235,26 @@ export default function Acelerador7() {
       });
       
       setShowRegenerateDialog(false);
+      setAutoSaveEnabled(true);
       return;
     }
 
     if (!checkGenerationThrottle()) {
       setShowRegenerateDialog(false);
+      setAutoSaveEnabled(true);
       return;
     }
 
-    const requestId = crypto.randomUUID();
+    const criteriaBefore = rubricaData.criteria.length;
+    const levelsBefore = rubricaData.levels.length;
+
     console.log('[A7:REGEN_REQUEST]', {
       request_id: requestId,
-      source_hash: unidadHash.hash,
-      previous_hash: rubrica?.source_hash,
+      unidad_id: unidad.id,
+      titulo: unidad.titulo,
+      area: unidad.area_curricular,
+      criteria_before: criteriaBefore,
+      levels_before: levelsBefore,
       timestamp: new Date().toISOString()
     });
 
@@ -210,57 +263,130 @@ export default function Acelerador7() {
       setLastGenerationTime(Date.now());
 
       const { data, error } = await supabase.functions.invoke('generate-evaluation-rubric', {
-        body: { unidad_data: unidad }
+        body: { 
+          request_id: requestId,
+          unidad_data: unidad,
+          force: true,
+          previous_rubric_id: rubrica?.id
+        }
+      });
+
+      // Log response
+      console.log('[A7:REGEN_RESPONSE]', {
+        request_id: requestId,
+        success: data?.success || false,
+        criteria_count: data?.estructura?.criteria?.length || 0,
+        levels_count: data?.estructura?.levels?.length || 0,
+        preview: data?.estructura ? JSON.stringify(data.estructura).substring(0, 200) + '...' : 'null',
+        timestamp: new Date().toISOString()
       });
 
       if (error || !data?.success) {
         const errorMessage = data?.message || error?.message || 'Error desconocido';
+        console.log('[A7:REGEN_ERROR]', {
+          request_id: requestId,
+          message: errorMessage,
+          error_code: data?.error_code
+        });
+        
         toast({
           title: "Error en la regeneración",
-          description: errorMessage,
+          description: `${errorMessage} (ID: ${requestId})`,
           variant: "destructive",
         });
         return;
       }
 
-      console.log('[A7:REGEN_SUCCESS]', {
-        request_id: requestId,
-        criteria_count: data.estructura.criteria.length,
-        timestamp: new Date().toISOString()
-      });
+      // Validate structure before applying
+      const estructura = data.estructura;
+      if (!estructura.levels || !Array.isArray(estructura.criteria) || 
+          estructura.criteria.length < 4 || estructura.criteria.length > 8 ||
+          !estructura.levels.includes('Inicio') || 
+          !estructura.levels.includes('Proceso') || 
+          !estructura.levels.includes('Logro')) {
+        
+        console.log('[A7:REGEN_ERROR]', {
+          request_id: requestId,
+          message: 'Invalid structure received',
+          criteria_count: estructura.criteria?.length || 0,
+          levels: estructura.levels || []
+        });
+        
+        throw new Error('Estructura de rúbrica inválida recibida de la IA');
+      }
 
-      setRubricaData(data.estructura);
+      // Apply new rubric data (complete replacement)
+      setRubricaData(estructura);
       setGenerationComplete(true);
+      
+      const criteriaAfter = estructura.criteria.length;
+      const levelsAfter = estructura.levels.length;
+      
+      console.log('[A7:REGEN_APPLY]', {
+        request_id: requestId,
+        criteria_after: criteriaAfter,
+        levels_after: levelsAfter
+      });
       
       // Save immediately with new hash
       await saveRubrica({
-        estructura: data.estructura,
+        estructura: estructura,
         source_hash: unidadHash.hash,
         source_snapshot: unidadHash.snapshot,
         needs_review: false
       });
       
+      console.log('[A7:REGEN_SAVE]', { 
+        request_id: requestId,
+        silent: true 
+      });
+      
       toast({
-        title: "Rúbrica regenerada exitosamente",
-        description: `Se ha actualizado la rúbrica con ${data.estructura.criteria.length} criterios`,
+        title: "Rúbrica regenerada y guardada",
+        description: `Rúbrica actualizada con ${criteriaAfter} criterios`,
+      });
+
+      console.log('[A7:REGEN_DONE]', { 
+        request_id: requestId,
+        timestamp: new Date().toISOString()
       });
 
     } catch (error: any) {
-      console.error('[A7:REGEN_ERROR]', {
+      console.log('[A7:REGEN_ERROR]', {
         request_id: requestId,
-        error_message: error.message,
-        timestamp: new Date().toISOString()
+        message: error.message || 'Unknown error',
+        stack: error.stack?.substring(0, 200)
       });
       
       toast({
         title: "Error inesperado",
-        description: "No se pudo regenerar la rúbrica",
+        description: `No se pudo regenerar la rúbrica (ID: ${requestId})`,
         variant: "destructive",
       });
     } finally {
       setRegenerationLoading(false);
       setShowRegenerateDialog(false);
+      // Resume auto-save
+      setAutoSaveEnabled(true);
     }
+  };
+
+  // Handle regenerate button click
+  const handleRegenerateClick = () => {
+    const requestId = crypto.randomUUID();
+    console.log('[A7:REGEN_CLICK]', { request_id: requestId });
+    setShowRegenerateDialog(true);
+    console.log('[A7:REGEN_CONFIRM_OPEN]', { request_id: requestId });
+  };
+
+  // Handle regenerate dialog cancel
+  const handleRegenerateCancel = () => {
+    const requestId = crypto.randomUUID();
+    console.log('[A7:REGEN_CONFIRM]', { 
+      accepted: false, 
+      request_id: requestId 
+    });
+    setShowRegenerateDialog(false);
   };
 
   const addCriterion = () => {
@@ -411,9 +537,7 @@ export default function Acelerador7() {
     }
   };
 
-  // State calculations
-  const isClosed = rubrica?.estado === 'CERRADO';
-  const needsReview = rubrica?.needs_review === true;
+  // State calculations (continued)
   const canProceedToA8 = progress.a7_completed && isClosed && !needsReview;
   const canAccessA7 = progress.a6_completed;
   const hasRubricas = rubricaData.criteria.length > 0;
@@ -422,6 +546,28 @@ export default function Acelerador7() {
       c.criterio.trim() && Object.values(c.descriptores).every(d => d.trim())
     );
   const analysisComplete = generationComplete && hasRubricas && formValid;
+
+  // Expose debug data to window
+  useEffect(() => {
+    const debugData = {
+      isClosed,
+      generationLoading,
+      regenLoading: regenerationLoading,
+      autoSaving,
+      saving,
+      criteriaCount: rubricaData?.criteria?.length || 0,
+      levelsCount: rubricaData?.levels?.length || 0,
+      lastAutoSaveAt: lastAutoSaveTime ? new Date(lastAutoSaveTime).toISOString() : null,
+      unidadId: unidad?.id || null,
+      rubricaId: rubrica?.id || null,
+      autoSaveEnabled,
+      needsReview,
+      formValid
+    };
+    
+    (window as any).__A7_DEBUG = debugData;
+  }, [isClosed, generationLoading, regenerationLoading, autoSaving, saving, 
+      rubricaData, lastAutoSaveTime, unidad?.id, rubrica?.id, autoSaveEnabled, needsReview, formValid]);
 
   // Validation errors
   const validationErrors = [];
@@ -623,13 +769,23 @@ export default function Acelerador7() {
                 {/* Regenerate Button */}
                 {!isClosed && rubrica?.estado !== 'CERRADO' && hasRubricas && (
                   <Button
-                    onClick={() => setShowRegenerateDialog(true)}
+                    onClick={handleRegenerateClick}
                     disabled={regenerationLoading || !unidad}
                     variant="outline"
                     className="flex items-center gap-2"
+                    aria-busy={regenerationLoading}
                   >
-                    <RotateCcw className="h-4 w-4" />
-                    {regenerationLoading ? 'Regenerando...' : 'Regenerar con IA'}
+                    {regenerationLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                        Regenerando...
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="h-4 w-4" />
+                        Regenerar con IA
+                      </>
+                    )}
                   </Button>
                 )}
               </div>
@@ -844,9 +1000,21 @@ export default function Acelerador7() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRegenerateRubric}>
-              {regenerationLoading ? 'Regenerando...' : 'Regenerar'}
+            <AlertDialogCancel onClick={handleRegenerateCancel}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleRegenerateRubric}
+              disabled={regenerationLoading}
+            >
+              {regenerationLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                  Regenerando...
+                </>
+              ) : (
+                'Regenerar'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

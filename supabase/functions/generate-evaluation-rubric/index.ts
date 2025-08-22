@@ -78,13 +78,15 @@ serve(async (req) => {
       });
     }
     
-    const { unidad_data } = await req.json();
+    const { unidad_data, request_id, force, previous_rubric_id } = await req.json();
     
     console.log('[A7:INPUT_VALIDATION]', { 
-      requestId,
+      requestId: request_id || requestId,
       hasApiKey: !!openAIApiKey,
       hasUnidadData: !!unidad_data,
-      unidadFields: unidad_data ? Object.keys(unidad_data) : []
+      unidadFields: unidad_data ? Object.keys(unidad_data) : [],
+      force: !!force,
+      previous_rubric_id: previous_rubric_id || null
     });
     
     if (!openAIApiKey) {
