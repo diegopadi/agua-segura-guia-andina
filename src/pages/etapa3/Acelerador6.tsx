@@ -46,6 +46,8 @@ export default function Acelerador6() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfExtracting, setPdfExtracting] = useState(false);
 
   // Auto-save functionality
   useEffect(() => {
@@ -86,6 +88,16 @@ export default function Acelerador6() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // File validation
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Error",
+        description: "Solo se permiten archivos PDF",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
       toast({
         title: "Error",
@@ -95,16 +107,124 @@ export default function Acelerador6() {
       return;
     }
 
-    setPdfFile(file);
-    
-    // TODO: Extract text from PDF and update diagnostico_text
-    // For now, we'll just set the filename
-    handleInputChange('diagnostico_pdf_url', file.name);
-    
-    toast({
-      title: "PDF cargado",
-      description: "Archivo PDF cargado correctamente. Ingrese el texto manualmente si es necesario.",
-    });
+    try {
+      setPdfUploading(true);
+      setPdfFile(file);
+
+      // Generate unique file path
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${timestamp}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      const filePath = `diagnosticos/${fileName}`;
+
+      // Upload to diagnosticos-pdf bucket
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('diagnosticos-pdf')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw new Error(`Error subiendo archivo: ${uploadError.message}`);
+      }
+
+      // Get public URL for the uploaded file
+      const { data: urlData } = supabase.storage
+        .from('diagnosticos-pdf')
+        .getPublicUrl(filePath);
+
+      // Update form data with PDF URL
+      handleInputChange('diagnostico_pdf_url', urlData.publicUrl);
+
+      toast({
+        title: "PDF subido exitosamente",
+        description: "Extrayendo texto automáticamente...",
+      });
+
+      // Start text extraction
+      setPdfExtracting(true);
+
+      const { data: extractData, error: extractError } = await supabase.functions.invoke('extract-diagnostico-text', {
+        body: { file_path: filePath }
+      });
+
+      if (extractError) {
+        console.error('Extract error:', extractError);
+        throw new Error(`Error extrayendo texto: ${extractError.message}`);
+      }
+
+      if (extractData.success && extractData.text) {
+        const extractedText = extractData.text.trim();
+        
+        if (extractedText.length > 100) {
+          handleInputChange('diagnostico_text', extractedText);
+          toast({
+            title: "Texto extraído exitosamente",
+            description: `Se extrajeron ${extractedText.length} caracteres del PDF`,
+          });
+          
+          // Telemetry event for successful extraction
+          console.log('A6 PDF Text Extracted Successfully', {
+            event: 'a6_pdf_text_extracted_ok',
+            file_size: file.size,
+            text_length: extractedText.length,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          toast({
+            title: "Texto extraído parcialmente",
+            description: "Se extrajo poco texto del PDF. Por favor, ingrese el texto manualmente.",
+            variant: "destructive",
+          });
+          
+          // Telemetry event for partial extraction
+          console.log('A6 PDF Text Extraction Partial', {
+            event: 'a6_pdf_text_extracted_partial',
+            file_size: file.size,
+            text_length: extractedText.length,
+            timestamp: new Date().toISOString()
+          });
+        }
+      } else {
+        throw new Error(extractData.error || 'No se pudo extraer texto del PDF');
+      }
+
+      // Telemetry event for successful PDF upload
+      console.log('A6 PDF Uploaded Successfully', {
+        event: 'a6_pdf_uploaded',
+        file_size: file.size,
+        file_name: fileName,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('PDF upload/extract error:', error);
+      
+      // Telemetry event for failed extraction
+      console.log('A6 PDF Processing Failed', {
+        event: 'a6_pdf_text_extracted_fail',
+        error: error.message,
+        file_size: file?.size || 0,
+        timestamp: new Date().toISOString()
+      });
+
+      toast({
+        title: "Error procesando PDF",
+        description: `${error.message}. Por favor, ingrese el texto manualmente.`,
+        variant: "destructive",
+      });
+
+      // Reset file state on error but keep any uploaded URL
+      setPdfFile(null);
+    } finally {
+      setPdfUploading(false);
+      setPdfExtracting(false);
+      
+      // Reset file input
+      const input = document.getElementById('pdf-upload') as HTMLInputElement;
+      if (input) input.value = '';
+    }
   };
 
   const handleAnalyzeCoherence = async () => {
@@ -365,26 +485,52 @@ export default function Acelerador6() {
                       onChange={handlePdfUpload}
                       className="hidden"
                       id="pdf-upload"
-                      disabled={isClosed}
+                      disabled={isClosed || pdfUploading}
                     />
                     <Button 
                       variant="outline" 
                       onClick={() => document.getElementById('pdf-upload')?.click()}
-                      disabled={isClosed}
+                      disabled={isClosed || pdfUploading}
+                      className="w-full"
                     >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Seleccionar PDF
+                      {pdfUploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                          {pdfExtracting ? "Extrayendo texto..." : "Subiendo PDF..."}
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Seleccionar PDF
+                        </>
+                      )}
                     </Button>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Máximo 5MB. Si el PDF no se puede leer, ingrese el texto manualmente.
+                      Máximo 5MB. El texto se extraerá automáticamente.
                     </p>
                   </div>
                 </div>
               )}
 
               {formData.diagnostico_pdf_url && (
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">PDF cargado: {formData.diagnostico_pdf_url}</p>
+                <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">PDF procesado exitosamente</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.diagnostico_pdf_url.split('/').pop()?.substring(0, 50)}...
+                    </p>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      handleInputChange('diagnostico_pdf_url', '');
+                      handleInputChange('diagnostico_text', '');
+                    }}
+                    disabled={isClosed}
+                  >
+                    Eliminar
+                  </Button>
                 </div>
               )}
 
