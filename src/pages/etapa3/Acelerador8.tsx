@@ -116,6 +116,9 @@ export default function Acelerador8() {
   );
   const analysisComplete = generationComplete;
 
+  // Mutex to prevent concurrent saves
+  const [isSavingMutex, setIsSavingMutex] = useState(false);
+
   // Enhanced auto-save with debounce (5s) + throttle (20s)
   useEffect(() => {
     // Clear existing timeouts
@@ -125,7 +128,7 @@ export default function Acelerador8() {
     
     // Check conditions to pause auto-save - CRITICAL: block during regeneration
     const shouldPause = !autoSaveEnabled || areSessionsClosed || generationLoading || 
-                       regenerationLoading || !generationComplete || saving || autoSaving;
+                       regenerationLoading || !generationComplete || saving || autoSaving || isSavingMutex;
     
     // Additional guard: never auto-save during regeneration
     if (regenerationLoading) {
@@ -139,7 +142,7 @@ export default function Acelerador8() {
       }, 100); // Small delay to batch rapid changes
     }
   }, [debouncedSesionesData, autoSaveEnabled, areSessionsClosed, generationLoading, 
-      regenerationLoading, generationComplete, saving, autoSaving, sesiones]);
+      regenerationLoading, generationComplete, saving, autoSaving, isSavingMutex, sesiones]);
 
   // Expose debug info to window
   useEffect(() => {
@@ -154,31 +157,48 @@ export default function Acelerador8() {
   }, [regenerationLoading, lastRequestId, lastHttpStatus, lastNetworkError, autoSaveEnabled, sesionesData.length]);
 
   const handleAutoSave = useCallback(async () => {
+    if (saving || isSavingMutex || !sesionesData || sesionesData.length === 0) return;
+    
     const now = Date.now();
     
-    // Throttle: don't save more than once every 20 seconds
-    if (lastAutoSaveTime && (now - lastAutoSaveTime) < 20000) {
+    // Throttle: don't save more than once every 10 seconds
+    if (lastAutoSaveTime && (now - lastAutoSaveTime) < 10000) {
       return;
     }
+    
+    // Check if data has actually changed
+    const hasChanges = sesionesData.some(sesion => 
+      sesion.titulo !== '' || 
+      sesion.inicio !== '' || 
+      sesion.desarrollo !== '' || 
+      sesion.cierre !== ''
+    );
+    
+    if (!hasChanges) return;
     
     // Skip autosave toast if regeneration dialog is open and loading
     const skipToast = showRegenerateDialog && regenerationLoading;
     
+    setIsSavingMutex(true);
     try {
       console.log('[A8:AUTOSAVE]', { timestamp: new Date().toISOString() });
       setAutoSaving(true);
       setLastAutoSaveTime(now);
       
-      await saveSesiones(sesionesData);
+      const success = await saveSesiones(sesionesData);
       
-      console.log('[A8:AUTOSAVE_SUCCESS]', { timestamp: new Date().toISOString() });
-      
-      if (!skipToast) {
-        toast({
-          title: "Guardado automático",
-          description: "Las sesiones se han guardado automáticamente",
-          duration: 2000
-        });
+      if (success) {
+        console.log('[A8:AUTOSAVE_SUCCESS]', { timestamp: new Date().toISOString() });
+        
+        if (!skipToast) {
+          toast({
+            title: "Guardado automático",
+            description: "Las sesiones se han guardado automáticamente",
+            duration: 2000
+          });
+        }
+      } else {
+        console.log('[A8:AUTOSAVE_FAILED]', { timestamp: new Date().toISOString() });
       }
     } catch (error: any) {
       console.log('[A8:AUTOSAVE_ERROR]', { 
@@ -187,8 +207,9 @@ export default function Acelerador8() {
       });
     } finally {
       setAutoSaving(false);
+      setIsSavingMutex(false);
     }
-  }, [sesionesData, lastAutoSaveTime, saveSesiones, showRegenerateDialog, regenerationError, toast]);
+  }, [sesionesData, lastAutoSaveTime, saveSesiones, showRegenerateDialog, regenerationLoading, toast, saving, isSavingMutex]);
 
   // Payload sanitizer to avoid size limits
   const sanitizeUnidadForPayload = (unidad: any) => {
@@ -653,56 +674,93 @@ export default function Acelerador8() {
   };
 
   const handleClose = async () => {
-    const hasContent = sesionesData.some(sesion => 
-      sesion.titulo.trim() || sesion.inicio.trim() || sesion.desarrollo.trim() || sesion.cierre.trim()
+    console.log('Closing A8...');
+    
+    // Validate sessions before closing
+    const validSessions = sesionesData.filter(sesion => 
+      sesion.titulo && sesion.titulo.trim().length > 0
     );
-
-    if (!hasContent) {
+    
+    if (validSessions.length === 0) {
       toast({
         title: "Error",
-        description: "Debe completar al menos una sesión antes de cerrar",
+        description: "Debe tener al menos una sesión válida para cerrar",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Save current state first
+    const success = await saveSesiones(sesionesData);
+    if (!success) {
+      toast({
+        title: "Error",
+        description: "Error al guardar las sesiones antes de cerrar",
         variant: "destructive",
       });
       return;
     }
 
-    console.log('[A8:CLOSE]', { 
-      form_valid: formValid, 
-      analysis_complete: analysisComplete, 
-      timestamp: new Date().toISOString() 
-    });
-
-    await handleSave();
-    await closeAccelerator('A8');
-    
-    toast({
-      title: "A8 cerrado",
-      description: "Las sesiones han sido guardadas y el acelerador se ha cerrado exitosamente.",
-    });
+    // Close the accelerator
+    try {
+      await closeAccelerator('A8');
+      toast({
+        title: "Acelerador cerrado",
+        description: "A8 cerrado correctamente",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Error al cerrar el acelerador",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleReopen = async () => {
+    console.log('Reopening A8...');
+    
+    // Update sessions to draft state
+    const updatedSesiones = sesionesData.map(sesion => ({
+      ...sesion,
+      estado: 'BORRADOR' as const,
+      closed_at: null
+    }));
+    
+    setSesionesData(updatedSesiones);
+    
+    // Save the updated state
+    const success = await saveSesiones(updatedSesiones);
+    if (!success) {
+      toast({
+        title: "Error",
+        description: "Error al reabrir las sesiones",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Also reopen the accelerator in the database
     try {
-      const updatedSesiones = sesionesData.map(sesion => ({
-        ...sesion,
-        estado: 'BORRADOR' as const,
-        closed_at: null
-      }));
-      
-      await saveSesiones(updatedSesiones);
-      setSesionesData(updatedSesiones);
+      await supabase
+        .from('unidades_aprendizaje')
+        .update({ 
+          estado: 'BORRADOR',
+          closed_at: null
+        })
+        .eq('id', unidad?.id)
+        .eq('user_id', unidad?.user_id);
       
       toast({
         title: "Acelerador reabierto",
-        description: "Las sesiones se han reabierto para edición.",
+        description: "Sesiones reabiertas para edición",
       });
-      
       setShowReopenDialog(false);
     } catch (error) {
-      console.error('Reopen error:', error);
+      console.error('Error reopening accelerator:', error);
       toast({
-        title: "Error al reabrir",
-        description: "No se pudieron reabrir las sesiones",
+        title: "Error",
+        description: "Error al reabrir el acelerador",
         variant: "destructive",
       });
     }

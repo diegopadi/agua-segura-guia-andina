@@ -119,9 +119,9 @@ ${Array.isArray(sesion.evidencias) ? sesion.evidencias.join(', ') : sesion.evide
 
 RÚBRICA DE SESIÓN:`);
 
-        if (sesion.rubrica_sesion?.criteria && Array.isArray(sesion.rubrica_sesion.criteria)) {
-          sesion.rubrica_sesion.criteria.forEach((criterio: any, critIndex: number) => {
-            sections.push(`  ${critIndex + 1}. ${criterio.descripcion || criterio.nombre || 'Sin descripción'}`);
+        if (sesion.rubrica_json?.criteria && Array.isArray(sesion.rubrica_json.criteria)) {
+          sesion.rubrica_json.criteria.forEach((criterio: any, critIndex: number) => {
+            sections.push(`  ${critIndex + 1}. ${criterio}`);
           });
         }
       });
@@ -564,14 +564,14 @@ RÚBRICA DE SESIÓN:`);
                             </p>
                           </div>
                           
-                          {sesion.rubrica_sesion?.criteria && Array.isArray(sesion.rubrica_sesion.criteria) && (
+                          {(sesion.rubrica_json?.criteria && sesion.rubrica_json.criteria.length > 0) && (
                             <div>
                               <h4 className="font-medium text-gray-700 mb-2">RÚBRICA DE SESIÓN</h4>
                               <div className="bg-gray-50 p-3 rounded border-l-4 border-gray-200">
                                 <ul className="text-sm space-y-1">
-                                  {sesion.rubrica_sesion.criteria.map((criterio: any, critIndex: number) => (
+                                  {sesion.rubrica_json.criteria.map((criterio: any, critIndex: number) => (
                                     <li key={critIndex}>
-                                      {critIndex + 1}. {criterio.descripcion || criterio.nombre || 'Sin descripción'}
+                                      {critIndex + 1}. {criterio}
                                     </li>
                                   ))}
                                 </ul>

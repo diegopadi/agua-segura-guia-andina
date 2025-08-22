@@ -292,47 +292,103 @@ export function useEtapa3V2() {
   };
 
   const saveSesiones = async (sesionesData: SesionClase[]) => {
-    if (!user || !unidad) return [];
+    if (!user) return false;
 
     try {
       setSaving(true);
+      
+      // Get current unidad
+      if (!unidad) {
+        throw new Error('No hay unidad disponible');
+      }
 
-      // Delete existing sessions for this unit
-      await supabase
-        .from('sesiones_clase')
-        .delete()
-        .eq('unidad_id', unidad.id);
+      // Validate sessions data before saving
+      const validSessions = sesionesData.filter(sesion => 
+        sesion.titulo && sesion.titulo.trim().length > 0
+      );
 
-      // Insert new sessions with proper typing
-      const sessionsToInsert = sesionesData.map(sesion => ({
+      if (validSessions.length === 0) {
+        throw new Error('No hay sesiones válidas para guardar');
+      }
+
+      // Use individual UPSERT operations for better error handling
+      const upsertPromises = validSessions.map(async (sesion, index) => {
+        const sessionData = {
+          unidad_id: unidad.id,
+          user_id: user.id,
+          session_index: index + 1,
+          titulo: sesion.titulo || `Sesión ${index + 1}`,
+          inicio: sesion.inicio || '',
+          desarrollo: sesion.desarrollo || '',
+          cierre: sesion.cierre || '',
+          evidencias: sesion.evidencias || [],
+          rubrica_json: sesion.rubrica_json || { criteria: [] },
+          estado: sesion.estado || 'BORRADOR',
+          updated_at: new Date().toISOString()
+        };
+
+        // Try to find existing session first
+        const { data: existingSession } = await supabase
+          .from('sesiones_clase')
+          .select('id')
+          .eq('unidad_id', unidad.id)
+          .eq('user_id', user.id)
+          .eq('session_index', index + 1)
+          .maybeSingle();
+
+        if (existingSession) {
+          // Update existing session
+          const { data, error } = await supabase
+            .from('sesiones_clase')
+            .update(sessionData)
+            .eq('id', existingSession.id)
+            .select()
+            .single();
+          
+          if (error) throw error;
+          return data;
+        } else {
+          // Insert new session
+          const { data, error } = await supabase
+            .from('sesiones_clase')
+            .insert(sessionData)
+            .select()
+            .single();
+          
+          if (error) throw error;
+          return data;
+        }
+      });
+
+      // Execute all upserts
+      const savedSessions = await Promise.all(upsertPromises);
+
+      console.log('Sessions saved successfully:', savedSessions);
+      
+      // Transform and update local state
+      const transformedSessions: SesionClase[] = savedSessions.map(sesion => ({
         ...sesion,
-        unidad_id: unidad.id,
-        user_id: user.id
-      })) as any;
-
-      const { data, error } = await supabase
-        .from('sesiones_clase')
-        .insert(sessionsToInsert)
-        .select()
-        .order('session_index');
-
-      if (error) throw error;
-
-      setSesiones(data as SesionClase[] || []);
+        evidencias: Array.isArray(sesion.evidencias) ? sesion.evidencias : [],
+        rubrica_json: sesion.rubrica_json as SesionClase['rubrica_json'] || { criteria: [] },
+        estado: sesion.estado as 'BORRADOR' | 'CERRADO'
+      }));
+      
+      setSesiones(transformedSessions);
       
       toast({
         title: "Guardado",
-        description: "Sesiones guardadas correctamente",
+        description: `${savedSessions.length} sesiones guardadas correctamente`,
       });
-
-      return data || [];
+      return true;
     } catch (error: any) {
+      console.error('Error saving sessions:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
         title: "Error",
-        description: error.message,
+        description: `Error al guardar las sesiones: ${errorMessage}`,
         variant: "destructive",
       });
-      throw error;
+      return false;
     } finally {
       setSaving(false);
     }
