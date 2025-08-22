@@ -116,12 +116,14 @@ Estructura JSON requerida:
 
     console.log('[A8:EDGE_CONTEXT]', { tema, diag_len: diag.length, has_recs: !!recs });
 
-    // Add variation for regeneration
-    const variationPrompt = force ? 
-      `\n\nVARIACIÓN: Explora enfoques alternativos y nuevos ejemplos manteniendo el mismo tema. Usa diferentes estrategias pedagógicas, materiales distintos, y actividades variadas. Cambia los ejemplos específicos pero mantén la coherencia temática con "${tema}".` 
+    // Improved variation prompt for regeneration
+    const regenHint = force ? 
+      `\n\nVARIACIÓN: propón enfoques y ejemplos alternativos sobre «${unidadData.titulo} / seguridad hídrica», manteniendo la coherencia pedagógica. Usa estrategias diferentes, cambia materiales y actividades específicas, pero conserva la alineación temática.` 
       : '';
 
-    console.log('[A8:EDGE_CALL]', { request_id, model: 'gpt-5-2025-08-07', has_variation: !!force });
+    const model = Deno.env.get('A8_MODEL') ?? 'gpt-4o-mini';
+
+    console.log('[A8:EDGE_CALL]', { request_id, model, has_variation: !!force });
 
     const userPrompt = `Diseña ${unidadData.numero_sesiones} sesiones completas de ${unidadData.duracion_min} minutos cada una para la siguiente unidad de aprendizaje:
 
@@ -145,9 +147,9 @@ Cada sesión debe:
 - Proporcionar evidencias observables del aprendizaje vinculadas a ${tema}
 - Tener una mini-rúbrica con 2-8 criterios específicos y observables sobre ${tema}
 - Seguir la secuencia pedagógica apropiada para el área y grado
-- Incorporar ejemplos, materiales y situaciones específicos de ${tema}${variationPrompt}`;
+- Incorporar ejemplos, materiales y situaciones específicos de ${tema}${regenHint}`;
 
-    const fullPrompt = systemPrompt + `\n\nContextualiza TODAS las actividades a la temática central: «${tema}». Usa el diagnóstico y recomendaciones provistas para aterrizar ejemplos, materiales, situaciones y evaluación.${variationPrompt}`;
+    const fullPrompt = systemPrompt + `\n\nContextualiza TODAS las actividades a la temática central: «${tema}». Usa el diagnóstico y recomendaciones provistas para aterrizar ejemplos, materiales, situaciones y evaluación.${regenHint}`;
     
     console.log('[A8:EDGE_AI_PROMPT]', { 
       request_id, 
@@ -164,7 +166,7 @@ Cada sesión debe:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model,
         messages: [
           { 
             role: 'system', 
@@ -173,27 +175,22 @@ Cada sesión debe:
           { role: 'user', content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 4000,
+        max_tokens: 4000,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.log('[A8:EDGE_AI_ERROR]', {
-        request_id,
-        status: response.status,
-        error: errorData.slice(0, 500)
-      });
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('[A8:EDGE_OAI_ERROR]', { status: response.status, body: errorText });
+      throw new Error(`OPENAI_${response.status}: ${errorText.slice(0, 500)}`);
     }
 
     const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
-
-    console.log('[A8:EDGE_AI_RESPONSE]', {
+    const aiResponse = data?.choices?.[0]?.message?.content ?? '';
+    console.log('[A8:EDGE_AI_RESPONSE]', { 
       request_id,
-      response_length: aiResponse?.length || 0,
-      response_preview: aiResponse?.slice(0, 200) + '...' || 'empty'
+      len: aiResponse.length, 
+      preview: aiResponse.slice(0, 250) 
     });
 
     let sessionStructure;
