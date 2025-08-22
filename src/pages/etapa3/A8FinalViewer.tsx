@@ -308,11 +308,21 @@ RÚBRICA DE SESIÓN:`);
                                     </div>
                                   </div>
                                   
-                                  {rec.vinculo_diagnostico && (
-                                    <p className="text-xs text-muted-foreground mb-3 italic">
-                                      Vínculo: {rec.vinculo_diagnostico}
-                                    </p>
-                                  )}
+                                   {rec.vinculo_diagnostico && (
+                                     <p className="text-xs text-muted-foreground mb-3 italic">
+                                       Vínculo: {
+                                         typeof rec.vinculo_diagnostico === 'string' ? (
+                                           rec.vinculo_diagnostico
+                                         ) : typeof rec.vinculo_diagnostico === 'object' && rec.vinculo_diagnostico !== null ? (
+                                           rec.vinculo_diagnostico.cita ? 
+                                             `"${rec.vinculo_diagnostico.cita}"${rec.vinculo_diagnostico.ubicacion ? ` (${rec.vinculo_diagnostico.ubicacion})` : ''}` : 
+                                             JSON.stringify(rec.vinculo_diagnostico)
+                                         ) : (
+                                           String(rec.vinculo_diagnostico)
+                                         )
+                                       }
+                                     </p>
+                                   )}
                                   
                                   <div className="space-y-3 text-sm">
                                     {rec.por_que && (
