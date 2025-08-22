@@ -176,11 +176,17 @@ export default function Acelerador6() {
     try {
       setPdfUploading(true);
 
-      // Generate unique file path
+      // Get current user ID for RLS compliance
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      // Generate unique file path with user_id as first folder for RLS compliance
       const timestamp = Date.now();
       const fileExt = file.name.split('.').pop();
       const fileName = `${timestamp}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-      const filePath = `diagnosticos/${fileName}`;
+      const filePath = `${user.id}/diagnosticos/${fileName}`;
 
       // Upload to diagnosticos-pdf bucket
       const { data: uploadData, error: uploadError } = await supabase.storage
