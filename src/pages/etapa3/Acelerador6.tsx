@@ -99,7 +99,7 @@ export default function Acelerador6() {
       unidad &&
       debouncedFormData.titulo &&
       debouncedFormData.area_curricular &&
-      now - lastAutoSaveAt >= THROTTLE_MS
+      (lastAutoSaveAt === 0 || now - lastAutoSaveAt >= THROTTLE_MS)
     ) {
       handleAutoSave();
       setLastAutoSaveAt(now);
@@ -870,16 +870,26 @@ export default function Acelerador6() {
 
             <div className="flex gap-3">
               {!isClosed && (
-                <Button 
-                  onClick={handleClose}
-                  disabled={!isFormValid() || saving}
-                  variant="default"
-                >
-                  Guardar y Cerrar A6
-                </Button>
+                <>
+                  <Button 
+                    onClick={handleSave}
+                    disabled={!isFormValid() || saving}
+                    variant="outline"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Guardar
+                  </Button>
+                  <Button 
+                    onClick={handleClose}
+                    disabled={!isFormValid() || saving || !analysisComplete}
+                    variant="default"
+                  >
+                    Guardar y Cerrar A6
+                  </Button>
+                </>
               )}
               
-              {canProceedToA7 && (
+              {isClosed && analysisComplete && isFormValid() && (
                 <Button onClick={() => navigate('/etapa3/acelerador7')}>
                   Continuar a A7
                   <ArrowRight className="h-4 w-4 ml-2" />
