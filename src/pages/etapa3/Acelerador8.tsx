@@ -38,6 +38,14 @@ export default function Acelerador8() {
   const [lastNetworkError, setLastNetworkError] = useState<string | null>(null);
   const [payloadBytes, setPayloadBytes] = useState<number>(0);
   
+  // Regeneration error state
+  const [regenerationError, setRegenerationError] = useState<{
+    requestId: string;
+    message: string;
+    code: string;
+  } | null>(null);
+  const [lastRequestId, setLastRequestId] = useState<string | null>(null);
+  
   const lastAutoSaveRef = useRef<NodeJS.Timeout>();
   const throttleRef = useRef<NodeJS.Timeout>();
   
@@ -133,6 +141,18 @@ export default function Acelerador8() {
   }, [debouncedSesionesData, autoSaveEnabled, areSessionsClosed, generationLoading, 
       regenerationLoading, generationComplete, saving, autoSaving, sesiones]);
 
+  // Expose debug info to window
+  useEffect(() => {
+    (window as any).__A8_DEBUG = {
+      regenLoading: regenerationLoading,
+      lastRequestId: lastRequestId,
+      lastHttpStatus: lastHttpStatus,
+      lastNetworkError: lastNetworkError,
+      autoSaveEnabled: autoSaveEnabled,
+      sessionsCount: sesionesData.length
+    };
+  }, [regenerationLoading, lastRequestId, lastHttpStatus, lastNetworkError, autoSaveEnabled, sesionesData.length]);
+
   const handleAutoSave = useCallback(async () => {
     const now = Date.now();
     
@@ -140,6 +160,9 @@ export default function Acelerador8() {
     if (lastAutoSaveTime && (now - lastAutoSaveTime) < 20000) {
       return;
     }
+    
+    // Skip autosave toast if regeneration dialog is open with error
+    const skipToast = showRegenerateDialog && regenerationError;
     
     try {
       console.log('[A8:AUTOSAVE]', { timestamp: new Date().toISOString() });
@@ -149,6 +172,14 @@ export default function Acelerador8() {
       await saveSesiones(sesionesData);
       
       console.log('[A8:AUTOSAVE_SUCCESS]', { timestamp: new Date().toISOString() });
+      
+      if (!skipToast) {
+        toast({
+          title: "Guardado automático",
+          description: "Las sesiones se han guardado automáticamente",
+          duration: 2000
+        });
+      }
     } catch (error: any) {
       console.log('[A8:AUTOSAVE_ERROR]', { 
         message: error.message, 
@@ -157,7 +188,7 @@ export default function Acelerador8() {
     } finally {
       setAutoSaving(false);
     }
-  }, [sesionesData, lastAutoSaveTime, saveSesiones]);
+  }, [sesionesData, lastAutoSaveTime, saveSesiones, showRegenerateDialog, regenerationError, toast]);
 
   // Payload sanitizer to avoid size limits
   const sanitizeUnidadForPayload = (unidad: any) => {
@@ -346,9 +377,20 @@ export default function Acelerador8() {
       return;
     }
 
+    const requestId = crypto.randomUUID();
+    setLastRequestId(requestId);
+    setRegenerationError(null);
+    setRegenerationLoading(true);
+    setAutoSaveEnabled(false);
+
     // Check if there are changes but don't block regeneration
     const existingHash = sesiones.length > 0 ? (sesiones[0] as any)?.source_hash : null;
     const hasChanges = !existingHash || !unidadHash?.hash || existingHash !== unidadHash.hash;
+    
+    console.log('[A8:REGEN_CONFIRM]', { 
+      accepted: true, 
+      request_id: requestId
+    });
     
     console.log('[A8:REGEN_STATUS]', {
       has_changes: hasChanges,
@@ -357,18 +399,15 @@ export default function Acelerador8() {
       force_regeneration: true
     });
 
-    const requestId = crypto.randomUUID();
+    console.log('[A8:REGEN_REQUEST]', {
+      request_id: requestId,
+      unidad_id: unidad?.id,
+      titulo: unidad?.titulo,
+      source_hash: unidadHash?.hash,
+      sessions_before: sesionesData.length
+    });
     
     try {
-      console.log('[A8:REGEN_CONFIRM]', { 
-        accepted: true, 
-        request_id: requestId,
-        timestamp: new Date().toISOString() 
-      });
-      
-      setRegenerationLoading(true);
-      setAutoSaveEnabled(false);
-
       // Sanitize payload for regeneration too
       const sanitizedUnidad = sanitizeUnidadForPayload(unidad);
       const payloadSize = new TextEncoder().encode(JSON.stringify({
@@ -404,6 +443,15 @@ export default function Acelerador8() {
         }
       });
 
+      // Log response immediately after invocation
+      console.log('[A8:REGEN_RESPONSE]', {
+        request_id: requestId,
+        http_status: data ? 200 : (error ? 500 : 0),
+        success: !!data?.success,
+        sessions_count: data?.sessions?.length || 0,
+        preview: data?.sessions ? JSON.stringify(data.sessions).slice(0, 200) + '…' : null
+      });
+
       setLastHttpStatus(data ? 200 : (error ? 500 : 0));
 
       if (error) {
@@ -416,16 +464,6 @@ export default function Acelerador8() {
         }
         throw error;
       }
-
-      console.log('[A8:REGEN_RESPONSE]', {
-        request_id: requestId,
-        http_status: data ? 200 : (error ? 500 : 0),
-        success: data?.success || false,
-        error_code: data?.error_code,
-        sessions_count: data?.sessions?.length || 0,
-        criteria_count: data?.sessions?.reduce((acc: number, s: any) => acc + (s?.rubrica_sesion?.criteria?.length || 0), 0) || 0,
-        preview: data?.sessions ? JSON.stringify(data.sessions).slice(0, 200)+'...' : null
-      });
 
       if (!data.success) {
         throw new Error(data.error || 'Failed to regenerate sessions');
@@ -481,9 +519,19 @@ export default function Acelerador8() {
         await saveSesiones(regeneratedSessions);
         console.log('[A8:REGEN_SAVE]', { request_id: requestId, silent: true });
         
+        // Success - close modal and update
+        setShowRegenerateDialog(false);
+        setLastGenerationTime(Date.now());
+        console.log('[A8:REGEN_SUCCESS]', {
+          request_id: requestId,
+          sessions_updated: data.sessions.length,
+          criteria_updated: data.sessions.reduce((acc: number, s: any) => acc + (s?.rubrica_sesion?.criteria?.length || 0), 0)
+        });
+
         toast({
           title: "Sesiones regeneradas",
-          description: "Las sesiones se han regenerado exitosamente",
+          description: "Las sesiones se han regenerado con nuevos enfoques y estrategias",
+          duration: 5000
         });
       } else {
         throw new Error(data.error || 'Error en la regeneración');
@@ -492,23 +540,22 @@ export default function Acelerador8() {
     } catch (error: any) {
       console.log('[A8:REGEN_ERROR]', { 
         request_id: requestId, 
-        message: error.message, 
-        error_code: error.code || 'UNKNOWN',
-        http_status: lastHttpStatus
+        message: error?.message || 'UNKNOWN', 
+        code: error?.code || 'UNKNOWN' 
       });
       
-      // Enhanced error toast that persists longer
-      toast({
-        title: `Error en A8 (ID: ${requestId})`,
-        description: `${error.code || 'REGEN_ERROR'} - ${error.message || "No se pudieron regenerar las sesiones."}`,
-        variant: "destructive",
-        duration: 7000 // 7 seconds to avoid auto-save interference
+      // Set error state for banner display - DON'T close modal
+      setRegenerationError({
+        requestId,
+        message: error?.message || 'Error desconocido durante la regeneración',
+        code: error?.code || 'UNKNOWN'
       });
+      
+      // Don't show toast, banner will be shown in modal
     } finally {
       setRegenerationLoading(false);
       setAutoSaveEnabled(true);
-      setShowRegenerateDialog(false);
-      console.log('[A8:REGEN_DONE]', { timestamp: new Date().toISOString() });
+      // Only close modal on success (moved to success block)
     }
   };
 
@@ -904,6 +951,7 @@ export default function Acelerador8() {
                 <Button 
                   onClick={handleRegenerateClick}
                   disabled={regenerationLoading || generationLoading || !unidad}
+                  aria-busy={regenerationLoading}
                   variant="outline"
                   data-testid="regen-sessions-btn"
                 >
@@ -1081,7 +1129,22 @@ export default function Acelerador8() {
 
         {/* Regenerate Confirmation Dialog */}
         <AlertDialog open={showRegenerateDialog} onOpenChange={setShowRegenerateDialog}>
-          <AlertDialogContent>
+          <AlertDialogContent>            
+            {/* Error Banner */}
+            {regenerationError && (
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <div className="text-destructive font-medium text-sm">
+                  Error en la regeneración
+                </div>
+                <div className="text-destructive/80 text-xs mt-1">
+                  ID: {regenerationError.requestId}
+                </div>
+                <div className="text-destructive text-sm mt-2">
+                  {regenerationError.message}
+                </div>
+              </div>
+            )}
+            
             <AlertDialogHeader>
               <AlertDialogTitle>¿Regenerar sesiones con IA?</AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
@@ -1095,6 +1158,7 @@ export default function Acelerador8() {
                 onClick={() => {
                   console.log('[A8:REGEN_CONFIRM]', { accepted: false, timestamp: new Date().toISOString() });
                   setShowRegenerateDialog(false);
+                  setRegenerationError(null);
                 }}
               >
                 Cancelar
@@ -1102,6 +1166,7 @@ export default function Acelerador8() {
               <AlertDialogAction 
                 onClick={handleRegenerateSessions}
                 disabled={regenerationLoading}
+                aria-busy={regenerationLoading}
                 data-testid="regen-confirm"
               >
                 {regenerationLoading ? (

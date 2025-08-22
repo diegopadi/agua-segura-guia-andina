@@ -16,6 +16,8 @@ serve(async (req) => {
     });
   }
 
+  let request_id: string | undefined;
+
   try {
     // Parse JSON with error handling
     let requestBody;
@@ -37,10 +39,17 @@ serve(async (req) => {
       });
     }
 
-    const { unidad_data, unidad_data_min, request_id, force, source_hash, previous_sessions_ids } = requestBody;
+    const { unidad_data, unidad_data_min, request_id: requestId, force, source_hash, previous_sessions_ids } = requestBody;
+    request_id = requestId;
     
     // Accept either format for backward compatibility
     const unidadData = unidad_data || unidad_data_min;
+
+    console.log('[A8:EDGE_START]', {
+      request_id,
+      method: req.method,
+      hasUnidadData: !!unidadData
+    });
 
     if (!unidadData) {
       throw new Error('Missing required parameter: unidad_data');
@@ -68,10 +77,8 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    // Check if regeneration is needed (only if not forced)
+    // Skip hash-based gating when force=true
     if (!force && source_hash && previous_sessions_ids?.length > 0) {
-      // In real implementation, you would check if existing sessions have same source_hash
-      // For now, simulate hash-based skipping
       console.log('[A8:EDGE_NOCHANGE]', { 
         request_id,
         source_hash,
@@ -255,7 +262,7 @@ Cada sesión debe:
     console.log('[A8:EDGE_ERROR]', {
       request_id: errorRequestId,
       error: error.message,
-      stack: error.stack?.substring(0, 500)
+      stack: error.stack?.substring(0, 400)
     });
     
     const errorPreview = error.message.substring(0, 200);
