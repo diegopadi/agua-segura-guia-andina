@@ -283,6 +283,7 @@ export type Database = {
           estado: string
           estructura: Json
           id: string
+          needs_review: boolean | null
           unidad_id: string
           updated_at: string
           user_id: string
@@ -293,6 +294,7 @@ export type Database = {
           estado?: string
           estructura?: Json
           id?: string
+          needs_review?: boolean | null
           unidad_id: string
           updated_at?: string
           user_id: string
@@ -303,6 +305,7 @@ export type Database = {
           estado?: string
           estructura?: Json
           id?: string
+          needs_review?: boolean | null
           unidad_id?: string
           updated_at?: string
           user_id?: string
@@ -327,6 +330,7 @@ export type Database = {
           evidencias: string[] | null
           id: string
           inicio: string | null
+          needs_review: boolean | null
           rubrica_json: Json | null
           session_index: number
           titulo: string
@@ -343,6 +347,7 @@ export type Database = {
           evidencias?: string[] | null
           id?: string
           inicio?: string | null
+          needs_review?: boolean | null
           rubrica_json?: Json | null
           session_index: number
           titulo: string
@@ -359,6 +364,7 @@ export type Database = {
           evidencias?: string[] | null
           id?: string
           inicio?: string | null
+          needs_review?: boolean | null
           rubrica_json?: Json | null
           session_index?: number
           titulo?: string

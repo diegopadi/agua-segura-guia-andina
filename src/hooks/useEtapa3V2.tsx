@@ -13,10 +13,10 @@ export interface UnidadAprendizaje {
   duracion_min: number;
   proposito: string;
   competencias_ids: string[];
-  capacidades: any[];
+  capacidades: Array<{ codigo: string; descripcion: string; }>;
   evidencias: string;
-  estandares: any[];
-  desempenos: any[];
+  estandares: Array<{ codigo: string; descripcion: string; }>;
+  desempenos: Array<{ codigo: string; descripcion: string; }>;
   estrategias_ids: string[];
   enfoques_ids: string[];
   diagnostico_pdf_url?: string;
@@ -40,6 +40,7 @@ export interface RubricaEvaluacion {
     }>;
   };
   estado: 'BORRADOR' | 'CERRADO';
+  needs_review?: boolean;
   created_at: string;
   updated_at: string;
   closed_at?: string;
@@ -59,6 +60,7 @@ export interface SesionClase {
     criteria: string[];
   };
   estado: 'BORRADOR' | 'CERRADO';
+  needs_review?: boolean;
   created_at: string;
   updated_at: string;
   closed_at?: string;
@@ -97,7 +99,19 @@ export function useEtapa3V2() {
         throw unidadError;
       }
 
-      setUnidad(unidadData as UnidadAprendizaje);
+      // Transform data with proper typing
+      const transformedUnidad: UnidadAprendizaje | null = unidadData ? {
+        ...unidadData,
+        capacidades: Array.isArray(unidadData.capacidades) ? unidadData.capacidades as Array<{ codigo: string; descripcion: string; }> : [],
+        estandares: Array.isArray(unidadData.estandares) ? unidadData.estandares as Array<{ codigo: string; descripcion: string; }> : [],
+        desempenos: Array.isArray(unidadData.desempenos) ? unidadData.desempenos as Array<{ codigo: string; descripcion: string; }> : [],
+        competencias_ids: Array.isArray(unidadData.competencias_ids) ? unidadData.competencias_ids : [],
+        estrategias_ids: Array.isArray(unidadData.estrategias_ids) ? unidadData.estrategias_ids : [],
+        enfoques_ids: Array.isArray(unidadData.enfoques_ids) ? unidadData.enfoques_ids : [],
+        estado: unidadData.estado as 'BORRADOR' | 'CERRADO'
+      } : null;
+
+      setUnidad(transformedUnidad);
 
       if (unidadData) {
         // Fetch rubrica
@@ -111,7 +125,17 @@ export function useEtapa3V2() {
           throw rubricaError;
         }
 
-        setRubrica(rubricaData as RubricaEvaluacion);
+        // Transform rubrica with proper typing
+        const transformedRubrica: RubricaEvaluacion | null = rubricaData ? {
+          ...rubricaData,
+          estructura: rubricaData.estructura as RubricaEvaluacion['estructura'] || {
+            levels: [],
+            criteria: []
+          },
+          estado: rubricaData.estado as 'BORRADOR' | 'CERRADO'
+        } : null;
+
+        setRubrica(transformedRubrica);
 
         // Fetch sesiones
         const { data: sesionesData, error: sesionesError } = await supabase
@@ -124,7 +148,15 @@ export function useEtapa3V2() {
           throw sesionesError;
         }
 
-        setSesiones(sesionesData as SesionClase[] || []);
+        // Transform sesiones with proper typing
+        const transformedSesiones: SesionClase[] = sesionesData?.map(sesion => ({
+          ...sesion,
+          evidencias: Array.isArray(sesion.evidencias) ? sesion.evidencias : [],
+          rubrica_json: sesion.rubrica_json as SesionClase['rubrica_json'] || { criteria: [] },
+          estado: sesion.estado as 'BORRADOR' | 'CERRADO'
+        })) || [];
+
+        setSesiones(transformedSesiones);
       }
 
     } catch (error: any) {
@@ -145,19 +177,26 @@ export function useEtapa3V2() {
     try {
       setSaving(true);
 
-      // Prepare data for upsert
-      const dataToUpsert = {
+      // Prepare typed data for upsert
+      const dataToUpsert: Partial<UnidadAprendizaje> & { user_id: string; id?: string } = {
         ...unidadData,
         user_id: user.id,
-      } as any; // Use any to avoid strict type checking on upsert
+        capacidades: unidadData.capacidades || [],
+        estandares: unidadData.estandares || [],
+        desempenos: unidadData.desempenos || [],
+        competencias_ids: unidadData.competencias_ids || [],
+        estrategias_ids: unidadData.estrategias_ids || [],
+        enfoques_ids: unidadData.enfoques_ids || []
+      };
       
       if (unidad?.id) {
         dataToUpsert.id = unidad.id;
       }
 
+      // Use any for Supabase compatibility
       const { data, error } = await supabase
         .from('unidades_aprendizaje')
-        .upsert(dataToUpsert)
+        .upsert(dataToUpsert as any)
         .select()
         .single();
 
@@ -189,12 +228,12 @@ export function useEtapa3V2() {
     try {
       setSaving(true);
 
-      // Prepare data for upsert
+      // Prepare typed data for upsert
       const dataToUpsert = {
         ...rubricaData,
         unidad_id: unidad.id,
         user_id: user.id,
-      } as any; // Use any to avoid strict type checking on upsert
+      } as any;
       
       if (rubrica?.id) {
         dataToUpsert.id = rubrica.id;
@@ -240,12 +279,12 @@ export function useEtapa3V2() {
         .delete()
         .eq('unidad_id', unidad.id);
 
-      // Insert new sessions
+      // Insert new sessions with proper typing
       const sessionsToInsert = sesionesData.map(sesion => ({
         ...sesion,
         unidad_id: unidad.id,
         user_id: user.id
-      })) as any; // Use any to avoid strict type checking
+      })) as any;
 
       const { data, error } = await supabase
         .from('sesiones_clase')

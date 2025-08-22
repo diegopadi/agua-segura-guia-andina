@@ -41,3 +41,15 @@ verify_jwt = true
 
 [functions.generate-materials-ac5]
 verify_jwt = true
+
+[functions.extract-diagnostico-text]
+verify_jwt = true
+
+[functions.analyze-unit-coherence]
+verify_jwt = true
+
+[functions.generate-evaluation-rubric]
+verify_jwt = true
+
+[functions.generate-session-structure]
+verify_jwt = true
