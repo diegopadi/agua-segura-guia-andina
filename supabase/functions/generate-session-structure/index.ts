@@ -4,6 +4,42 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
+// Helper function to get contextual words for thematic validation
+function getContextualWords(tema: string): string[] {
+  const temaLower = tema.toLowerCase();
+  
+  // Base words always includes the original theme
+  const baseWords = [temaLower];
+  
+  // Theme-specific contextual expansions
+  const contextualMappings = {
+    'seguridad hídrica': ['agua', 'hídrica', 'hídrico', 'recursos hídricos', 'gestión del agua', 'acceso al agua', 'calidad del agua'],
+    'educación ambiental': ['ambiente', 'ambiental', 'ecología', 'ecológico', 'sostenibilidad', 'conservación', 'naturaleza'],
+    'educación ciudadana': ['ciudadanía', 'ciudadano', 'democracia', 'derechos', 'participación', 'responsabilidad civil'],
+    'educación en salud': ['salud', 'nutrición', 'alimentación', 'bienestar', 'higiene', 'prevención'],
+    'educación tecnológica': ['tecnología', 'digital', 'informática', 'computación', 'innovación', 'TIC']
+  };
+  
+  // Add specific contextual words if theme matches
+  for (const [key, words] of Object.entries(contextualMappings)) {
+    if (temaLower.includes(key) || key.includes(temaLower)) {
+      baseWords.push(...words);
+    }
+  }
+  
+  // Add generic word variations (plurals, related terms)
+  if (temaLower.includes('agua')) {
+    baseWords.push('agua', 'aguas', 'acuático', 'acuática', 'líquido');
+  }
+  
+  if (temaLower.includes('seguridad')) {
+    baseWords.push('seguridad', 'seguro', 'segura', 'protección', 'garantizar');
+  }
+  
+  // Remove duplicates and return
+  return [...new Set(baseWords)];
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -295,12 +331,32 @@ Cada sesión debe:
       );
       validationReason = hasAreaAlignment ? 'area_alignment' : 'content_completeness';
     } else {
-      // For specific topics, check thematic alignment
-      const allMentionTema = sessionStructure.sessions.every(s => 
-        JSON.stringify(s).toLowerCase().includes(temaLower)
-      );
-      validationPassed = allMentionTema;
-      validationReason = allMentionTema ? 'thematic_alignment' : 'missing_thematic_context';
+      // For specific topics, check contextual thematic alignment
+      const contextWords = getContextualWords(tema);
+      
+      const sessionsWithContext = sessionStructure.sessions.filter(s => {
+        const sessionContent = JSON.stringify(s).toLowerCase();
+        return contextWords.some(word => sessionContent.includes(word));
+      });
+      
+      // Require at least 70% of sessions to have thematic context
+      const contextPercentage = sessionsWithContext.length / sessionStructure.sessions.length;
+      validationPassed = contextPercentage >= 0.7;
+      validationReason = validationPassed ? 'contextual_thematic_alignment' : 'missing_thematic_context';
+      
+      // Enhanced logging for debugging
+      console.log('[A8:EDGE_CONTEXT_CHECK]', {
+        tema_original: tema,
+        context_words: contextWords,
+        sessions_with_context: sessionsWithContext.length,
+        total_sessions: sessionStructure.sessions.length,
+        context_percentage: Math.round(contextPercentage * 100),
+        session_titles: sessionStructure.sessions.map(s => s.titulo),
+        found_words: sessionStructure.sessions.map(s => {
+          const content = JSON.stringify(s).toLowerCase();
+          return contextWords.filter(word => content.includes(word));
+        })
+      });
     }
     
     console.log('[A8:EDGE_VALIDATION]', { 
