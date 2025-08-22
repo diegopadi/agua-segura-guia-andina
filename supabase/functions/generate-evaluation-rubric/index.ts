@@ -10,24 +10,24 @@ serve(async (req) => {
   }
 
   try {
-    const { unidad_data_min, rubric_style } = await req.json();
+    const { unidad_data } = await req.json();
     
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
     }
 
-    if (!unidad_data_min) {
-      throw new Error('Missing required parameter: unidad_data_min');
+    if (!unidad_data) {
+      throw new Error('Missing required parameter: unidad_data');
     }
 
     // Validate required fields
-    if (!unidad_data_min.proposito || !unidad_data_min.evidencias) {
+    if (!unidad_data.proposito || !unidad_data.evidencias) {
       return new Response(JSON.stringify({
         success: false,
         error: "unidad_incompleta",
         faltantes: [
-          !unidad_data_min.proposito ? "proposito" : null,
-          !unidad_data_min.evidencias ? "evidencias" : null
+          !unidad_data.proposito ? "proposito" : null,
+          !unidad_data.evidencias ? "evidencias" : null
         ].filter(Boolean)
       }), {
         status: 400,
@@ -36,31 +36,46 @@ serve(async (req) => {
     }
 
     console.log('Generating evaluation rubric for:', {
-      titulo: unidad_data_min.titulo,
-      area: unidad_data_min.area_curricular,
-      style: rubric_style || 'analitica'
+      titulo: unidad_data.titulo,
+      area: unidad_data.area_curricular
     });
 
     const systemPrompt = `Eres un especialista en evaluación educativa en Perú. 
-Diseñas rúbricas analíticas cortas (4–6 criterios máximo), con descriptores progresivos alineados al CNEB. 
-Cada criterio debe estar vinculado a las evidencias de la unidad. 
-Incluye al menos un descriptor que considere pertinencia cultural o lingüística si el diagnóstico lo sugiere. 
-Responde SIEMPRE en JSON válido, sin markdown. 
-Si faltan datos críticos, devuelve error tipado.`;
+Genera una rúbrica de evaluación con exactamente 4-8 criterios, cada uno con exactamente 3 niveles de desempeño.
+Los niveles SIEMPRE deben ser: "Inicio", "Proceso", "Logro".
+Responde SIEMPRE en JSON válido con la estructura exacta requerida.`;
 
-    const userPrompt = `Genera una rúbrica de evaluación analítica para esta unidad. 
-Debe contener 4–6 criterios observables, cada uno con 3 niveles (Inicial, En proceso, Logro). 
-Los criterios deben estar vinculados a las evidencias de aprendizaje de la unidad.
+    const userPrompt = `Genera una rúbrica de evaluación para esta unidad de aprendizaje.
 
 DATOS DE LA UNIDAD:
-Título: ${unidad_data_min.titulo}
-Área: ${unidad_data_min.area_curricular}
-Grado: ${unidad_data_min.grado}
-Propósito: ${unidad_data_min.proposito}
-Evidencias: ${unidad_data_min.evidencias}
-Competencias: ${unidad_data_min.competencias_ids}
+- Título: ${unidad_data.titulo}
+- Área: ${unidad_data.area_curricular}
+- Grado: ${unidad_data.grado}
+- Propósito: ${unidad_data.proposito}
+- Evidencias: ${unidad_data.evidencias}
 
-Devuelve también un campo 'alineacion_evidencias' explicando cómo los criterios se relacionan con las evidencias.`;
+ESTRUCTURA JSON REQUERIDA:
+{
+  "levels": ["Inicio", "Proceso", "Logro"],
+  "criteria": [
+    {
+      "criterio": "Nombre del criterio de evaluación",
+      "descriptores": {
+        "Inicio": "Descripción para nivel inicial",
+        "Proceso": "Descripción para nivel en proceso",
+        "Logro": "Descripción para nivel de logro"
+      }
+    }
+  ]
+}
+
+REQUISITOS:
+- Incluye entre 4 y 8 criterios de evaluación
+- Cada criterio debe tener exactamente 3 descriptores (uno por cada nivel)
+- Los criterios deben evaluar aspectos clave de las evidencias de la unidad
+- Los descriptores deben ser progresivos y específicos
+
+Genera la rúbrica ahora:`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -97,15 +112,33 @@ Devuelve también un campo 'alineacion_evidencias' explicando cómo los criterio
     }
 
     // Validate response structure
-    if (!rubricResult.titulo || !rubricResult.criterios) {
-      throw new Error('AI response missing required fields');
+    if (!rubricResult.levels || !rubricResult.criteria) {
+      throw new Error('AI response missing required fields: levels or criteria');
     }
 
-    console.log('Evaluation rubric generated successfully');
+    // Validate criteria count (4-8 criteria)
+    if (!Array.isArray(rubricResult.criteria) || rubricResult.criteria.length < 4 || rubricResult.criteria.length > 8) {
+      throw new Error(`Invalid criteria count: ${rubricResult.criteria.length}. Must be between 4-8.`);
+    }
+
+    // Validate each criterion has proper structure
+    for (const criterion of rubricResult.criteria) {
+      if (!criterion.criterio || !criterion.descriptores) {
+        throw new Error('Invalid criterion structure');
+      }
+      const expectedLevels = ['Inicio', 'Proceso', 'Logro'];
+      for (const level of expectedLevels) {
+        if (!criterion.descriptores[level]) {
+          throw new Error(`Missing descriptor for level: ${level}`);
+        }
+      }
+    }
+
+    console.log('Evaluation rubric generated successfully with', rubricResult.criteria.length, 'criteria');
 
     return new Response(JSON.stringify({
       success: true,
-      rubrica: rubricResult
+      estructura: rubricResult
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -74,6 +74,13 @@ export default function Acelerador7() {
       return;
     }
 
+    console.log('[A7:GEN_REQUEST]', {
+      unidad_id: unidad.id,
+      titulo: unidad.titulo,
+      area: unidad.area_curricular,
+      timestamp: new Date().toISOString()
+    });
+
     try {
       setGenerationLoading(true);
 
@@ -83,25 +90,56 @@ export default function Acelerador7() {
         }
       });
 
+      console.log('[A7:GEN_RESPONSE]', {
+        success: data?.success,
+        has_estructura: !!data?.estructura,
+        criteria_count: data?.estructura?.criteria?.length || 0,
+        error: error?.message || data?.error,
+        timestamp: new Date().toISOString()
+      });
+
       if (error) throw error;
 
       if (data.success && data.estructura) {
-        setRubricaData(data.estructura);
+        // Validate the structure
+        const estructura = data.estructura;
+        
+        if (!estructura.levels || !estructura.criteria || !Array.isArray(estructura.criteria)) {
+          throw new Error('Estructura de rúbrica inválida');
+        }
+
+        if (estructura.criteria.length < 4 || estructura.criteria.length > 8) {
+          throw new Error(`Número de criterios inválido: ${estructura.criteria.length}. Debe ser entre 4-8.`);
+        }
+
+        console.log('[A7:GEN_VALID]', {
+          levels_count: estructura.levels.length,
+          criteria_count: estructura.criteria.length,
+          valid_structure: true,
+          timestamp: new Date().toISOString()
+        });
+
+        setRubricaData(estructura);
         setGenerationComplete(true);
         
         toast({
           title: "Rúbrica generada",
-          description: "La rúbrica de evaluación se ha generado exitosamente",
+          description: `Se ha generado una rúbrica con ${estructura.criteria.length} criterios de evaluación`,
         });
       } else {
         throw new Error(data.error || 'Error en la generación');
       }
 
     } catch (error: any) {
-      console.error('Generation error:', error);
+      console.error('[A7:GEN_ERROR]', {
+        error_message: error.message,
+        error_type: error.name || 'UnknownError',
+        timestamp: new Date().toISOString()
+      });
+      
       toast({
         title: "Error en la generación",
-        description: "No se pudo generar la rúbrica. Puede crear una manualmente.",
+        description: error.message || "No se pudo generar la rúbrica. Puede crear una manualmente.",
         variant: "destructive",
       });
     } finally {
@@ -210,10 +248,27 @@ export default function Acelerador7() {
       return;
     }
 
+    console.log('[A7:SAVE]', {
+      criteria_count: rubricaData.criteria.length,
+      levels_count: rubricaData.levels.length,
+      is_closed: false,
+      timestamp: new Date().toISOString()
+    });
+
     try {
       await saveRubrica({ estructura: rubricaData });
+      
+      toast({
+        title: "Rúbrica guardada",
+        description: "Los cambios se han guardado correctamente",
+      });
     } catch (error) {
       console.error('Save error:', error);
+      toast({
+        title: "Error al guardar",
+        description: "No se pudieron guardar los cambios",
+        variant: "destructive",
+      });
     }
   };
 
@@ -227,8 +282,41 @@ export default function Acelerador7() {
       return;
     }
 
-    await handleSave();
-    await closeAccelerator('A7');
+    if (!formValid) {
+      toast({
+        title: "Error",
+        description: "Complete todos los campos de la rúbrica antes de cerrar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('[A7:CLOSE]', {
+      criteria_count: rubricaData.criteria.length,
+      form_valid: formValid,
+      analysis_complete: analysisComplete,
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+      // First save the current data
+      await saveRubrica({ estructura: rubricaData });
+      
+      // Then close the accelerator
+      await closeAccelerator('A7');
+      
+      toast({
+        title: "Acelerador 7 cerrado",
+        description: "La rúbrica ha sido finalizada. Ahora puede continuar al Acelerador 8",
+      });
+    } catch (error) {
+      console.error('Close error:', error);
+      toast({
+        title: "Error al cerrar",
+        description: "No se pudo cerrar el acelerador",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleReopen = async () => {
@@ -255,14 +343,15 @@ export default function Acelerador7() {
     }
   };
 
+  // State calculations
   const isClosed = rubrica?.estado === 'CERRADO';
-  const canProceedToA8 = progress.a7_completed;
+  const canProceedToA8 = progress.a7_completed && isClosed;
   const canAccessA7 = progress.a6_completed;
   const hasRubricas = rubricaData.criteria.length > 0;
   const formValid = rubricaData.criteria.length > 0 && rubricaData.criteria.every(c => 
     c.criterio.trim() && Object.values(c.descriptores).every(d => d.trim())
   );
-  const analysisComplete = generationComplete || hasRubricas;
+  const analysisComplete = generationComplete && hasRubricas;
 
   // Comprehensive A7 Diagnostic
   useEffect(() => {
@@ -299,9 +388,9 @@ export default function Acelerador7() {
       
       // Button visibility
       buttons: {
-        generateRubricVisible: !generationComplete && !isClosed,
-        saveVisible: !isClosed,
-        saveAndCloseVisible: !isClosed,
+        generateRubricVisible: !isClosed && !analysisComplete,
+        saveVisible: !isClosed && hasRubricas,
+        saveAndCloseVisible: !isClosed && analysisComplete && formValid,
         continueToA8Visible: canProceedToA8,
         editVisible: isClosed,
         reopenDialogOpen: showReopenDialog
@@ -409,7 +498,7 @@ export default function Acelerador7() {
         )}
 
         {/* Generation Section */}
-        {!generationComplete && !isClosed && (
+        {!isClosed && !analysisComplete && (
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="text-center">
@@ -563,10 +652,10 @@ export default function Acelerador7() {
           </Button>
 
           <div className="flex gap-3">
-            {!isClosed && (
+            {!isClosed && analysisComplete && formValid && (
               <Button 
                 onClick={handleClose}
-                disabled={rubricaData.criteria.length === 0 || saving}
+                disabled={saving}
                 variant="default"
               >
                 Guardar y Cerrar A7
