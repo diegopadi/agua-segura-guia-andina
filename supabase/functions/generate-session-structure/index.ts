@@ -211,7 +211,7 @@ Cada sesión debe:
     }
 
     console.log('[A8:EDGE_OK]', { 
-      request_id,
+      request_id: request_id || 'unknown',
       sessions_generated: sessionStructure.sessions.length,
       total_criteria: sessionStructure.sessions.reduce((acc: number, s: any) => acc + s.rubrica_sesion.criteria.length, 0)
     });
