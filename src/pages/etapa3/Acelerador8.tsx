@@ -866,10 +866,22 @@ export default function Acelerador8() {
                   Editar
                 </Button>
               ) : (
-                <Button onClick={handleSave} disabled={saving || autoSaving}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {saving ? "Guardando..." : "Guardar"}
-                </Button>
+                <>
+                  <Button onClick={handleSave} disabled={saving || autoSaving}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {saving ? "Guardando..." : "Guardar"}
+                  </Button>
+                  
+                  {progress.a7_completed && sesionesData.length > 0 && (
+                    <Button
+                      onClick={() => navigate('/etapa3/acelerador8/visor')}
+                      variant="outline"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Ver Documento Completo
+                    </Button>
+                  )}
+                </>
               )}
             </div>
         </div>

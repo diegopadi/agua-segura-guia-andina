@@ -108,17 +108,48 @@ Estructura JSON requerida:
   ]
 }`;
 
-    const tema = unidadData.tema_transversal || unidadData.titulo || '';
+    // Smart topic extraction
+    let tema = unidadData.tema_transversal || '';
     const diag = unidadData.diagnostico_text || '';
     const recs = typeof unidadData.ia_recomendaciones === 'string'
       ? unidadData.ia_recomendaciones
       : JSON.stringify(unidadData.ia_recomendaciones || {});
 
+    // Extract contextual theme if missing or generic
+    if (!tema || tema.length < 5 || /^[\d\s\-_\.]+$/.test(tema)) {
+      const searchText = `${diag} ${recs}`.toLowerCase();
+      const topicKeywords = [
+        { pattern: /agua|hídric[ao]|seguridad hídrica/g, topic: 'seguridad hídrica' },
+        { pattern: /ambiente|ambiental|ecología/g, topic: 'educación ambiental' },
+        { pattern: /democracia|ciudadan/g, topic: 'educación ciudadana' },
+        { pattern: /salud|nutric/g, topic: 'educación en salud' },
+        { pattern: /tecnología|digital/g, topic: 'educación tecnológica' }
+      ];
+      
+      let extractedTopic = '';
+      for (const keyword of topicKeywords) {
+        if (keyword.pattern.test(searchText)) {
+          extractedTopic = keyword.topic;
+          break;
+        }
+      }
+      
+      tema = extractedTopic || unidadData.area_curricular || unidadData.titulo || 'tema general';
+    }
+
+    console.log('[A8:EDGE_TEMA_EXTRACTION]', { 
+      original: unidadData.tema_transversal,
+      titulo: unidadData.titulo, 
+      extracted: tema,
+      area: unidadData.area_curricular,
+      diag_preview: diag.slice(0, 100)
+    });
+    
     console.log('[A8:EDGE_CONTEXT]', { tema, diag_len: diag.length, has_recs: !!recs });
 
-    // Improved variation prompt for regeneration
+    // Dynamic regeneration prompt based on actual theme
     const regenHint = force ? 
-      `\n\nVARIACIÓN: propón enfoques y ejemplos alternativos sobre «${unidadData.titulo} / seguridad hídrica», manteniendo la coherencia pedagógica. Usa estrategias diferentes, cambia materiales y actividades específicas, pero conserva la alineación temática.` 
+      `\n\nVARIACIÓN: Genera sesiones completamente diferentes sobre «${tema}» manteniendo coherencia pedagógica. Cambia estrategias didácticas, usa materiales alternativos, propón actividades distintas y ejemplos variados. Mantén alineación temática pero explora enfoques pedagógicos diferentes (ej: si antes fue expositivo, ahora hazlo colaborativo; si fue teórico, hazlo práctico).` 
       : '';
 
     const model = Deno.env.get('A8_MODEL') ?? 'gpt-4o-mini';
@@ -159,6 +190,14 @@ Cada sesión debe:
       prompt_preview: fullPrompt.slice(0, 300) + '...'
     });
 
+    // Enhanced logging for debugging
+    console.log('[A8:EDGE_FULL_PROMPT]', {
+      request_id,
+      system_prompt_len: systemPrompt.length,
+      user_prompt_len: userPrompt.length,
+      full_prompt_preview: fullPrompt.slice(0, 500)
+    });
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -187,6 +226,14 @@ Cada sesión debe:
 
     const data = await response.json();
     const aiResponse = data?.choices?.[0]?.message?.content ?? '';
+    
+    // Enhanced AI response logging
+    console.log('[A8:EDGE_RAW_AI]', { 
+      request_id,
+      raw_response_len: aiResponse.length,
+      raw_preview: aiResponse.slice(0, 400)
+    });
+    
     console.log('[A8:EDGE_AI_RESPONSE]', { 
       request_id,
       len: aiResponse.length, 
@@ -229,15 +276,43 @@ Cada sesión debe:
       session.rubrica_sesion.levels = ['Inicio', 'Proceso', 'Logro'];
     }
 
-    // Validate thematic contextualization
-    const allMentionTema = sessionStructure.sessions.every(
-      s => JSON.stringify(s).toLowerCase().includes((tema||'').toLowerCase())
-    );
+    // Smart thematic validation
+    const temaLower = (tema || '').toLowerCase();
+    const isGenericTopic = !tema || tema.length < 5 || /^[\d\s\-_\.]+$/.test(tema);
     
-    console.log('[A8:EDGE_VALID_CONTEXT]', { allMentionTema });
+    let validationPassed = true;
+    let validationReason = '';
     
-    if (!allMentionTema) {
-      throw new Error('INVALID_CONTEXT: sesiones sin mención explícita al tema transversal/central');
+    if (isGenericTopic) {
+      // For generic topics, validate against area_curricular or content quality
+      const areaLower = (unidadData.area_curricular || '').toLowerCase();
+      const hasAreaAlignment = sessionStructure.sessions.some(s => 
+        JSON.stringify(s).toLowerCase().includes(areaLower)
+      );
+      
+      validationPassed = hasAreaAlignment || sessionStructure.sessions.every(s => 
+        s.titulo && s.inicio && s.desarrollo && s.cierre
+      );
+      validationReason = hasAreaAlignment ? 'area_alignment' : 'content_completeness';
+    } else {
+      // For specific topics, check thematic alignment
+      const allMentionTema = sessionStructure.sessions.every(s => 
+        JSON.stringify(s).toLowerCase().includes(temaLower)
+      );
+      validationPassed = allMentionTema;
+      validationReason = allMentionTema ? 'thematic_alignment' : 'missing_thematic_context';
+    }
+    
+    console.log('[A8:EDGE_VALIDATION]', { 
+      tema_used: tema,
+      is_generic: isGenericTopic,
+      validation_passed: validationPassed,
+      reason: validationReason,
+      sessions_count: sessionStructure.sessions.length
+    });
+    
+    if (!validationPassed) {
+      throw new Error(`INVALID_CONTEXT: ${validationReason} - tema: "${tema}"`);
     }
 
     console.log('[A8:EDGE_OK]', { 

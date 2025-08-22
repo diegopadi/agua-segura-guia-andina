@@ -53,10 +53,10 @@ const App = () => (
                     <Route path="/etapa2/acelerador4" element={<Acelerador4 />} />
                     <Route path="/etapa2/acelerador5" element={<Acelerador5 />} />
                     <Route path="/etapa3" element={<Etapa3 />} />
-                    <Route path="/etapa3/acelerador6" element={<Acelerador6 />} />
-                    <Route path="/etapa3/acelerador7" element={<Acelerador7 />} />
-                    <Route path="/etapa3/acelerador8" element={<Acelerador8 />} />
-                    <Route path="/etapa3/acelerador8/visor" element={<A8FinalViewer />} />
+            <Route path="/etapa3/acelerador6" element={<Acelerador6 />} />
+            <Route path="/etapa3/acelerador7" element={<Acelerador7 />} />
+            <Route path="/etapa3/acelerador8" element={<Acelerador8 />} />
+            <Route path="/etapa3/acelerador8/visor" element={<A8FinalViewer />} />
                     <Route path="/documentos" element={<Documentos />} />
                     <Route path="/ayuda" element={<Ayuda />} />
                     <Route path="/administracion" element={<Admin />} />
