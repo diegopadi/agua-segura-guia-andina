@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, ArrowRight, Bot, CheckCircle, Save, Lock, Plus, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ArrowLeft, ArrowRight, Bot, CheckCircle, Save, Lock, Plus, Trash2, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/useDebounce';
 import { supabase } from '@/integrations/supabase/client';
 import { useEtapa3V2, RubricaEvaluacion } from '@/hooks/useEtapa3V2';
 
@@ -23,6 +25,11 @@ export default function Acelerador7() {
 
   const [generationLoading, setGenerationLoading] = useState(false);
   const [generationComplete, setGenerationComplete] = useState(false);
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  
+  // Debounced rubrica data for auto-save
+  const debouncedRubricaData = useDebounce(rubricaData, 3000);
 
   // Load existing rubrica data
   useEffect(() => {
@@ -34,22 +41,26 @@ export default function Acelerador7() {
     }
   }, [rubrica]);
 
-  // Auto-save functionality
+  // Silent auto-save functionality with debounce
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (rubricaData.criteria.length > 0 && !saving) {
-        handleAutoSave();
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [rubricaData, saving]);
+    if (debouncedRubricaData.criteria.length > 0 && !saving && !autoSaving && rubrica) {
+      handleAutoSave();
+    }
+  }, [debouncedRubricaData, saving, autoSaving, rubrica]);
 
   const handleAutoSave = async () => {
     try {
+      setAutoSaving(true);
       await saveRubrica({ estructura: rubricaData });
     } catch (error) {
       console.error('Auto-save failed:', error);
+      toast({
+        title: "Error en guardado automático",
+        description: "No se pudieron guardar los cambios automáticamente",
+        variant: "destructive",
+      });
+    } finally {
+      setAutoSaving(false);
     }
   };
 
@@ -220,6 +231,30 @@ export default function Acelerador7() {
     await closeAccelerator('A7');
   };
 
+  const handleReopen = async () => {
+    try {
+      await saveRubrica({
+        estructura: rubricaData,
+        estado: 'BORRADOR',
+        closed_at: null
+      });
+      
+      toast({
+        title: "Acelerador reabierto",
+        description: "La rúbrica se ha reabierto para edición.",
+      });
+      
+      setShowReopenDialog(false);
+    } catch (error) {
+      console.error('Reopen error:', error);
+      toast({
+        title: "Error al reabrir",
+        description: "No se pudo reabrir la rúbrica",
+        variant: "destructive",
+      });
+    }
+  };
+
   const isClosed = rubrica?.estado === 'CERRADO';
   const canProceedToA8 = progress.a7_completed;
   const canAccessA7 = progress.a6_completed;
@@ -268,16 +303,29 @@ export default function Acelerador7() {
           </div>
 
           <div className="flex items-center gap-3">
+            {autoSaving && (
+              <Badge variant="outline" className="gap-2">
+                <div className="animate-spin rounded-full h-3 w-3 border-b border-muted-foreground"></div>
+                Guardando...
+              </Badge>
+            )}
             {isClosed && (
               <Badge variant="default" className="gap-2">
                 <Lock className="h-4 w-4" />
                 Cerrado
               </Badge>
             )}
-            <Button onClick={handleSave} disabled={saving || isClosed}>
-              <Save className="h-4 w-4 mr-2" />
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
+            {isClosed ? (
+              <Button onClick={() => setShowReopenDialog(true)} variant="outline">
+                <Edit3 className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            ) : (
+              <Button onClick={handleSave} disabled={saving || autoSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Guardando..." : "Guardar"}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -477,6 +525,26 @@ export default function Acelerador7() {
           </div>
         </div>
       </div>
+
+      {/* Reopen Confirmation Dialog */}
+      <AlertDialog open={showReopenDialog} onOpenChange={setShowReopenDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Reabrir Acelerador 7?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Al reabrir esta rúbrica de evaluación podrá editarla nuevamente.
+              <br /><br />
+              ¿Está seguro de que desea continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReopen}>
+              Sí, reabrir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

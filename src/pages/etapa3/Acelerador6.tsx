@@ -7,12 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Upload, Bot, CheckCircle, ArrowLeft, ArrowRight, Save, Lock } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ArrowLeft, ArrowRight, Upload, FileText, Bot, CheckCircle, Save, Lock, AlertCircle, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/useDebounce';
 import { supabase } from '@/integrations/supabase/client';
 import { useEtapa3V2 } from '@/hooks/useEtapa3V2';
-import type { UnidadAprendizaje } from '@/hooks/useEtapa3V2';
+import CompetenciasMultiSelect from '@/components/CompetenciasMultiSelect';
 
 const AREAS_CURRICULARES = [
   'Comunicación', 'Matemática', 'Ciencias Sociales', 'Ciencia y Tecnología',
@@ -27,60 +28,85 @@ export default function Acelerador6() {
   const { toast } = useToast();
   const { unidad, loading, saving, saveUnidad, closeAccelerator, progress } = useEtapa3V2();
   
-  const [formData, setFormData] = useState<Partial<UnidadAprendizaje>>({
+  const [formData, setFormData] = useState({
     titulo: '',
     area_curricular: '',
     grado: '',
-    numero_sesiones: 6,
-    duracion_min: 45,
+    numero_sesiones: 4,
+    duracion_min: 90,
     proposito: '',
-    competencias_ids: [],
-    capacidades: [],
     evidencias: '',
-    estandares: [],
-    desempenos: [],
     diagnostico_text: '',
-    ia_recomendaciones: ''
+    diagnostico_pdf_url: '',
+    ia_recomendaciones: '',
+    competencias_ids: [] as string[],
   });
-
-  const [analysisLoading, setAnalysisLoading] = useState(false);
-  const [analysisComplete, setAnalysisComplete] = useState(false);
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUploading, setPdfUploading] = useState(false);
   const [pdfExtracting, setPdfExtracting] = useState(false);
-
-  // Auto-save functionality
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (formData.titulo && formData.area_curricular && !saving) {
-        handleAutoSave();
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [formData, saving]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  
+  // Debounced form data for auto-save
+  const debouncedFormData = useDebounce(formData, 3000);
 
   // Load existing data
   useEffect(() => {
     if (unidad) {
-      setFormData(unidad);
-      if (unidad.ia_recomendaciones) {
-        setAnalysisComplete(true);
-      }
+      setFormData({
+        titulo: unidad.titulo || '',
+        area_curricular: unidad.area_curricular || '',
+        grado: unidad.grado || '',
+        numero_sesiones: unidad.numero_sesiones || 4,
+        duracion_min: unidad.duracion_min || 90,
+        proposito: unidad.proposito || '',
+        evidencias: unidad.evidencias || '',
+        diagnostico_text: unidad.diagnostico_text || '',
+        diagnostico_pdf_url: unidad.diagnostico_pdf_url || '',
+        ia_recomendaciones: unidad.ia_recomendaciones || '',
+        competencias_ids: unidad.competencias_ids || [],
+      });
     }
   }, [unidad]);
 
+  // Silent auto-save functionality with debounce
+  useEffect(() => {
+    if (debouncedFormData.titulo && debouncedFormData.area_curricular && !saving && !autoSaving && unidad) {
+      handleAutoSave();
+    }
+  }, [debouncedFormData, saving, autoSaving, unidad]);
+
   const handleAutoSave = async () => {
-    if (!isFormValid()) return;
+    if (!formData.titulo || !formData.area_curricular) return;
     
     try {
-      await saveUnidad(formData);
+      setAutoSaving(true);
+      await saveUnidad({
+        titulo: formData.titulo,
+        area_curricular: formData.area_curricular,
+        grado: formData.grado,
+        numero_sesiones: formData.numero_sesiones,
+        duracion_min: formData.duracion_min,
+        proposito: formData.proposito,
+        evidencias: formData.evidencias,
+        diagnostico_text: formData.diagnostico_text,
+        diagnostico_pdf_url: formData.diagnostico_pdf_url,
+        ia_recomendaciones: formData.ia_recomendaciones,
+        competencias_ids: formData.competencias_ids,
+      });
     } catch (error) {
       console.error('Auto-save failed:', error);
+      toast({
+        title: "Error en guardado automático",
+        description: "No se pudieron guardar los cambios automáticamente",
+        variant: "destructive",
+      });
+    } finally {
+      setAutoSaving(false);
     }
   };
 
-  const handleInputChange = (field: keyof UnidadAprendizaje, value: any) => {
+  const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -109,7 +135,6 @@ export default function Acelerador6() {
 
     try {
       setPdfUploading(true);
-      setPdfFile(file);
 
       // Generate unique file path
       const timestamp = Date.now();
@@ -214,9 +239,6 @@ export default function Acelerador6() {
         description: `${error.message}. Por favor, ingrese el texto manualmente.`,
         variant: "destructive",
       });
-
-      // Reset file state on error but keep any uploaded URL
-      setPdfFile(null);
     } finally {
       setPdfUploading(false);
       setPdfExtracting(false);
@@ -238,7 +260,7 @@ export default function Acelerador6() {
     }
 
     try {
-      setAnalysisLoading(true);
+      setIsAnalyzing(true);
 
       const { data, error } = await supabase.functions.invoke('analyze-unit-coherence', {
         body: {
@@ -251,7 +273,6 @@ export default function Acelerador6() {
 
       if (data.success && data.analysis) {
         handleInputChange('ia_recomendaciones', JSON.stringify(data.analysis, null, 2));
-        setAnalysisComplete(true);
         
         toast({
           title: "Análisis completado",
@@ -269,22 +290,30 @@ export default function Acelerador6() {
         variant: "destructive",
       });
     } finally {
-      setAnalysisLoading(false);
+      setIsAnalyzing(false);
     }
   };
 
   const handleSave = async () => {
-    if (!isFormValid()) {
-      toast({
-        title: "Error",
-        description: "Complete todos los campos requeridos",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      await saveUnidad(formData);
+      await saveUnidad({
+        titulo: formData.titulo,
+        area_curricular: formData.area_curricular,
+        grado: formData.grado,
+        numero_sesiones: formData.numero_sesiones,
+        duracion_min: formData.duracion_min,
+        proposito: formData.proposito,
+        evidencias: formData.evidencias,
+        diagnostico_text: formData.diagnostico_text,
+        diagnostico_pdf_url: formData.diagnostico_pdf_url,
+        ia_recomendaciones: formData.ia_recomendaciones,
+        competencias_ids: formData.competencias_ids,
+      });
+      
+      toast({
+        title: "Unidad guardada",
+        description: "La unidad de aprendizaje se ha guardado exitosamente",
+      });
     } catch (error) {
       console.error('Save error:', error);
     }
@@ -293,8 +322,8 @@ export default function Acelerador6() {
   const handleClose = async () => {
     if (!isFormValid()) {
       toast({
-        title: "Error",
-        description: "Complete todos los campos requeridos antes de cerrar",
+        title: "Formulario incompleto",
+        description: "Debe completar todos los campos requeridos antes de cerrar",
         variant: "destructive",
       });
       return;
@@ -302,6 +331,31 @@ export default function Acelerador6() {
 
     await handleSave();
     await closeAccelerator('A6');
+  };
+
+  const handleReopen = async () => {
+    try {
+      await saveUnidad({
+        ...formData,
+        estado: 'BORRADOR',
+        closed_at: null
+      });
+      
+      // This will invalidate A7 and A8 through needs_review logic
+      toast({
+        title: "Acelerador reabierto",
+        description: "La unidad se ha reabierto para edición. A7 y A8 requerirán revisión.",
+      });
+      
+      setShowReopenDialog(false);
+    } catch (error) {
+      console.error('Reopen error:', error);
+      toast({
+        title: "Error al reabrir",
+        description: "No se pudo reabrir la unidad",
+        variant: "destructive",
+      });
+    }
   };
 
   const isFormValid = () => {
@@ -347,16 +401,29 @@ export default function Acelerador6() {
           </div>
 
           <div className="flex items-center gap-3">
+            {autoSaving && (
+              <Badge variant="outline" className="gap-2">
+                <div className="animate-spin rounded-full h-3 w-3 border-b border-muted-foreground"></div>
+                Guardando...
+              </Badge>
+            )}
             {isClosed && (
               <Badge variant="default" className="gap-2">
                 <Lock className="h-4 w-4" />
                 Cerrado
               </Badge>
             )}
-            <Button onClick={handleSave} disabled={saving || isClosed}>
-              <Save className="h-4 w-4 mr-2" />
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
+            {isClosed ? (
+              <Button onClick={() => setShowReopenDialog(true)} variant="outline">
+                <Edit3 className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            ) : (
+              <Button onClick={handleSave} disabled={saving || autoSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Guardando..." : "Guardar"}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -374,7 +441,7 @@ export default function Acelerador6() {
                   <Label htmlFor="titulo">Título de la Unidad *</Label>
                   <Input
                     id="titulo"
-                    value={formData.titulo || ''}
+                    value={formData.titulo}
                     onChange={(e) => handleInputChange('titulo', e.target.value)}
                     placeholder="Ingrese el título de la unidad"
                     disabled={isClosed}
@@ -383,8 +450,12 @@ export default function Acelerador6() {
                 <div>
                   <Label htmlFor="area">Área Curricular *</Label>
                   <Select
-                    value={formData.area_curricular || ''}
-                    onValueChange={(value) => handleInputChange('area_curricular', value)}
+                    value={formData.area_curricular}
+                    onValueChange={(value) => {
+                      handleInputChange('area_curricular', value);
+                      // Reset competencias when area changes
+                      handleInputChange('competencias_ids', []);
+                    }}
                     disabled={isClosed}
                   >
                     <SelectTrigger>
@@ -403,7 +474,7 @@ export default function Acelerador6() {
                 <div>
                   <Label htmlFor="grado">Grado *</Label>
                   <Select
-                    value={formData.grado || ''}
+                    value={formData.grado}
                     onValueChange={(value) => handleInputChange('grado', value)}
                     disabled={isClosed}
                   >
@@ -424,7 +495,7 @@ export default function Acelerador6() {
                     type="number"
                     min={1}
                     max={12}
-                    value={formData.numero_sesiones || 6}
+                    value={formData.numero_sesiones}
                     onChange={(e) => handleInputChange('numero_sesiones', parseInt(e.target.value))}
                     disabled={isClosed}
                   />
@@ -436,18 +507,31 @@ export default function Acelerador6() {
                     type="number"
                     min={30}
                     max={120}
-                    value={formData.duracion_min || 45}
+                    value={formData.duracion_min}
                     onChange={(e) => handleInputChange('duracion_min', parseInt(e.target.value))}
                     disabled={isClosed}
                   />
                 </div>
               </div>
 
+              {/* CNEB Competencies Multi-Select */}
+              <div className="col-span-2">
+                <CompetenciasMultiSelect
+                  areaCurricular={formData.area_curricular}
+                  selectedCompetencias={formData.competencias_ids}
+                  onCompetenciasChange={(competencias) => 
+                    handleInputChange('competencias_ids', competencias)
+                  }
+                  disabled={isClosed}
+                  maxCompetencias={2}
+                />
+              </div>
+
               <div>
                 <Label htmlFor="proposito">Propósito de la Unidad *</Label>
                 <Textarea
                   id="proposito"
-                  value={formData.proposito || ''}
+                  value={formData.proposito}
                   onChange={(e) => handleInputChange('proposito', e.target.value)}
                   placeholder="Describa el propósito de esta unidad de aprendizaje"
                   className="min-h-[100px]"
@@ -459,7 +543,7 @@ export default function Acelerador6() {
                 <Label htmlFor="evidencias">Evidencias de Aprendizaje *</Label>
                 <Textarea
                   id="evidencias"
-                  value={formData.evidencias || ''}
+                  value={formData.evidencias}
                   onChange={(e) => handleInputChange('evidencias', e.target.value)}
                   placeholder="Describa las evidencias que demostrarán el aprendizaje de los estudiantes"
                   className="min-h-[80px]"
@@ -514,11 +598,14 @@ export default function Acelerador6() {
 
               {formData.diagnostico_pdf_url && (
                 <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">PDF procesado exitosamente</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formData.diagnostico_pdf_url.split('/').pop()?.substring(0, 50)}...
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <div>
+                      <p className="text-sm font-medium">PDF procesado exitosamente</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formData.diagnostico_pdf_url.split('/').pop()?.substring(0, 50)}...
+                      </p>
+                    </div>
                   </div>
                   <Button 
                     variant="ghost" 
@@ -538,7 +625,7 @@ export default function Acelerador6() {
                 <Label htmlFor="diagnostico">Texto del Diagnóstico</Label>
                 <Textarea
                   id="diagnostico"
-                  value={formData.diagnostico_text || ''}
+                  value={formData.diagnostico_text}
                   onChange={(e) => handleInputChange('diagnostico_text', e.target.value)}
                   placeholder="Pegue aquí el texto del diagnóstico pedagógico o escriba un resumen..."
                   className="min-h-[120px]"
@@ -552,10 +639,10 @@ export default function Acelerador6() {
               {formData.diagnostico_text && formData.diagnostico_text.length >= 300 && !isClosed && (
                 <Button 
                   onClick={handleAnalyzeCoherence}
-                  disabled={analysisLoading || !isFormValid()}
+                  disabled={isAnalyzing || !isFormValid()}
                   className="w-full"
                 >
-                  {analysisLoading ? (
+                  {isAnalyzing ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Analizando coherencia...
@@ -569,7 +656,7 @@ export default function Acelerador6() {
                 </Button>
               )}
 
-              {analysisComplete && (
+              {formData.ia_recomendaciones && (
                 <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle className="h-5 w-5 text-green-600" />
@@ -581,7 +668,7 @@ export default function Acelerador6() {
                   <div>
                     <Label>Recomendaciones de IA (editable)</Label>
                     <Textarea
-                      value={formData.ia_recomendaciones || ''}
+                      value={formData.ia_recomendaciones}
                       onChange={(e) => handleInputChange('ia_recomendaciones', e.target.value)}
                       className="min-h-[150px] mt-2"
                       disabled={isClosed}
@@ -620,6 +707,28 @@ export default function Acelerador6() {
           </div>
         </div>
       </div>
+
+      {/* Reopen Confirmation Dialog */}
+      <AlertDialog open={showReopenDialog} onOpenChange={setShowReopenDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Reabrir Acelerador 6?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Al reabrir esta unidad de aprendizaje, los Aceleradores 7 (Rúbrica) y 8 (Sesiones) 
+              quedarán marcados como "pendientes de revisión" ya que pueden necesitar actualizaciones 
+              basadas en los cambios que realice.
+              <br /><br />
+              ¿Está seguro de que desea continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReopen}>
+              Sí, reabrir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

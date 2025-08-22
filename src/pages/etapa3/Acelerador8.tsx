@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Bot, CheckCircle, Save, Lock, Plus, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ArrowLeft, Bot, CheckCircle, Save, Lock, Plus, Trash2, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/useDebounce';
 import { supabase } from '@/integrations/supabase/client';
 import { useEtapa3V2, SesionClase } from '@/hooks/useEtapa3V2';
 
@@ -20,6 +22,11 @@ export default function Acelerador8() {
   const [sesionesData, setSesionesData] = useState<SesionClase[]>([]);
   const [generationLoading, setGenerationLoading] = useState(false);
   const [generationComplete, setGenerationComplete] = useState(false);
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  
+  // Debounced sesiones data for auto-save
+  const debouncedSesionesData = useDebounce(sesionesData, 3000);
 
   // Load existing sessions data
   useEffect(() => {
@@ -50,22 +57,26 @@ export default function Acelerador8() {
     }
   }, [sesiones, unidad]);
 
-  // Auto-save functionality
+  // Silent auto-save functionality with debounce
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (sesionesData.length > 0 && !saving && generationComplete) {
-        handleAutoSave();
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [sesionesData, saving, generationComplete]);
+    if (debouncedSesionesData.length > 0 && !saving && !autoSaving && generationComplete && sesiones.length > 0) {
+      handleAutoSave();
+    }
+  }, [debouncedSesionesData, saving, autoSaving, generationComplete, sesiones]);
 
   const handleAutoSave = async () => {
     try {
+      setAutoSaving(true);
       await saveSesiones(sesionesData);
     } catch (error) {
       console.error('Auto-save failed:', error);
+      toast({
+        title: "Error en guardado automático",
+        description: "No se pudieron guardar los cambios automáticamente",
+        variant: "destructive",
+      });
+    } finally {
+      setAutoSaving(false);
     }
   };
 
@@ -232,6 +243,33 @@ export default function Acelerador8() {
     await closeAccelerator('A8');
   };
 
+  const handleReopen = async () => {
+    try {
+      const updatedSesiones = sesionesData.map(sesion => ({
+        ...sesion,
+        estado: 'BORRADOR' as const,
+        closed_at: null
+      }));
+      
+      await saveSesiones(updatedSesiones);
+      setSesionesData(updatedSesiones);
+      
+      toast({
+        title: "Acelerador reabierto",
+        description: "Las sesiones se han reabierto para edición.",
+      });
+      
+      setShowReopenDialog(false);
+    } catch (error) {
+      console.error('Reopen error:', error);
+      toast({
+        title: "Error al reabrir",
+        description: "No se pudieron reabrir las sesiones",
+        variant: "destructive",
+      });
+    }
+  };
+
   const areSessionsClosed = sesiones.length > 0 && sesiones.every(s => s.estado === 'CERRADO');
   const canAccessA8 = progress.a7_completed;
 
@@ -279,16 +317,29 @@ export default function Acelerador8() {
           </div>
 
           <div className="flex items-center gap-3">
+            {autoSaving && (
+              <Badge variant="outline" className="gap-2">
+                <div className="animate-spin rounded-full h-3 w-3 border-b border-muted-foreground"></div>
+                Guardando...
+              </Badge>
+            )}
             {areSessionsClosed && (
               <Badge variant="default" className="gap-2">
                 <Lock className="h-4 w-4" />
                 Cerrado
               </Badge>
             )}
-            <Button onClick={handleSave} disabled={saving || areSessionsClosed}>
-              <Save className="h-4 w-4 mr-2" />
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
+            {areSessionsClosed ? (
+              <Button onClick={() => setShowReopenDialog(true)} variant="outline">
+                <Edit3 className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            ) : (
+              <Button onClick={handleSave} disabled={saving || autoSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Guardando..." : "Guardar"}
+              </Button>
+            )}
           </div>
         </div>
 
