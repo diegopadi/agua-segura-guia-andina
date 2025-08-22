@@ -74,7 +74,9 @@ export default function Acelerador7() {
       return;
     }
 
+    const requestId = crypto.randomUUID();
     console.log('[A7:GEN_REQUEST]', {
+      request_id: requestId,
       unidad_id: unidad.id,
       titulo: unidad.titulo,
       area: unidad.area_curricular,
@@ -90,17 +92,63 @@ export default function Acelerador7() {
         }
       });
 
+      // Log the raw response
       console.log('[A7:GEN_RESPONSE]', {
+        request_id: requestId,
+        status: error ? 'error' : 'success',
         success: data?.success,
+        error_code: data?.error_code,
+        message: data?.message,
         has_estructura: !!data?.estructura,
         criteria_count: data?.estructura?.criteria?.length || 0,
-        error: error?.message || data?.error,
+        supabase_error: error?.message,
         timestamp: new Date().toISOString()
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[A7:GEN_ERROR]', {
+          request_id: requestId,
+          error_message: error.message,
+          error_type: error.name,
+          timestamp: new Date().toISOString()
+        });
+        toast({
+          title: "Error de conexión",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
-      if (data.success && data.estructura) {
+      // Handle API-level errors (success: false)
+      if (data && !data.success) {
+        console.error('[A7:GEN_ERROR]', {
+          request_id: requestId,
+          error_code: data.error_code,
+          message: data.message,
+          details: data.details,
+          timestamp: new Date().toISOString()
+        });
+        
+        const errorMessages = {
+          'MISSING_API_KEY': 'Falta configurar la clave de OpenAI',
+          'INVALID_INPUT': 'Datos de entrada inválidos: ' + data.message,
+          'OPENAI_ERROR': 'Error en la API de OpenAI: ' + data.message,
+          'INVALID_AI_JSON': 'La IA no generó una respuesta válida',
+          'VALIDATION_FAIL': 'La rúbrica generada no cumple los criterios requeridos',
+          'UNEXPECTED': 'Error inesperado en el servidor'
+        };
+        
+        toast({
+          title: "Error en la generación",
+          description: errorMessages[data.error_code] || data.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Handle successful response
+      if (data?.success && data?.estructura) {
         // Validate the structure
         const estructura = data.estructura;
         
@@ -113,8 +161,10 @@ export default function Acelerador7() {
         }
 
         console.log('[A7:GEN_VALID]', {
+          request_id: requestId,
           levels_count: estructura.levels.length,
           criteria_count: estructura.criteria.length,
+          all_criteria_valid: estructura.criteria.every(c => c.criterio && c.descriptores),
           valid_structure: true,
           timestamp: new Date().toISOString()
         });
@@ -123,22 +173,34 @@ export default function Acelerador7() {
         setGenerationComplete(true);
         
         toast({
-          title: "Rúbrica generada",
+          title: "Rúbrica generada exitosamente",
           description: `Se ha generado una rúbrica con ${estructura.criteria.length} criterios de evaluación`,
         });
       } else {
-        throw new Error(data.error || 'Error en la generación');
+        console.error('[A7:GEN_ERROR]', {
+          request_id: requestId,
+          error_message: 'Invalid response structure',
+          response_data: data,
+          timestamp: new Date().toISOString()
+        });
+        toast({
+          title: "Error en la respuesta",
+          description: "Respuesta inválida del servidor",
+          variant: "destructive",
+        });
       }
 
     } catch (error: any) {
       console.error('[A7:GEN_ERROR]', {
+        request_id: requestId,
         error_message: error.message,
         error_type: error.name || 'UnknownError',
+        stack: error.stack?.substring(0, 300),
         timestamp: new Date().toISOString()
       });
       
       toast({
-        title: "Error en la generación",
+        title: "Error inesperado",
         description: error.message || "No se pudo generar la rúbrica. Puede crear una manualmente.",
         variant: "destructive",
       });
@@ -248,7 +310,9 @@ export default function Acelerador7() {
       return;
     }
 
+    const requestId = crypto.randomUUID();
     console.log('[A7:SAVE]', {
+      request_id: requestId,
       criteria_count: rubricaData.criteria.length,
       levels_count: rubricaData.levels.length,
       is_closed: false,
@@ -258,12 +322,21 @@ export default function Acelerador7() {
     try {
       await saveRubrica({ estructura: rubricaData });
       
+      console.log('[A7:SAVE_SUCCESS]', {
+        request_id: requestId,
+        timestamp: new Date().toISOString()
+      });
+      
       toast({
         title: "Rúbrica guardada",
         description: "Los cambios se han guardado correctamente",
       });
     } catch (error) {
-      console.error('Save error:', error);
+      console.error('[A7:SAVE_ERROR]', {
+        request_id: requestId,
+        error_message: error.message,
+        timestamp: new Date().toISOString()
+      });
       toast({
         title: "Error al guardar",
         description: "No se pudieron guardar los cambios",
@@ -291,10 +364,13 @@ export default function Acelerador7() {
       return;
     }
 
+    const requestId = crypto.randomUUID();
     console.log('[A7:CLOSE]', {
+      request_id: requestId,
       criteria_count: rubricaData.criteria.length,
       form_valid: formValid,
       analysis_complete: analysisComplete,
+      has_rubricas: hasRubricas,
       timestamp: new Date().toISOString()
     });
 
@@ -305,12 +381,21 @@ export default function Acelerador7() {
       // Then close the accelerator
       await closeAccelerator('A7');
       
+      console.log('[A7:CLOSE_SUCCESS]', {
+        request_id: requestId,
+        timestamp: new Date().toISOString()
+      });
+      
       toast({
         title: "Acelerador 7 cerrado",
         description: "La rúbrica ha sido finalizada. Ahora puede continuar al Acelerador 8",
       });
     } catch (error) {
-      console.error('Close error:', error);
+      console.error('[A7:CLOSE_ERROR]', {
+        request_id: requestId,
+        error_message: error.message,
+        timestamp: new Date().toISOString()
+      });
       toast({
         title: "Error al cerrar",
         description: "No se pudo cerrar el acelerador",
