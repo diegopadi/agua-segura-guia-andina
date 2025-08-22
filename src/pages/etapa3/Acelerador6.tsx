@@ -51,6 +51,23 @@ export default function Acelerador6() {
   // Debounced form data for auto-save (increased to 10s)
   const debouncedFormData = useDebounce(formData, 10000);
 
+  // Helper functions and computed values
+  const isFormValid = () => {
+    return !!(
+      formData.titulo?.trim() &&
+      formData.area_curricular &&
+      formData.grado &&
+      formData.proposito?.trim() &&
+      formData.evidencias?.trim() &&
+      formData.numero_sesiones &&
+      formData.duracion_min
+    );
+  };
+
+  const isClosed = unidad?.estado === 'CERRADO';
+  const canProceedToA7 = progress.a6_completed;
+  const analysisComplete = !!formData.ia_recomendaciones;
+
   // Load existing data
   useEffect(() => {
     if (unidad) {
@@ -69,22 +86,6 @@ export default function Acelerador6() {
       });
     }
   }, [unidad]);
-
-  const isFormValid = () => {
-    return !!(
-      formData.titulo?.trim() &&
-      formData.area_curricular &&
-      formData.grado &&
-      formData.proposito?.trim() &&
-      formData.evidencias?.trim() &&
-      formData.numero_sesiones &&
-      formData.duracion_min
-    );
-  };
-
-  const isClosed = unidad?.estado === 'CERRADO';
-  const canProceedToA7 = progress.a6_completed;
-  const analysisComplete = !!formData.ia_recomendaciones;
 
   // Silent auto-save functionality with debounce and throttle
   useEffect(() => {
