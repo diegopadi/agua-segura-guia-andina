@@ -318,7 +318,15 @@ RÚBRICA DE SESIÓN:`);
                                     {rec.por_que && (
                                       <div>
                                         <h5 className="font-medium text-blue-700 dark:text-blue-300 mb-1">¿Por qué es importante?</h5>
-                                        <p className="text-muted-foreground">{rec.por_que}</p>
+                                        <p className="text-muted-foreground">
+                                          {typeof rec.por_que === 'string' ? (
+                                            rec.por_que
+                                          ) : typeof rec.por_que === 'object' && rec.por_que !== null ? (
+                                            rec.por_que.cita ? `"${rec.por_que.cita}"${rec.por_que.ubicacion ? ` (${rec.por_que.ubicacion})` : ''}` : JSON.stringify(rec.por_que)
+                                          ) : (
+                                            String(rec.por_que)
+                                          )}
+                                        </p>
                                       </div>
                                     )}
                                     
@@ -327,12 +335,28 @@ RÚBRICA DE SESIÓN:`);
                                         <h5 className="font-medium text-green-700 dark:text-green-300 mb-1">¿Cómo implementarlo?</h5>
                                         {Array.isArray(rec.como) ? (
                                           <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                                            {rec.como.map((paso: string, pasoIndex: number) => (
-                                              <li key={pasoIndex}>{paso}</li>
+                                            {rec.como.map((paso: any, pasoIndex: number) => (
+                                              <li key={pasoIndex}>
+                                                {typeof paso === 'string' ? (
+                                                  paso
+                                                ) : typeof paso === 'object' && paso !== null ? (
+                                                  paso.cita ? `"${paso.cita}"${paso.ubicacion ? ` (${paso.ubicacion})` : ''}` : JSON.stringify(paso)
+                                                ) : (
+                                                  String(paso)
+                                                )}
+                                              </li>
                                             ))}
                                           </ol>
                                         ) : (
-                                          <p className="text-muted-foreground">{rec.como}</p>
+                                          <p className="text-muted-foreground">
+                                            {typeof rec.como === 'string' ? (
+                                              rec.como
+                                            ) : typeof rec.como === 'object' && rec.como !== null ? (
+                                              rec.como.cita ? `"${rec.como.cita}"${rec.como.ubicacion ? ` (${rec.como.ubicacion})` : ''}` : JSON.stringify(rec.como)
+                                            ) : (
+                                              String(rec.como)
+                                            )}
+                                          </p>
                                         )}
                                       </div>
                                     )}
@@ -340,7 +364,15 @@ RÚBRICA DE SESIÓN:`);
                                     {rec.ejemplo && (
                                       <div>
                                         <h5 className="font-medium text-purple-700 dark:text-purple-300 mb-1">Ejemplo</h5>
-                                        <p className="text-muted-foreground italic">{rec.ejemplo}</p>
+                                        <p className="text-muted-foreground italic">
+                                          {typeof rec.ejemplo === 'string' ? (
+                                            rec.ejemplo
+                                          ) : typeof rec.ejemplo === 'object' && rec.ejemplo !== null ? (
+                                            rec.ejemplo.cita ? `"${rec.ejemplo.cita}"${rec.ejemplo.ubicacion ? ` (${rec.ejemplo.ubicacion})` : ''}` : JSON.stringify(rec.ejemplo)
+                                          ) : (
+                                            String(rec.ejemplo)
+                                          )}
+                                        </p>
                                       </div>
                                     )}
                                     
