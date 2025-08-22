@@ -492,6 +492,23 @@ export default function Acelerador6() {
     }
   }, [formData.ia_recomendaciones]);
 
+  // Helper function to format IA recommendations for display
+  const formatIARecommendations = (iaRecommendations: string): string => {
+    if (!iaRecommendations) return '';
+    
+    try {
+      const parsed = JSON.parse(iaRecommendations);
+      if (parsed.ajustes_sugeridos_unidad && Array.isArray(parsed.ajustes_sugeridos_unidad)) {
+        return parsed.ajustes_sugeridos_unidad
+          .map((item: string) => `• ${item}`)
+          .join('\n\n');
+      }
+      return iaRecommendations; // Fall back to original if no ajustes_sugeridos_unidad
+    } catch (e) {
+      return iaRecommendations; // Fall back to original if not valid JSON
+    }
+  };
+
   // Debug logging for A6 runtime state (UI conditions)
   console.log('[A6:UI]', {
     isClosed,
@@ -850,7 +867,7 @@ export default function Acelerador6() {
                   <div>
                     <Label>Recomendaciones de IA (editable)</Label>
                     <Textarea
-                      value={formData.ia_recomendaciones}
+                      value={formatIARecommendations(formData.ia_recomendaciones)}
                       onChange={(e) => handleInputChange('ia_recomendaciones', e.target.value)}
                       className="min-h-[150px] mt-2"
                       disabled={isClosed}
