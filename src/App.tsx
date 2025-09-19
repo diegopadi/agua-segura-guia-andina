@@ -25,6 +25,7 @@ import Ayuda from "./pages/Ayuda";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import PublicSurvey from "./pages/PublicSurvey";
+import Pitch from "./pages/Pitch";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => (
                     <Route path="/documentos" element={<Documentos />} />
                     <Route path="/ayuda" element={<Ayuda />} />
                     <Route path="/administracion" element={<Admin />} />
+                    <Route path="/pitch" element={<Pitch />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
