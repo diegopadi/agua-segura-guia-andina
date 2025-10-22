@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import PublicSurvey from "./pages/PublicSurvey";
 import Pitch from "./pages/Pitch";
 import Proyectos from "./pages/Proyectos";
+import Generacion from "./pages/proyectos/Generacion";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
                   <Routes>
                     <Route path="/" element={<Inicio />} />
                     <Route path="/proyectos" element={<Proyectos />} />
+                    <Route path="/proyectos/generacion" element={<Generacion />} />
                     <Route path="/etapa1" element={<Etapa1 />} />
                     <Route path="/etapa1/acelerador1" element={<Acelerador1 />} />
                     <Route path="/etapa1/acelerador2" element={<Acelerador2 />} />
