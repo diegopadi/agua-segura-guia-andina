@@ -28,6 +28,7 @@ import PublicSurvey from "./pages/PublicSurvey";
 import Pitch from "./pages/Pitch";
 import Proyectos from "./pages/Proyectos";
 import Generacion from "./pages/proyectos/Generacion";
+import Manual from "./pages/proyectos/Manual";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
                     <Route path="/" element={<Inicio />} />
                     <Route path="/proyectos" element={<Proyectos />} />
                     <Route path="/proyectos/generacion" element={<Generacion />} />
+                    <Route path="/proyectos/manual" element={<Manual />} />
                     <Route path="/etapa1" element={<Etapa1 />} />
                     <Route path="/etapa1/acelerador1" element={<Acelerador1 />} />
                     <Route path="/etapa1/acelerador2" element={<Acelerador2 />} />
