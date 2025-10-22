@@ -80,6 +80,26 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              {/* Inicio - First item */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink 
+                    to="/" 
+                    className={({ isActive }) => 
+                      `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
+                        isActive 
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                          : "hover:bg-sidebar-accent/50 text-sidebar-foreground"
+                      }`
+                    }
+                  >
+                    <Home className="w-4 h-4" />
+                    {state === "expanded" && <span>Inicio</span>}
+                    {state === "expanded" && isActive("/") && <ChevronRight className="w-4 h-4 ml-auto" />}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
               {/* Docentes.IA - Collapsible group */}
               <SidebarMenuItem>
                 <SidebarMenuButton 
@@ -121,8 +141,8 @@ export function AppSidebar() {
                 </div>
               )}
 
-              {/* Main items */}
-              {mainItems.map(item => (
+              {/* Main items (excluding Inicio) */}
+              {mainItems.filter(item => item.title !== "Inicio").map(item => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 
