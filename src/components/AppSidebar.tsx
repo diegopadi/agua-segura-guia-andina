@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, BookOpen, FileText, HelpCircle, Droplets, ChevronRight, Shield, BarChart3 } from "lucide-react";
+import { Home, BookOpen, FileText, HelpCircle, Droplets, ChevronRight, Shield, BarChart3, FolderKanban } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { WaterLogo } from "@/components/WaterLogo";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, useSidebar } from "@/components/ui/sidebar";
@@ -7,6 +7,10 @@ const mainItems = [{
   title: "Inicio",
   url: "/",
   icon: Home
+}, {
+  title: "Proyectos CNPIE 2025",
+  url: "/proyectos",
+  icon: FolderKanban
 }, {
   title: "Pitch",
   url: "/pitch",
