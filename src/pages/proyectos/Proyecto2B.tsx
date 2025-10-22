@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { FileSearch, Zap, ClipboardCheck, ArrowLeft, BookOpen, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MiniCambioProyecto } from "@/components/MiniCambioProyecto";
 
 export default function Proyecto2B() {
   const navigate = useNavigate();
@@ -36,6 +37,7 @@ export default function Proyecto2B() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#E6F4F1' }}>
+      <MiniCambioProyecto variant="floating" />
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Encabezado */}
         <div className="mb-8">
