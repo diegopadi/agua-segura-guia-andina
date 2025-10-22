@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, BookOpen, FileText, HelpCircle, Droplets, ChevronRight, Shield, BarChart3, FolderKanban, Database, RefreshCw } from "lucide-react";
+import { Home, BookOpen, FileText, HelpCircle, Droplets, ChevronRight, ChevronDown, Shield, BarChart3, FolderKanban, Database, RefreshCw, GraduationCap } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { WaterLogo } from "@/components/WaterLogo";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, useSidebar } from "@/components/ui/sidebar";
@@ -12,18 +12,24 @@ const mainItems = [{
   url: "/proyectos",
   icon: FolderKanban
 }, {
-  title: "Pitch",
-  url: "/pitch",
-  icon: BarChart3
+  title: "Cambiar tipo 🔄",
+  url: "/mini-cambio-proyecto",
+  icon: RefreshCw
 }, {
   title: "Repositorio",
   url: "/repositorio",
   icon: Database
 }, {
-  title: "Cambiar tipo 🔄",
-  url: "/mini-cambio-proyecto",
-  icon: RefreshCw
+  title: "Pitch",
+  url: "/pitch",
+  icon: BarChart3
 }, {
+  title: "Documentos",
+  url: "/documentos",
+  icon: FileText
+}];
+
+const etapasItems = [{
   title: "Etapa 1",
   url: "/etapa1",
   icon: Droplets
@@ -35,11 +41,9 @@ const mainItems = [{
   title: "Etapa 3",
   url: "/etapa3",
   icon: Droplets
-}, {
-  title: "Documentos",
-  url: "/documentos",
-  icon: FileText
-}, {
+}];
+
+const footerItems = [{
   title: "Ayuda",
   url: "/ayuda",
   icon: HelpCircle
@@ -54,7 +58,10 @@ export function AppSidebar() {
   } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
+  const [docentesExpanded, setDocentesExpanded] = useState(false);
+  
   const isActive = (path: string) => currentPath === path;
+  const isEtapaActive = etapasItems.some(item => isActive(item.url));
   return <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
@@ -73,17 +80,96 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainItems.map(item => <SidebarMenuItem key={item.title}>
+              {/* Docentes.IA - Collapsible group */}
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={() => setDocentesExpanded(!docentesExpanded)}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isEtapaActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "hover:bg-sidebar-accent/50 text-sidebar-foreground"}`}
+                >
+                  <GraduationCap className="w-4 h-4" style={{ color: '#0F7A9D' }} />
+                  {state === "expanded" && <span className="font-medium" style={{ color: '#0F7A9D' }}>Docentes.IA</span>}
+                  {state === "expanded" && (
+                    docentesExpanded ? 
+                      <ChevronDown className="w-4 h-4 ml-auto transition-transform" /> : 
+                      <ChevronRight className="w-4 h-4 ml-auto transition-transform" />
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* Etapas sub-items */}
+              {docentesExpanded && state === "expanded" && (
+                <div className="ml-6 space-y-1 animate-fade-in">
+                  {etapasItems.map(item => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild>
+                        <NavLink 
+                          to={item.url} 
+                          className={({ isActive }) => 
+                            `flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${
+                              isActive 
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                                : "hover:bg-sidebar-accent/50 text-sidebar-foreground"
+                            }`
+                          }
+                        >
+                          <item.icon className="w-3 h-3" />
+                          <span className="text-sm">{item.title}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </div>
+              )}
+
+              {/* Main items */}
+              {mainItems.map(item => (
+                <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={({
-                  isActive
-                }) => `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "hover:bg-sidebar-accent/50 text-sidebar-foreground"}`}>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => 
+                        `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
+                          isActive 
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                            : "hover:bg-sidebar-accent/50 text-sidebar-foreground"
+                        }`
+                      }
+                    >
                       <item.icon className="w-4 h-4" />
                       {state === "expanded" && <span>{item.title}</span>}
                       {state === "expanded" && isActive(item.url) && <ChevronRight className="w-4 h-4 ml-auto" />}
                     </NavLink>
                   </SidebarMenuButton>
-                </SidebarMenuItem>)}
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Footer Section */}
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {footerItems.map(item => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => 
+                        `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
+                          isActive 
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                            : "hover:bg-sidebar-accent/50 text-sidebar-foreground"
+                        }`
+                      }
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {state === "expanded" && <span>{item.title}</span>}
+                      {state === "expanded" && isActive(item.url) && <ChevronRight className="w-4 h-4 ml-auto" />}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
