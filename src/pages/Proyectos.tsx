@@ -51,8 +51,7 @@ export default function Proyectos() {
               </p>
               <Button 
                 onClick={() => navigate('/proyectos/generacion')}
-                className="w-full text-white font-medium"
-                style={{ backgroundColor: '#005C6B' }}
+                className="w-full bg-teal-800 hover:bg-teal-900 text-white font-medium"
               >
                 Continuar
               </Button>
@@ -83,8 +82,7 @@ export default function Proyectos() {
               </p>
               <Button 
                 onClick={() => navigate('/proyectos/manual')}
-                className="w-full font-medium"
-                style={{ backgroundColor: '#DDF4F2', color: '#005C6B' }}
+                className="w-full bg-teal-800 hover:bg-teal-900 text-white font-medium"
               >
                 Continuar
               </Button>

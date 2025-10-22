@@ -84,14 +84,14 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={() => setDocentesExpanded(!docentesExpanded)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isEtapaActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "hover:bg-sidebar-accent/50 text-sidebar-foreground"}`}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isEtapaActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "hover:bg-sidebar-accent/50 text-white"}`}
                 >
-                  <GraduationCap className="w-4 h-4" style={{ color: '#0F7A9D' }} />
-                  {state === "expanded" && <span className="font-medium" style={{ color: '#0F7A9D' }}>Docentes.IA</span>}
+                  <GraduationCap className="w-4 h-4 text-white" />
+                  {state === "expanded" && <span className="font-medium text-white">Docentes.IA</span>}
                   {state === "expanded" && (
                     docentesExpanded ? 
-                      <ChevronDown className="w-4 h-4 ml-auto transition-transform" /> : 
-                      <ChevronRight className="w-4 h-4 ml-auto transition-transform" />
+                      <ChevronDown className="w-4 h-4 ml-auto transition-transform text-white" /> : 
+                      <ChevronRight className="w-4 h-4 ml-auto transition-transform text-white" />
                   )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
