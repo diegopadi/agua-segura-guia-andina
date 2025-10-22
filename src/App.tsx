@@ -30,6 +30,7 @@ import Proyectos from "./pages/Proyectos";
 import Generacion from "./pages/proyectos/Generacion";
 import Manual from "./pages/proyectos/Manual";
 import Proyecto2A from "./pages/proyectos/Proyecto2A";
+import Proyecto2B from "./pages/proyectos/Proyecto2B";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
                     <Route path="/proyectos/generacion" element={<Generacion />} />
                     <Route path="/proyectos/manual" element={<Manual />} />
                     <Route path="/proyectos/2a" element={<Proyecto2A />} />
+                    <Route path="/proyectos/2b" element={<Proyecto2B />} />
                     <Route path="/etapa1" element={<Etapa1 />} />
                     <Route path="/etapa1/acelerador1" element={<Acelerador1 />} />
                     <Route path="/etapa1/acelerador2" element={<Acelerador2 />} />
