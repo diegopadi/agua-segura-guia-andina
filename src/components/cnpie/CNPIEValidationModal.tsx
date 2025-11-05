@@ -50,9 +50,15 @@ export function CNPIEValidationModal({
             </div>
           </div>
 
-          <p className="text-sm">
-            Una vez validado, podrás acceder al Acelerador {acelerador + 1} de la Etapa {etapa}.
-          </p>
+          {etapa === 2 && acelerador === 7 ? (
+            <p className="text-sm">
+              Una vez validado, pasarás a la <strong>Evaluación Final de Etapa 2</strong> donde podrás revisar tu puntaje CNPIE y descargar la documentación.
+            </p>
+          ) : (
+            <p className="text-sm">
+              Una vez validado, podrás acceder al <strong>Acelerador {acelerador + 1}</strong> de la Etapa {etapa}.
+            </p>
+          )}
         </div>
 
         <DialogFooter>

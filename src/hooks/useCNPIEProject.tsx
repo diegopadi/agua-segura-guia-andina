@@ -182,12 +182,58 @@ export function useCNPIEProject(tipoProyecto: '2A' | '2B' | '2C') {
     return proyecto.datos_aceleradores;
   };
 
+  const validateEvaluacionFinal = async () => {
+    if (!proyecto) return false;
+
+    try {
+      setSaving(true);
+      
+      const updatedEstado = {
+        ...proyecto.estado_aceleradores,
+        etapa2_evaluacion_final: 'completado'
+      };
+
+      const { error } = await supabase
+        .from('cnpie_proyectos')
+        .update({
+          estado_aceleradores: updatedEstado,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', proyecto.id);
+
+      if (error) throw error;
+
+      setProyecto(prev => prev ? {
+        ...prev,
+        estado_aceleradores: updatedEstado
+      } : null);
+
+      toast({
+        title: "¡Etapa 2 completada!",
+        description: "Ahora puedes continuar a la Etapa 3"
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error('Error validating evaluacion final:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return {
     proyecto,
     loading,
     saving,
     saveAcceleratorData,
     validateAccelerator,
+    validateEvaluacionFinal,
     canProceedToNext,
     getAcceleratorData,
     getAllData,

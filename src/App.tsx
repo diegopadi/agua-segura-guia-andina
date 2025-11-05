@@ -42,6 +42,8 @@ import Etapa2Acelerador4 from "./pages/cnpie/2a/Etapa2Acelerador4";
 import Etapa2Acelerador5 from "./pages/cnpie/2a/Etapa2Acelerador5";
 import Etapa2Acelerador6 from "./pages/cnpie/2a/Etapa2Acelerador6";
 import Etapa2Acelerador7 from "./pages/cnpie/2a/Etapa2Acelerador7";
+import Etapa2EvaluacionFinal from "./pages/cnpie/2a/Etapa2EvaluacionFinal";
+import Etapa3EvaluacionFinal from "./pages/etapa3/Etapa3EvaluacionFinal";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +81,7 @@ const App = () => (
                     <Route path="/cnpie/2a/etapa2/acelerador5" element={<Etapa2Acelerador5 />} />
                     <Route path="/cnpie/2a/etapa2/acelerador6" element={<Etapa2Acelerador6 />} />
                     <Route path="/cnpie/2a/etapa2/acelerador7" element={<Etapa2Acelerador7 />} />
+                    <Route path="/cnpie/2a/etapa2/evaluacion-final" element={<Etapa2EvaluacionFinal />} />
                     <Route path="/etapa1" element={<Etapa1 />} />
                     <Route path="/etapa1/acelerador1" element={<Acelerador1 />} />
                     <Route path="/etapa1/acelerador2" element={<Acelerador2 />} />
@@ -91,6 +94,7 @@ const App = () => (
             <Route path="/etapa3/acelerador9" element={<Acelerador9 />} />
             <Route path="/etapa3/acelerador10" element={<Acelerador10 />} />
             <Route path="/etapa3/acelerador10/visor" element={<A8FinalViewer />} />
+            <Route path="/etapa3/evaluacion-final" element={<Etapa3EvaluacionFinal />} />
                     <Route path="/documentos" element={<Documentos />} />
                     <Route path="/ayuda" element={<Ayuda />} />
                     <Route path="/administracion" element={<Admin />} />

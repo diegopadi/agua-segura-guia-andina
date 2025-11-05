@@ -13,6 +13,17 @@ export default function Proyecto2A() {
   // Verificar si Etapa 1 está completa
   const etapa1Completada = proyecto?.estado_aceleradores?.etapa1_acelerador1 === 'completado';
 
+  // Verificar si Etapa 2 está completa
+  const etapa2Completada = !!(
+    proyecto?.estado_aceleradores?.etapa2_acelerador2 === 'completado' &&
+    proyecto?.estado_aceleradores?.etapa2_acelerador3 === 'completado' &&
+    proyecto?.estado_aceleradores?.etapa2_acelerador4 === 'completado' &&
+    proyecto?.estado_aceleradores?.etapa2_acelerador5 === 'completado' &&
+    proyecto?.estado_aceleradores?.etapa2_acelerador6 === 'completado' &&
+    proyecto?.estado_aceleradores?.etapa2_acelerador7 === 'completado' &&
+    proyecto?.estado_aceleradores?.etapa2_evaluacion_final === 'completado'
+  );
+
   const etapas = [
     {
       numero: 1,
@@ -38,7 +49,8 @@ export default function Proyecto2A() {
       descripcion: "Generación de entregables para CNPIE 2025: evidencias, sistematización y documentación final.",
       icon: ClipboardCheck,
       color: "#1BBEAE",
-      disponible: false
+      disponible: etapa2Completada,
+      ruta: '/etapa3'
     }
   ];
 

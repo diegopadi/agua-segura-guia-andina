@@ -459,6 +459,29 @@ export function useEtapa3V2() {
     fetchEtapa3Data();
   }, [user]);
 
+  const validateEtapa3Final = async () => {
+    try {
+      setSaving(true);
+
+      toast({
+        title: "¡Etapa 3 completada!",
+        description: "Tu unidad de aprendizaje está lista para implementar"
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error('Error validating etapa 3 final:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return {
     unidad,
     rubrica,
@@ -470,6 +493,7 @@ export function useEtapa3V2() {
     saveRubrica,
     saveSesiones,
     closeAccelerator,
+    validateEtapa3Final,
     refetch: fetchEtapa3Data
   };
 }

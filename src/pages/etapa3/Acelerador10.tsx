@@ -703,11 +703,12 @@ export default function Acelerador10() {
 
     // Close the accelerator
     try {
-      await closeAccelerator('A8');
+      await closeAccelerator('A10');
       toast({
-        title: "Acelerador cerrado",
-        description: "A8 cerrado correctamente",
+        title: "Acelerador 10 completado",
+        description: "Ahora pasarás a la Evaluación Final de Etapa 3",
       });
+      navigate('/etapa3/evaluacion-final');
     } catch (error) {
       toast({
         title: "Error",

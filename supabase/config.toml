@@ -77,3 +77,6 @@ verify_jwt = true
 
 [functions.analyze-cnpie-pertinencia]
 verify_jwt = true
+
+[functions.validate-etapa3-coherence]
+verify_jwt = true

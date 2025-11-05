@@ -55,8 +55,8 @@ export function CNPIEAcceleratorLayout({
         // Dentro de Etapa 2, ir al siguiente acelerador
         navigate(`/cnpie/${tipoProyecto.toLowerCase()}/etapa2/acelerador${aceleradorNumber + 1}`);
       } else if (etapaNumber === 2 && aceleradorNumber === 7) {
-        // Después del último acelerador de Etapa 2, volver al overview
-        navigate(`/cnpie/${tipoProyecto.toLowerCase()}/etapa2/overview`);
+        // Después del último acelerador de Etapa 2, ir a la Evaluación Final
+        navigate(`/cnpie/${tipoProyecto.toLowerCase()}/etapa2/evaluacion-final`);
       }
     }
   };
