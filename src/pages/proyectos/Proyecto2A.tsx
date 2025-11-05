@@ -46,11 +46,11 @@ export default function Proyecto2A() {
     {
       numero: 3,
       titulo: "Evaluación y cierre",
-      descripcion: "Generación de entregables para CNPIE 2025: evidencias, sistematización y documentación final.",
+      descripcion: "Validación con rúbricas CNPIE, generación de documentación consolidada y cierre del proyecto.",
       icon: ClipboardCheck,
       color: "#1BBEAE",
       disponible: etapa2Completada,
-      ruta: '/etapa3'
+      ruta: '/cnpie/2a/etapa3/acelerador8'
     }
   ];
 

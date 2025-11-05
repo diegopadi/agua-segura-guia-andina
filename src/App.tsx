@@ -43,6 +43,7 @@ import Etapa2Acelerador5 from "./pages/cnpie/2a/Etapa2Acelerador5";
 import Etapa2Acelerador6 from "./pages/cnpie/2a/Etapa2Acelerador6";
 import Etapa2Acelerador7 from "./pages/cnpie/2a/Etapa2Acelerador7";
 import Etapa2EvaluacionFinal from "./pages/cnpie/2a/Etapa2EvaluacionFinal";
+import Etapa3Acelerador8 from "./pages/cnpie/2a/Etapa3Acelerador8";
 import ProyectoCompletado from "./pages/cnpie/2a/ProyectoCompletado";
 import Etapa3EvaluacionFinal from "./pages/etapa3/Etapa3EvaluacionFinal";
 
@@ -83,6 +84,7 @@ const App = () => (
                     <Route path="/cnpie/2a/etapa2/acelerador6" element={<Etapa2Acelerador6 />} />
                     <Route path="/cnpie/2a/etapa2/acelerador7" element={<Etapa2Acelerador7 />} />
                     <Route path="/cnpie/2a/etapa2/evaluacion-final" element={<Etapa2EvaluacionFinal />} />
+                    <Route path="/cnpie/2a/etapa3/acelerador8" element={<Etapa3Acelerador8 />} />
                     <Route path="/cnpie/2a/completado" element={<ProyectoCompletado />} />
                     <Route path="/etapa1" element={<Etapa1 />} />
                     <Route path="/etapa1/acelerador1" element={<Acelerador1 />} />
