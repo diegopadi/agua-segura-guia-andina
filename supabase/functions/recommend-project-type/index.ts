@@ -88,7 +88,11 @@ Proporciona una recomendación fundamentada del tipo de proyecto (2A, 2B o 2C) m
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    let content = data.choices[0].message.content;
+    
+    // Limpiar markdown code blocks si existen
+    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
     const result = JSON.parse(content);
 
     console.log('Recomendación generada:', result.recomendacion);

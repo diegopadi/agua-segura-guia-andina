@@ -74,7 +74,11 @@ Genera 8-12 preguntas que ayuden al docente a reflexionar y completar informaci√
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    let content = data.choices[0].message.content;
+    
+    // Limpiar markdown code blocks si existen
+    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
     const result = JSON.parse(content);
 
     console.log('Preguntas generadas exitosamente:', result.preguntas.length);
