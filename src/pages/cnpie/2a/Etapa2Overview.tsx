@@ -11,52 +11,52 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const aceleradores = [
   {
-    numero: 4,
+    numero: 2,
     titulo: "Vinculación al CNEB",
     descripcion: "Vincula tu proyecto con competencias, capacidades y desempeños del CNEB",
     icon: Target,
+    color: "#00A6A6",
+    ruta: '/cnpie/2a/etapa2/acelerador2'
+  },
+  {
+    numero: 3,
+    titulo: "Impacto y Resultados",
+    descripcion: "Documenta los resultados e impactos de tu proyecto consolidado",
+    icon: CheckCircle2,
+    color: "#1BBEAE",
+    ruta: '/cnpie/2a/etapa2/acelerador3'
+  },
+  {
+    numero: 4,
+    titulo: "Participación Comunitaria",
+    descripcion: "Registra la participación de estudiantes, familias y comunidad educativa",
+    icon: Users,
     color: "#00A6A6",
     ruta: '/cnpie/2a/etapa2/acelerador4'
   },
   {
     numero: 5,
-    titulo: "Impacto y Resultados",
-    descripcion: "Documenta los resultados e impactos de tu proyecto consolidado",
-    icon: CheckCircle2,
+    titulo: "Sostenibilidad",
+    descripcion: "Analiza la sostenibilidad y escalabilidad de tu innovación",
+    icon: Leaf,
     color: "#1BBEAE",
     ruta: '/cnpie/2a/etapa2/acelerador5'
   },
   {
     numero: 6,
-    titulo: "Participación Comunitaria",
-    descripcion: "Registra la participación de estudiantes, familias y comunidad educativa",
-    icon: Users,
+    titulo: "Pertinencia Pedagógica",
+    descripcion: "Valida la pertinencia y coherencia pedagógica del proyecto",
+    icon: BookOpen,
     color: "#00A6A6",
     ruta: '/cnpie/2a/etapa2/acelerador6'
   },
   {
     numero: 7,
-    titulo: "Sostenibilidad",
-    descripcion: "Analiza la sostenibilidad y escalabilidad de tu innovación",
-    icon: Leaf,
-    color: "#1BBEAE",
-    ruta: '/cnpie/2a/etapa2/acelerador7'
-  },
-  {
-    numero: 8,
-    titulo: "Pertinencia Pedagógica",
-    descripcion: "Valida la pertinencia y coherencia pedagógica del proyecto",
-    icon: BookOpen,
-    color: "#00A6A6",
-    ruta: '/cnpie/2a/etapa2/acelerador8'
-  },
-  {
-    numero: 9,
     titulo: "Reflexión y Aprendizajes",
     descripcion: "Reflexiona sobre desafíos, lecciones aprendidas y mejoras",
     icon: MessageSquare,
     color: "#1BBEAE",
-    ruta: '/cnpie/2a/etapa2/acelerador9'
+    ruta: '/cnpie/2a/etapa2/acelerador7'
   }
 ];
 
@@ -77,7 +77,7 @@ export default function Etapa2Overview() {
     const estado = proyecto.estado_aceleradores?.[`etapa2_acelerador${numero}`];
     if (estado === 'completado') return 'completado';
     // El primer acelerador siempre está disponible
-    if (numero === 4) return 'disponible';
+    if (numero === 2) return 'disponible';
     // Los demás requieren que el anterior esté completo
     const anteriorCompleto = proyecto.estado_aceleradores?.[`etapa2_acelerador${numero - 1}`] === 'completado';
     return anteriorCompleto ? 'disponible' : 'bloqueado';

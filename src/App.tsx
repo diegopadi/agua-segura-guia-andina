@@ -36,12 +36,12 @@ import Repositorio from "./pages/Repositorio";
 import MiniCambioProyecto from "./pages/MiniCambioProyecto";
 import Etapa1Acelerador1 from "./pages/cnpie/2a/Etapa1Acelerador1";
 import Etapa2Overview from "./pages/cnpie/2a/Etapa2Overview";
+import Etapa2Acelerador2 from "./pages/cnpie/2a/Etapa2Acelerador2";
+import Etapa2Acelerador3 from "./pages/cnpie/2a/Etapa2Acelerador3";
 import Etapa2Acelerador4 from "./pages/cnpie/2a/Etapa2Acelerador4";
 import Etapa2Acelerador5 from "./pages/cnpie/2a/Etapa2Acelerador5";
 import Etapa2Acelerador6 from "./pages/cnpie/2a/Etapa2Acelerador6";
 import Etapa2Acelerador7 from "./pages/cnpie/2a/Etapa2Acelerador7";
-import Etapa2Acelerador8 from "./pages/cnpie/2a/Etapa2Acelerador8";
-import Etapa2Acelerador9 from "./pages/cnpie/2a/Etapa2Acelerador9";
 
 const queryClient = new QueryClient();
 
@@ -73,12 +73,12 @@ const App = () => (
                     {/* CNPIE Routes */}
                     <Route path="/cnpie/2a/etapa1/acelerador1" element={<Etapa1Acelerador1 />} />
                     <Route path="/cnpie/2a/etapa2/overview" element={<Etapa2Overview />} />
+                    <Route path="/cnpie/2a/etapa2/acelerador2" element={<Etapa2Acelerador2 />} />
+                    <Route path="/cnpie/2a/etapa2/acelerador3" element={<Etapa2Acelerador3 />} />
                     <Route path="/cnpie/2a/etapa2/acelerador4" element={<Etapa2Acelerador4 />} />
                     <Route path="/cnpie/2a/etapa2/acelerador5" element={<Etapa2Acelerador5 />} />
                     <Route path="/cnpie/2a/etapa2/acelerador6" element={<Etapa2Acelerador6 />} />
                     <Route path="/cnpie/2a/etapa2/acelerador7" element={<Etapa2Acelerador7 />} />
-                    <Route path="/cnpie/2a/etapa2/acelerador8" element={<Etapa2Acelerador8 />} />
-                    <Route path="/cnpie/2a/etapa2/acelerador9" element={<Etapa2Acelerador9 />} />
                     <Route path="/etapa1" element={<Etapa1 />} />
                     <Route path="/etapa1/acelerador1" element={<Acelerador1 />} />
                     <Route path="/etapa1/acelerador2" element={<Acelerador2 />} />

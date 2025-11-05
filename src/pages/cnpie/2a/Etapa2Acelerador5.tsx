@@ -7,39 +7,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Lightbulb, Plus, X, TrendingUp } from "lucide-react";
-
-interface Indicador {
-  nombre: string;
-  lineaBase: string;
-  resultadoActual: string;
-  porcentajeMejora: string;
-}
+import { Leaf, CheckCircle2, XCircle, Sparkles, AlertCircle } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Etapa2Acelerador5() {
   const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
   const { getCriterioByName } = useCNPIERubric('2A');
   const { toast } = useToast();
 
-  const rubricaImpacto = getCriterioByName('Impacto');
+  const rubricaSostenibilidad = getCriterioByName('Sostenibilidad');
 
   const [formData, setFormData] = useState({
-    descripcionImpacto: '',
-    indicadores: [] as Indicador[],
-    evidenciasDocumentales: '',
-    testimonios: '',
-    datosComparativos: ''
-  });
-
-  const [nuevoIndicador, setNuevoIndicador] = useState<Indicador>({
-    nombre: '',
-    lineaBase: '',
-    resultadoActual: '',
-    porcentajeMejora: ''
+    estrategiasSostenibilidad: '',
+    institucionalizacion: '',
+    capacidadesDesarrolladas: '',
+    recursosNecesarios: '',
+    presupuesto: '',
+    escalabilidad: '',
+    replicabilidad: '',
+    tienePresupuesto: 'no' as 'si' | 'no',
+    tienePlanEscalamiento: 'no' as 'si' | 'no'
   });
 
   const [analyzing, setAnalyzing] = useState(false);
@@ -49,13 +40,11 @@ export default function Etapa2Acelerador5() {
     const savedData = getAcceleratorData(2, 5);
     if (savedData) {
       setFormData(savedData);
-      if (savedData.analysis) setAnalysis(savedData.analysis);
     }
   }, [proyecto]);
 
   const handleSave = async () => {
-    const dataToSave = { ...formData, analysis };
-    return await saveAcceleratorData(2, 5, dataToSave);
+    return await saveAcceleratorData(2, 5, formData);
   };
 
   const handleValidate = async () => {
@@ -64,19 +53,12 @@ export default function Etapa2Acelerador5() {
   };
 
   const handleAnalyze = async () => {
-    if (!formData.descripcionImpacto || formData.indicadores.length === 0) {
-      toast({
-        title: "Campos incompletos",
-        description: "Completa al menos la descripción y un indicador",
-        variant: "destructive"
-      });
-      return;
-    }
-
+    setAnalyzing(true);
     try {
-      setAnalyzing(true);
-      const { data, error } = await supabase.functions.invoke('analyze-cnpie-impacto', {
-        body: formData
+      const etapa1Data = proyecto?.datos_aceleradores?.etapa1_acelerador1 || {};
+      
+      const { data, error } = await supabase.functions.invoke('analyze-cnpie-sostenibilidad', {
+        body: { ...formData, etapa1Data }
       });
 
       if (error) throw error;
@@ -85,13 +67,15 @@ export default function Etapa2Acelerador5() {
         setAnalysis(data.analysis);
         toast({
           title: "Análisis completado",
-          description: "La IA ha analizado el impacto de tu proyecto"
+          description: `Puntaje estimado: ${data.analysis.puntaje_estimado}/20 puntos`
         });
+      } else {
+        throw new Error(data.error || "Error en el análisis");
       }
     } catch (error: any) {
-      console.error('Error analyzing:', error);
+      console.error('Error analyzing sustainability:', error);
       toast({
-        title: "Error",
+        title: "Error en el análisis",
         description: error.message,
         variant: "destructive"
       });
@@ -100,29 +84,19 @@ export default function Etapa2Acelerador5() {
     }
   };
 
-  const addIndicador = () => {
-    if (nuevoIndicador.nombre.trim() && nuevoIndicador.lineaBase.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        indicadores: [...prev.indicadores, { ...nuevoIndicador }]
-      }));
-      setNuevoIndicador({ nombre: '', lineaBase: '', resultadoActual: '', porcentajeMejora: '' });
-    }
-  };
+  const canProceed = !!(
+    formData.estrategiasSostenibilidad && 
+    formData.institucionalizacion && 
+    formData.recursosNecesarios
+  );
 
-  const removeIndicador = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      indicadores: prev.indicadores.filter((_, i) => i !== index)
-    }));
-  };
-
-  const canProceed = !!(formData.descripcionImpacto && formData.indicadores.length > 0);
   const progress = (
-    (formData.descripcionImpacto ? 30 : 0) +
-    (formData.indicadores.length > 0 ? 30 : 0) +
-    (formData.evidenciasDocumentales ? 20 : 0) +
-    (formData.testimonios ? 20 : 0)
+    (formData.estrategiasSostenibilidad ? 25 : 0) +
+    (formData.institucionalizacion ? 20 : 0) +
+    (formData.capacidadesDesarrolladas ? 15 : 0) +
+    (formData.recursosNecesarios ? 20 : 0) +
+    (formData.escalabilidad ? 10 : 0) +
+    (formData.replicabilidad ? 10 : 0)
   );
 
   if (!proyecto) {
@@ -139,196 +113,273 @@ export default function Etapa2Acelerador5() {
       onValidate={handleValidate}
       canProceed={canProceed}
       currentProgress={progress}
-      titulo="Impacto y Resultados"
-      descripcion="Documenta los resultados cuantitativos y cualitativos de tu proyecto"
+      titulo="Sostenibilidad"
+      descripcion="Analiza la sostenibilidad y escalabilidad de tu innovación"
     >
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          {/* Descripción del Impacto */}
+          {/* Botón de análisis IA */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    Análisis IA de Sostenibilidad
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Obtén retroalimentación inmediata sobre las estrategias de sostenibilidad de tu proyecto según el criterio CNPIE (20 pts).
+                  </p>
+                  <Button 
+                    onClick={handleAnalyze}
+                    disabled={!canProceed || analyzing}
+                    className="w-full"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {analyzing ? "Analizando..." : "Analizar Sostenibilidad con IA"}
+                  </Button>
+                </div>
+              </div>
+
+              {analysis && (
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-background rounded-lg">
+                    <span className="font-medium">Puntaje Estimado:</span>
+                    <Badge variant="default" className="text-lg">
+                      {analysis.puntaje_estimado}/20 pts
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-background rounded-lg">
+                    <span className="font-medium">Completitud:</span>
+                    <Badge variant="secondary">
+                      {analysis.completitud}%
+                    </Badge>
+                  </div>
+
+                  {analysis.fortalezas?.length > 0 && (
+                    <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                      <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                        ✓ Fortalezas
+                      </h4>
+                      <ul className="text-sm space-y-1 text-green-800 dark:text-green-200">
+                        {analysis.fortalezas.map((f: string, i: number) => (
+                          <li key={i}>• {f}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.areas_mejorar?.length > 0 && (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
+                      <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                        ⚠ Áreas de Mejora
+                      </h4>
+                      <ul className="text-sm space-y-1 text-yellow-800 dark:text-yellow-200">
+                        {analysis.areas_mejorar.map((a: string, i: number) => (
+                          <li key={i}>• {a}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.sugerencias?.length > 0 && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                        💡 Sugerencias
+                      </h4>
+                      <ul className="text-sm space-y-1 text-blue-800 dark:text-blue-200">
+                        {analysis.sugerencias.map((s: string, i: number) => (
+                          <li key={i}>• {s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {/* Estrategias de Sostenibilidad */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Descripción del Impacto
+                <Leaf className="w-5 h-5" />
+                Estrategias de Sostenibilidad
               </CardTitle>
               <CardDescription>
-                Describe de manera general el impacto observado en estudiantes y la comunidad educativa
+                Describe las estrategias para asegurar la continuidad del proyecto
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Textarea
-                value={formData.descripcionImpacto}
-                onChange={(e) => setFormData(prev => ({ ...prev, descripcionImpacto: e.target.value }))}
-                placeholder="Describe los cambios observados en aprendizajes, actitudes, prácticas pedagógicas, clima institucional, etc..."
+                value={formData.estrategiasSostenibilidad}
+                onChange={(e) => setFormData(prev => ({ ...prev, estrategiasSostenibilidad: e.target.value }))}
+                placeholder="Describe cómo se asegura la continuidad del proyecto: capacitación permanente, institucionalización, alianzas, recursos..."
                 className="min-h-[150px]"
-                maxLength={rubricaImpacto?.extension_maxima || 3000}
+                maxLength={rubricaSostenibilidad?.extension_maxima || 2000}
               />
               <div className="text-xs text-muted-foreground mt-2">
-                {formData.descripcionImpacto.length} / {rubricaImpacto?.extension_maxima || 3000} caracteres
+                {formData.estrategiasSostenibilidad.length} / {rubricaSostenibilidad?.extension_maxima || 2000} caracteres
               </div>
             </CardContent>
           </Card>
 
-          {/* Indicadores Cuantitativos */}
+          {/* Institucionalización */}
           <Card>
             <CardHeader>
-              <CardTitle>Indicadores Cuantitativos</CardTitle>
+              <CardTitle>Institucionalización</CardTitle>
               <CardDescription>
-                Registra indicadores medibles con línea base y resultados actuales
+                Describe cómo el proyecto se ha integrado a la gestión institucional
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={formData.institucionalizacion}
+                onChange={(e) => setFormData(prev => ({ ...prev, institucionalizacion: e.target.value }))}
+                placeholder="¿Está en el PEI? ¿En el PAT? ¿En documentos de gestión? ¿Tiene apoyo del equipo directivo?..."
+                className="min-h-[120px]"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Capacidades Desarrolladas */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Capacidades Desarrolladas</CardTitle>
+              <CardDescription>
+                Describe las capacidades que se han fortalecido en docentes y equipo
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={formData.capacidadesDesarrolladas}
+                onChange={(e) => setFormData(prev => ({ ...prev, capacidadesDesarrolladas: e.target.value }))}
+                placeholder="¿Qué capacidades nuevas han desarrollado los docentes? ¿Pueden continuar sin apoyo externo?..."
+                className="min-h-[120px]"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Recursos Necesarios */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recursos Necesarios</CardTitle>
+              <CardDescription>
+                Detalla los recursos necesarios para continuar el proyecto
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-3 p-4 bg-muted rounded-lg">
-                <div>
-                  <Label>Nombre del Indicador</Label>
-                  <Input
-                    value={nuevoIndicador.nombre}
-                    onChange={(e) => setNuevoIndicador(prev => ({ ...prev, nombre: e.target.value }))}
-                    placeholder="Ej: Nivel de logro en competencia matemática"
-                  />
-                </div>
-                <div className="grid md:grid-cols-2 gap-3">
-                  <div>
-                    <Label>Línea Base (inicio)</Label>
-                    <Input
-                      value={nuevoIndicador.lineaBase}
-                      onChange={(e) => setNuevoIndicador(prev => ({ ...prev, lineaBase: e.target.value }))}
-                      placeholder="Ej: 35% en nivel logrado"
-                    />
+              <Textarea
+                value={formData.recursosNecesarios}
+                onChange={(e) => setFormData(prev => ({ ...prev, recursosNecesarios: e.target.value }))}
+                placeholder="Describe recursos humanos, materiales, tecnológicos, financieros necesarios..."
+                className="min-h-[120px]"
+              />
+
+              <div>
+                <Label>¿Cuenta con presupuesto asignado?</Label>
+                <RadioGroup
+                  value={formData.tienePresupuesto}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, tienePresupuesto: value as 'si' | 'no' }))}
+                  className="flex gap-4 mt-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="si" id="presupuesto-si" />
+                    <Label htmlFor="presupuesto-si" className="flex items-center gap-1">
+                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      Sí
+                    </Label>
                   </div>
-                  <div>
-                    <Label>Resultado Actual</Label>
-                    <Input
-                      value={nuevoIndicador.resultadoActual}
-                      onChange={(e) => setNuevoIndicador(prev => ({ ...prev, resultadoActual: e.target.value }))}
-                      placeholder="Ej: 68% en nivel logrado"
-                    />
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="no" id="presupuesto-no" />
+                    <Label htmlFor="presupuesto-no" className="flex items-center gap-1">
+                      <XCircle className="w-4 h-4 text-red-600" />
+                      No
+                    </Label>
                   </div>
-                </div>
-                <div>
-                  <Label>Porcentaje de Mejora (%)</Label>
-                  <Input
-                    value={nuevoIndicador.porcentajeMejora}
-                    onChange={(e) => setNuevoIndicador(prev => ({ ...prev, porcentajeMejora: e.target.value }))}
-                    placeholder="Ej: 94% de mejora"
-                  />
-                </div>
-                <Button onClick={addIndicador} className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Agregar Indicador
-                </Button>
+                </RadioGroup>
               </div>
 
-              <div className="space-y-2">
-                {formData.indicadores.map((ind, idx) => (
-                  <div key={idx} className="p-3 border rounded-lg bg-card">
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-semibold">{ind.nombre}</h4>
-                      <Button variant="ghost" size="icon" onClick={() => removeIndicador(idx)}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <p><span className="font-medium">Línea Base:</span> {ind.lineaBase}</p>
-                      <p><span className="font-medium">Resultado Actual:</span> {ind.resultadoActual}</p>
-                      {ind.porcentajeMejora && (
-                        <p><span className="font-medium">Mejora:</span> {ind.porcentajeMejora}</p>
-                      )}
-                    </div>
+              {formData.tienePresupuesto === 'si' && (
+                <div>
+                  <Label>Detalle del Presupuesto</Label>
+                  <Textarea
+                    value={formData.presupuesto}
+                    onChange={(e) => setFormData(prev => ({ ...prev, presupuesto: e.target.value }))}
+                    placeholder="Describe el presupuesto anual estimado y fuentes de financiamiento..."
+                    className="min-h-[100px]"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Escalabilidad */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Escalabilidad</CardTitle>
+              <CardDescription>
+                ¿Puede el proyecto ampliarse a más grados, secciones o áreas?
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                value={formData.escalabilidad}
+                onChange={(e) => setFormData(prev => ({ ...prev, escalabilidad: e.target.value }))}
+                placeholder="Describe cómo se puede escalar el proyecto dentro de tu institución..."
+                className="min-h-[100px]"
+              />
+
+              <div>
+                <Label>¿Tiene plan de escalamiento?</Label>
+                <RadioGroup
+                  value={formData.tienePlanEscalamiento}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, tienePlanEscalamiento: value as 'si' | 'no' }))}
+                  className="flex gap-4 mt-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="si" id="plan-si" />
+                    <Label htmlFor="plan-si" className="flex items-center gap-1">
+                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      Sí
+                    </Label>
                   </div>
-                ))}
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="no" id="plan-no" />
+                    <Label htmlFor="plan-no" className="flex items-center gap-1">
+                      <XCircle className="w-4 h-4 text-red-600" />
+                      No
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
             </CardContent>
           </Card>
 
-          {/* Evidencias Documentales */}
+          {/* Replicabilidad */}
           <Card>
             <CardHeader>
-              <CardTitle>Evidencias Documentales</CardTitle>
+              <CardTitle>Replicabilidad</CardTitle>
               <CardDescription>
-                Describe las evidencias que respaldan el impacto (fotos, videos, registros, etc.)
+                ¿Puede el proyecto replicarse en otras instituciones educativas?
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Textarea
-                value={formData.evidenciasDocumentales}
-                onChange={(e) => setFormData(prev => ({ ...prev, evidenciasDocumentales: e.target.value }))}
-                placeholder="Enumera y describe las evidencias documentales del impacto..."
+                value={formData.replicabilidad}
+                onChange={(e) => setFormData(prev => ({ ...prev, replicabilidad: e.target.value }))}
+                placeholder="Describe las condiciones necesarias para que otras IEs puedan replicar tu proyecto..."
                 className="min-h-[100px]"
               />
             </CardContent>
           </Card>
-
-          {/* Testimonios */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Testimonios y Percepciones</CardTitle>
-              <CardDescription>
-                Registra testimonios de estudiantes, docentes o familias sobre el proyecto
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={formData.testimonios}
-                onChange={(e) => setFormData(prev => ({ ...prev, testimonios: e.target.value }))}
-                placeholder="Cita testimonios representativos que evidencien el impacto del proyecto..."
-                className="min-h-[100px]"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Botón de Análisis */}
-          <Button
-            onClick={handleAnalyze}
-            disabled={analyzing || !canProceed}
-            className="w-full"
-            size="lg"
-          >
-            <Lightbulb className="w-5 h-5 mr-2" />
-            {analyzing ? "Analizando..." : "Analizar Impacto con IA"}
-          </Button>
-
-          {/* Análisis de IA */}
-          {analysis && (
-            <Card className="border-primary/20">
-              <CardHeader>
-                <CardTitle>Análisis de la IA</CardTitle>
-                <Badge variant="default" className="text-lg w-fit">
-                  {analysis.puntaje_estimado} / 20 pts
-                </Badge>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {analysis.fortalezas && (
-                  <div>
-                    <h4 className="font-semibold text-green-600 mb-2">Fortalezas</h4>
-                    <ul className="space-y-1">
-                      {analysis.fortalezas.map((f: string, idx: number) => (
-                        <li key={idx} className="text-sm">• {f}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {analysis.sugerencias && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Sugerencias</h4>
-                    <ul className="space-y-1">
-                      {analysis.sugerencias.map((s: string, idx: number) => (
-                        <li key={idx} className="text-sm">→ {s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Sidebar con rúbrica */}
         <div className="md:col-span-1">
           <div className="sticky top-4">
             <CNPIERubricViewer
-              rubricas={rubricaImpacto ? [rubricaImpacto] : []}
-              destacarCriterios={['Impacto']}
+              rubricas={rubricaSostenibilidad ? [rubricaSostenibilidad] : []}
+              destacarCriterios={['Sostenibilidad']}
             />
           </div>
         </div>

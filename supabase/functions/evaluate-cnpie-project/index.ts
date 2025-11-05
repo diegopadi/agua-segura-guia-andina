@@ -38,13 +38,21 @@ serve(async (req) => {
 
     const systemPrompt = `Eres un evaluador experto del CNPIE 2025 (Concurso Nacional de Proyectos de Innovación Educativa).
 
-Tu tarea es analizar un proyecto de categoría ${categoria} y asignar puntajes estimados según las rúbricas oficiales.
-
-RÚBRICAS OFICIALES:
+RÚBRICAS OFICIALES (PUNTAJES MÁXIMOS):
 ${rubricasText}
 
+INSTRUCCIONES CRÍTICAS:
+1. NUNCA asignes un puntaje que exceda el máximo del criterio
+2. Si falta información, asigna puntaje bajo (no inventes datos)
+3. Sé estricto pero constructivo
+4. El puntaje 0 significa "sin información"
+5. Los porcentajes se calculan así: (puntaje / máximo) * 100
+
+Ejemplo: Si Originalidad tiene máximo 30 pts y el proyecto es parcial, asigna 15-20 pts, NUNCA 35 pts.
+
+Tu tarea es analizar un proyecto de categoría ${categoria} y asignar puntajes estimados según las rúbricas oficiales.
 Debes analizar los datos proporcionados del proyecto y:
-1. Asignar un puntaje estimado para cada criterio (0 hasta el máximo)
+1. Asignar un puntaje estimado para cada criterio (0 hasta el máximo indicado)
 2. Calcular el porcentaje de cumplimiento por criterio
 3. Identificar 3-5 fortalezas específicas
 4. Identificar 3-5 áreas a mejorar
@@ -100,12 +108,42 @@ Proporciona tu evaluación en formato JSON con esta estructura:
     
     const evaluation = JSON.parse(content);
 
+    // ✅ VALIDAR que ningún puntaje exceda el máximo
+    const rubricasMap = Object.fromEntries(
+      rubricas.map(r => [r.criterio, r.puntaje_maximo])
+    );
+
+    for (const [criterio, datos] of Object.entries(evaluation.puntajes_criterios)) {
+      const maxPermitido = rubricasMap[criterio];
+      if (!maxPermitido) {
+        console.warn(`⚠️ Criterio desconocido: ${criterio}`);
+        continue;
+      }
+      
+      // Forzar que el puntaje no exceda el máximo
+      if ((datos as any).puntaje > maxPermitido) {
+        console.warn(`⚠️ Puntaje excedido en ${criterio}: ${(datos as any).puntaje} > ${maxPermitido}. Corrigiendo...`);
+        (datos as any).puntaje = maxPermitido;
+      }
+      
+      // Recalcular porcentaje
+      (datos as any).maximo = maxPermitido;
+      (datos as any).porcentaje = Math.round(((datos as any).puntaje / maxPermitido) * 100);
+    }
+
     // Calcular totales
     const puntaje_total = Object.values(evaluation.puntajes_criterios).reduce(
       (sum: number, criterio: any) => sum + criterio.puntaje, 0
     );
     const puntaje_maximo = rubricas.reduce((sum, r) => sum + r.puntaje_maximo, 0);
     const porcentaje_cumplimiento = Math.round((puntaje_total / puntaje_maximo) * 100);
+
+    console.log('✅ Evaluación calculada:', {
+      puntaje_total,
+      puntaje_maximo,
+      porcentaje_cumplimiento,
+      criterios: Object.keys(evaluation.puntajes_criterios)
+    });
 
     const evaluationResult = {
       puntajes_criterios: evaluation.puntajes_criterios,

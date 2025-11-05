@@ -7,30 +7,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Lightbulb, Users } from "lucide-react";
+import { BookOpen, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Etapa2Acelerador6() {
   const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
   const { getCriterioByName } = useCNPIERubric('2A');
   const { toast } = useToast();
 
-  const rubricaParticipacion = getCriterioByName('Participación');
+  const rubricaPertinencia = getCriterioByName('Pertinencia');
 
   const [formData, setFormData] = useState({
-    participacionEstudiantes: '',
-    numeroEstudiantes: '',
-    rolEstudiantes: '',
-    participacionFamilias: '',
-    numeroFamilias: '',
-    formasParticipacionFamilias: '',
-    participacionDocentes: '',
-    numeroDocentes: '',
-    participacionComunidad: '',
-    alianzas: ''
+    fundamentacionPedagogica: '',
+    enfoquePedagogico: '',
+    articulacionCurriculo: '',
+    metodologias: '',
+    evaluacionAprendizajes: '',
+    adaptaciones: ''
   });
 
   const [analyzing, setAnalyzing] = useState(false);
@@ -40,13 +35,11 @@ export default function Etapa2Acelerador6() {
     const savedData = getAcceleratorData(2, 6);
     if (savedData) {
       setFormData(savedData);
-      if (savedData.analysis) setAnalysis(savedData.analysis);
     }
   }, [proyecto]);
 
   const handleSave = async () => {
-    const dataToSave = { ...formData, analysis };
-    return await saveAcceleratorData(2, 6, dataToSave);
+    return await saveAcceleratorData(2, 6, formData);
   };
 
   const handleValidate = async () => {
@@ -55,19 +48,12 @@ export default function Etapa2Acelerador6() {
   };
 
   const handleAnalyze = async () => {
-    if (!formData.participacionEstudiantes || !formData.numeroEstudiantes) {
-      toast({
-        title: "Campos incompletos",
-        description: "Completa al menos la participación de estudiantes",
-        variant: "destructive"
-      });
-      return;
-    }
-
+    setAnalyzing(true);
     try {
-      setAnalyzing(true);
-      const { data, error } = await supabase.functions.invoke('analyze-cnpie-participacion', {
-        body: formData
+      const etapa1Data = proyecto?.datos_aceleradores?.etapa1_acelerador1 || {};
+      
+      const { data, error } = await supabase.functions.invoke('analyze-cnpie-pertinencia', {
+        body: { ...formData, etapa1Data }
       });
 
       if (error) throw error;
@@ -76,13 +62,15 @@ export default function Etapa2Acelerador6() {
         setAnalysis(data.analysis);
         toast({
           title: "Análisis completado",
-          description: "La IA ha analizado la participación comunitaria"
+          description: `Puntaje estimado: ${data.analysis.puntaje_estimado}/25 puntos`
         });
+      } else {
+        throw new Error(data.error || "Error en el análisis");
       }
     } catch (error: any) {
-      console.error('Error analyzing:', error);
+      console.error('Error analyzing pertinence:', error);
       toast({
-        title: "Error",
+        title: "Error en el análisis",
         description: error.message,
         variant: "destructive"
       });
@@ -91,13 +79,19 @@ export default function Etapa2Acelerador6() {
     }
   };
 
-  const canProceed = !!(formData.participacionEstudiantes && formData.numeroEstudiantes);
+  const canProceed = !!(
+    formData.fundamentacionPedagogica && 
+    formData.enfoquePedagogico && 
+    formData.articulacionCurriculo
+  );
+
   const progress = (
-    (formData.participacionEstudiantes ? 25 : 0) +
-    (formData.participacionFamilias ? 20 : 0) +
-    (formData.participacionDocentes ? 20 : 0) +
-    (formData.participacionComunidad ? 20 : 0) +
-    (formData.alianzas ? 15 : 0)
+    (formData.fundamentacionPedagogica ? 25 : 0) +
+    (formData.enfoquePedagogico ? 20 : 0) +
+    (formData.articulacionCurriculo ? 20 : 0) +
+    (formData.metodologias ? 15 : 0) +
+    (formData.evaluacionAprendizajes ? 15 : 0) +
+    (formData.adaptaciones ? 5 : 0)
   );
 
   if (!proyecto) {
@@ -114,213 +108,213 @@ export default function Etapa2Acelerador6() {
       onValidate={handleValidate}
       canProceed={canProceed}
       currentProgress={progress}
-      titulo="Participación Comunitaria"
-      descripcion="Documenta la participación de estudiantes, familias y comunidad educativa"
+      titulo="Pertinencia Pedagógica"
+      descripcion="Valida la pertinencia y coherencia pedagógica del proyecto"
     >
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          {/* Participación de Estudiantes */}
+          {/* Botón de análisis IA */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    Análisis IA de Pertinencia Pedagógica
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Obtén retroalimentación sobre la fundamentación pedagógica y articulación curricular según el criterio CNPIE (25 pts).
+                  </p>
+                  <Button 
+                    onClick={handleAnalyze}
+                    disabled={!canProceed || analyzing}
+                    className="w-full"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {analyzing ? "Analizando..." : "Analizar Pertinencia con IA"}
+                  </Button>
+                </div>
+              </div>
+
+              {analysis && (
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-background rounded-lg">
+                    <span className="font-medium">Puntaje Estimado:</span>
+                    <Badge variant="default" className="text-lg">
+                      {analysis.puntaje_estimado}/25 pts
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-background rounded-lg">
+                    <span className="font-medium">Completitud:</span>
+                    <Badge variant="secondary">
+                      {analysis.completitud}%
+                    </Badge>
+                  </div>
+
+                  {analysis.fortalezas?.length > 0 && (
+                    <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                      <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                        ✓ Fortalezas
+                      </h4>
+                      <ul className="text-sm space-y-1 text-green-800 dark:text-green-200">
+                        {analysis.fortalezas.map((f: string, i: number) => (
+                          <li key={i}>• {f}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.areas_mejorar?.length > 0 && (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
+                      <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                        ⚠ Áreas de Mejora
+                      </h4>
+                      <ul className="text-sm space-y-1 text-yellow-800 dark:text-yellow-200">
+                        {analysis.areas_mejorar.map((a: string, i: number) => (
+                          <li key={i}>• {a}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.sugerencias?.length > 0 && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                        💡 Sugerencias
+                      </h4>
+                      <ul className="text-sm space-y-1 text-blue-800 dark:text-blue-200">
+                        {analysis.sugerencias.map((s: string, i: number) => (
+                          <li key={i}>• {s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {/* Fundamentación Pedagógica */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Participación de Estudiantes
+                <BookOpen className="w-5 h-5" />
+                Fundamentación Pedagógica
               </CardTitle>
               <CardDescription>
-                Describe cómo participan los estudiantes en el proyecto
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Descripción de la Participación</Label>
-                <Textarea
-                  value={formData.participacionEstudiantes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, participacionEstudiantes: e.target.value }))}
-                  placeholder="Describe cómo los estudiantes participan activamente en el proyecto, sus roles, responsabilidades..."
-                  className="min-h-[120px]"
-                  maxLength={rubricaParticipacion?.extension_maxima || 2000}
-                />
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Número de Estudiantes Participantes</Label>
-                  <Input
-                    type="number"
-                    value={formData.numeroEstudiantes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, numeroEstudiantes: e.target.value }))}
-                    placeholder="Ej: 120"
-                  />
-                </div>
-                <div>
-                  <Label>Rol de los Estudiantes</Label>
-                  <Input
-                    value={formData.rolEstudiantes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, rolEstudiantes: e.target.value }))}
-                    placeholder="Ej: Protagonistas, investigadores"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Participación de Familias */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Participación de Familias</CardTitle>
-              <CardDescription>
-                Describe la participación e involucramiento de las familias
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Descripción de la Participación</Label>
-                <Textarea
-                  value={formData.participacionFamilias}
-                  onChange={(e) => setFormData(prev => ({ ...prev, participacionFamilias: e.target.value }))}
-                  placeholder="Describe cómo las familias se involucran en el proyecto..."
-                  className="min-h-[100px]"
-                />
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Número de Familias Participantes</Label>
-                  <Input
-                    type="number"
-                    value={formData.numeroFamilias}
-                    onChange={(e) => setFormData(prev => ({ ...prev, numeroFamilias: e.target.value }))}
-                    placeholder="Ej: 80"
-                  />
-                </div>
-                <div>
-                  <Label>Formas de Participación</Label>
-                  <Input
-                    value={formData.formasParticipacionFamilias}
-                    onChange={(e) => setFormData(prev => ({ ...prev, formasParticipacionFamilias: e.target.value }))}
-                    placeholder="Ej: Talleres, reuniones, actividades"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Participación de Docentes */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Participación de Docentes</CardTitle>
-              <CardDescription>
-                Describe la participación del equipo docente
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Descripción de la Participación</Label>
-                <Textarea
-                  value={formData.participacionDocentes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, participacionDocentes: e.target.value }))}
-                  placeholder="Describe cómo los docentes participan, se capacitan, colaboran..."
-                  className="min-h-[100px]"
-                />
-              </div>
-              <div>
-                <Label>Número de Docentes Involucrados</Label>
-                <Input
-                  type="number"
-                  value={formData.numeroDocentes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, numeroDocentes: e.target.value }))}
-                  placeholder="Ej: 15"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Participación Comunitaria */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Participación de la Comunidad</CardTitle>
-              <CardDescription>
-                Describe la participación de actores comunitarios externos
+                Describe las bases pedagógicas y teóricas que sustentan tu proyecto
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Textarea
-                value={formData.participacionComunidad}
-                onChange={(e) => setFormData(prev => ({ ...prev, participacionComunidad: e.target.value }))}
-                placeholder="Describe la participación de autoridades locales, organizaciones, empresas, etc..."
-                className="min-h-[100px]"
+                value={formData.fundamentacionPedagogica}
+                onChange={(e) => setFormData(prev => ({ ...prev, fundamentacionPedagogica: e.target.value }))}
+                placeholder="¿En qué teorías o enfoques pedagógicos se basa tu proyecto? (constructivismo, aprendizaje situado, pedagogía crítica, etc.)..."
+                className="min-h-[150px]"
+                maxLength={rubricaPertinencia?.extension_maxima || 2500}
               />
+              <div className="text-xs text-muted-foreground mt-2">
+                {formData.fundamentacionPedagogica.length} / {rubricaPertinencia?.extension_maxima || 2500} caracteres
+              </div>
             </CardContent>
           </Card>
 
-          {/* Alianzas */}
+          {/* Enfoque Pedagógico */}
           <Card>
             <CardHeader>
-              <CardTitle>Alianzas y Colaboraciones</CardTitle>
+              <CardTitle>Enfoque Pedagógico Aplicado</CardTitle>
               <CardDescription>
-                Registra alianzas estratégicas establecidas
+                Describe el enfoque pedagógico predominante en tu proyecto
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Textarea
-                value={formData.alianzas}
-                onChange={(e) => setFormData(prev => ({ ...prev, alianzas: e.target.value }))}
-                placeholder="Describe convenios, alianzas o colaboraciones con instituciones externas..."
-                className="min-h-[100px]"
+                value={formData.enfoquePedagogico}
+                onChange={(e) => setFormData(prev => ({ ...prev, enfoquePedagogico: e.target.value }))}
+                placeholder="Ej: Aprendizaje Basado en Proyectos (ABP), Aprendizaje Colaborativo, Gamificación, STEAM, etc..."
+                className="min-h-[120px]"
               />
             </CardContent>
           </Card>
 
-          {/* Botón de Análisis */}
-          <Button
-            onClick={handleAnalyze}
-            disabled={analyzing || !canProceed}
-            className="w-full"
-            size="lg"
-          >
-            <Lightbulb className="w-5 h-5 mr-2" />
-            {analyzing ? "Analizando..." : "Analizar Participación con IA"}
-          </Button>
+          {/* Articulación con Currículo */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Articulación con el Currículo Nacional</CardTitle>
+              <CardDescription>
+                Describe cómo se articula con el CNEB y documentos curriculares
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={formData.articulacionCurriculo}
+                onChange={(e) => setFormData(prev => ({ ...prev, articulacionCurriculo: e.target.value }))}
+                placeholder="¿Cómo se vincula con competencias, capacidades, desempeños del CNEB? ¿Responde a los enfoques transversales?..."
+                className="min-h-[120px]"
+              />
+            </CardContent>
+          </Card>
 
-          {/* Análisis de IA */}
-          {analysis && (
-            <Card className="border-primary/20">
-              <CardHeader>
-                <CardTitle>Análisis de la IA</CardTitle>
-                <Badge variant="default" className="text-lg w-fit">
-                  {analysis.puntaje_estimado} / 20 pts
-                </Badge>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {analysis.fortalezas && (
-                  <div>
-                    <h4 className="font-semibold text-green-600 mb-2">Fortalezas</h4>
-                    <ul className="space-y-1">
-                      {analysis.fortalezas.map((f: string, idx: number) => (
-                        <li key={idx} className="text-sm">• {f}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {analysis.sugerencias && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Sugerencias</h4>
-                    <ul className="space-y-1">
-                      {analysis.sugerencias.map((s: string, idx: number) => (
-                        <li key={idx} className="text-sm">→ {s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {/* Metodologías */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Metodologías y Estrategias</CardTitle>
+              <CardDescription>
+                Describe las metodologías y estrategias didácticas empleadas
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={formData.metodologias}
+                onChange={(e) => setFormData(prev => ({ ...prev, metodologias: e.target.value }))}
+                placeholder="Describe las estrategias didácticas específicas: trabajo cooperativo, indagación, etc..."
+                className="min-h-[120px]"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Evaluación de Aprendizajes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Evaluación de Aprendizajes</CardTitle>
+              <CardDescription>
+                Describe cómo se evalúa el progreso y logro de aprendizajes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={formData.evaluacionAprendizajes}
+                onChange={(e) => setFormData(prev => ({ ...prev, evaluacionAprendizajes: e.target.value }))}
+                placeholder="¿Qué instrumentos de evaluación se usan? ¿Cómo se da la retroalimentación? ¿Hay evaluación formativa?..."
+                className="min-h-[120px]"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Adaptaciones y Diferenciación */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Adaptaciones y Diferenciación</CardTitle>
+              <CardDescription>
+                ¿Cómo se adapta a las necesidades diversas de los estudiantes?
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={formData.adaptaciones}
+                onChange={(e) => setFormData(prev => ({ ...prev, adaptaciones: e.target.value }))}
+                placeholder="Describe adaptaciones para estudiantes con NEE, ritmos de aprendizaje diversos, etc..."
+                className="min-h-[100px]"
+              />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar con rúbrica */}
         <div className="md:col-span-1">
           <div className="sticky top-4">
             <CNPIERubricViewer
-              rubricas={rubricaParticipacion ? [rubricaParticipacion] : []}
-              destacarCriterios={['Participación']}
+              rubricas={rubricaPertinencia ? [rubricaPertinencia] : []}
+              destacarCriterios={['Pertinencia']}
             />
           </div>
         </div>
