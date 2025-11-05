@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, CheckCircle2, XCircle } from "lucide-react";
+import { Leaf, CheckCircle2, XCircle, Sparkles, AlertCircle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Etapa2Acelerador7() {
   const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
@@ -31,6 +33,9 @@ export default function Etapa2Acelerador7() {
     tienePlanEscalamiento: 'no' as 'si' | 'no'
   });
 
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<any>(null);
+
   useEffect(() => {
     const savedData = getAcceleratorData(2, 7);
     if (savedData) {
@@ -45,6 +50,38 @@ export default function Etapa2Acelerador7() {
   const handleValidate = async () => {
     await handleSave();
     return await validateAccelerator(2, 7);
+  };
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    try {
+      const etapa1Data = proyecto?.datos_aceleradores?.etapa1_acelerador1 || {};
+      
+      const { data, error } = await supabase.functions.invoke('analyze-cnpie-sostenibilidad', {
+        body: { ...formData, etapa1Data }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setAnalysis(data.analysis);
+        toast({
+          title: "Análisis completado",
+          description: `Puntaje estimado: ${data.analysis.puntaje_estimado}/20 puntos`
+        });
+      } else {
+        throw new Error(data.error || "Error en el análisis");
+      }
+    } catch (error: any) {
+      console.error('Error analyzing sustainability:', error);
+      toast({
+        title: "Error en el análisis",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const canProceed = !!(
@@ -81,6 +118,86 @@ export default function Etapa2Acelerador7() {
     >
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
+          {/* Botón de análisis IA */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    Análisis IA de Sostenibilidad
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Obtén retroalimentación inmediata sobre las estrategias de sostenibilidad de tu proyecto según el criterio CNPIE (20 pts).
+                  </p>
+                  <Button 
+                    onClick={handleAnalyze}
+                    disabled={!canProceed || analyzing}
+                    className="w-full"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {analyzing ? "Analizando..." : "Analizar Sostenibilidad con IA"}
+                  </Button>
+                </div>
+              </div>
+
+              {analysis && (
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-background rounded-lg">
+                    <span className="font-medium">Puntaje Estimado:</span>
+                    <Badge variant="default" className="text-lg">
+                      {analysis.puntaje_estimado}/20 pts
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-background rounded-lg">
+                    <span className="font-medium">Completitud:</span>
+                    <Badge variant="secondary">
+                      {analysis.completitud}%
+                    </Badge>
+                  </div>
+
+                  {analysis.fortalezas?.length > 0 && (
+                    <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                      <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                        ✓ Fortalezas
+                      </h4>
+                      <ul className="text-sm space-y-1 text-green-800 dark:text-green-200">
+                        {analysis.fortalezas.map((f: string, i: number) => (
+                          <li key={i}>• {f}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.areas_mejorar?.length > 0 && (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
+                      <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                        ⚠ Áreas de Mejora
+                      </h4>
+                      <ul className="text-sm space-y-1 text-yellow-800 dark:text-yellow-200">
+                        {analysis.areas_mejorar.map((a: string, i: number) => (
+                          <li key={i}>• {a}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.sugerencias?.length > 0 && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                        💡 Sugerencias
+                      </h4>
+                      <ul className="text-sm space-y-1 text-blue-800 dark:text-blue-200">
+                        {analysis.sugerencias.map((s: string, i: number) => (
+                          <li key={i}>• {s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
           {/* Estrategias de Sostenibilidad */}
           <Card>
             <CardHeader>

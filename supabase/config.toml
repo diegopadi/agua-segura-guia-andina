@@ -68,3 +68,12 @@ verify_jwt = true
 
 [functions.generate-etapa2-synthesis]
 verify_jwt = true
+
+[functions.analyze-cnpie-originalidad]
+verify_jwt = true
+
+[functions.analyze-cnpie-sostenibilidad]
+verify_jwt = true
+
+[functions.analyze-cnpie-pertinencia]
+verify_jwt = true
