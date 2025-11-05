@@ -75,6 +75,9 @@ export default function Proyectos() {
                   Elegir tipo manualmente
                 </CardTitle>
               </div>
+              <CardDescription className="text-sm" style={{ color: '#1A1A1A', opacity: 0.8 }}>
+                &nbsp;
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm" style={{ color: '#1A1A1A' }}>
