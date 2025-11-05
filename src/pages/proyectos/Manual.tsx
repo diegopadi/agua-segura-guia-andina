@@ -2,20 +2,37 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { FileText, Sparkles, CheckCircle, ArrowLeft, BookOpen, Target, Clock, FileCheck, Users, BookMarked, Loader2 } from "lucide-react";
+import { FileText, Sparkles, CheckCircle, ArrowLeft, BookOpen, Target, Clock, FileCheck, Users, BookMarked, Loader2, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAcceleratorsSummary } from "@/hooks/useAcceleratorsSummary";
+import RepositoryFilePicker from "@/components/RepositoryFilePicker";
+import { FileRecord } from "@/hooks/useFileManager";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import QuestionsForm from "@/components/QuestionsForm";
 
-interface Experiencia {
-  fuente: "Repositorio" | "Subida local";
-  nombre: string;
-  etiquetas: string[];
-  fecha: string;
+interface PreguntaGenerada {
+  categoria: string;
+  pregunta: string;
+  objetivo: string;
+}
+
+interface Recomendacion {
+  recomendacion: "2A" | "2B" | "2C";
+  confianza: number;
+  justificacion: string;
+  fortalezas: string[];
+  aspectos_a_fortalecer: string[];
 }
 
 export default function Manual() {
   const navigate = useNavigate();
-  const [preguntasGeneradas, setPreguntasGeneradas] = useState(false);
+  const { toast } = useToast();
+  const [experiencias, setExperiencias] = useState<FileRecord[]>([]);
+  const [preguntasGeneradas, setPreguntasGeneradas] = useState<PreguntaGenerada[]>([]);
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
+  const [recomendacion, setRecomendacion] = useState<Recomendacion | null>(null);
+  const [generatingRecommendation, setGeneratingRecommendation] = useState(false);
   const { hallazgos, loading, generating, generateSummary, hasData } = useAcceleratorsSummary();
 
   // Generar resumen automáticamente al cargar
@@ -25,51 +42,95 @@ export default function Manual() {
     }
   }, []);
 
-  const experiencias: Experiencia[] = [
-    {
-      fuente: "Repositorio",
-      nombre: "Informe_Agua_Segura_2024.pdf",
-      etiquetas: ["Agua", "2024", "Validado"],
-      fecha: "15/10/2024"
-    },
-    {
-      fuente: "Subida local",
-      nombre: "Documento_Experiencia.pdf",
-      etiquetas: ["Temporal", "Análisis"],
-      fecha: "20/10/2024"
-    }
-  ];
+  const handleSelectFiles = (files: FileRecord[]) => {
+    setExperiencias([...experiencias, ...files]);
+    toast({
+      title: "Archivos adjuntados",
+      description: `${files.length} archivo(s) agregado(s)`
+    });
+  };
 
-  const preguntasSugeridas = [
-    {
-      categoria: "Pertinencia",
-      icon: Target,
-      pregunta: "¿Tu propuesta responde a una necesidad prioritaria en tu comunidad educativa?"
-    },
-    {
-      categoria: "Madurez",
-      icon: Clock,
-      pregunta: "¿Cuánto tiempo lleva implementándose esta innovación?"
-    },
-    {
-      categoria: "Evidencias",
-      icon: FileCheck,
-      pregunta: "¿Qué documentos respaldan tus avances?"
-    },
-    {
-      categoria: "Participación",
-      icon: Users,
-      pregunta: "¿Qué actores están involucrados en la ejecución?"
-    },
-    {
-      categoria: "Sistematización",
-      icon: BookMarked,
-      pregunta: "¿Cómo registrarás los resultados del proceso?"
-    }
-  ];
+  const quitarExperiencia = (id: string) => {
+    setExperiencias(experiencias.filter(e => e.id !== id));
+  };
 
-  const generarPreguntas = () => {
-    setPreguntasGeneradas(true);
+  const generarPreguntas = async () => {
+    if (!hallazgos) {
+      toast({
+        title: "Error",
+        description: "Debes generar el resumen diagnóstico primero",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setGeneratingQuestions(true);
+
+      const { data, error } = await supabase.functions.invoke('generate-questions-from-context', {
+        body: {
+          diagnostico: hallazgos,
+          experiencias: experiencias
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setPreguntasGeneradas(data.data.preguntas);
+        toast({
+          title: "Preguntas generadas",
+          description: `${data.data.preguntas.length} preguntas creadas con IA`
+        });
+      }
+    } catch (error) {
+      console.error('Error generando preguntas:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron generar las preguntas",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingQuestions(false);
+    }
+  };
+
+  const handleSubmitAnswers = async (respuestas: Record<string, string>) => {
+    try {
+      setGeneratingRecommendation(true);
+
+      const { data, error } = await supabase.functions.invoke('recommend-project-type', {
+        body: {
+          diagnostico: hallazgos,
+          experiencias: experiencias,
+          respuestas
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setRecomendacion(data.data);
+        toast({
+          title: "Recomendación generada",
+          description: `Proyecto ${data.data.recomendacion} sugerido`
+        });
+        
+        // Scroll to recommendation
+        setTimeout(() => {
+          document.getElementById('recomendacion')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Error generando recomendación:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo generar la recomendación",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingRecommendation(false);
+    }
   };
 
   return (
@@ -168,57 +229,60 @@ export default function Manual() {
               </>
             )}
 
-            {/* Tabla de experiencias */}
+            {/* Experiencias con selector del repositorio */}
             <div>
-              <p className="font-medium mb-3" style={{ color: '#005C6B' }}>
-                Experiencias registradas:
-              </p>
-              <div className="space-y-2">
-                {experiencias.map((exp, i) => (
-                  <div 
-                    key={i}
-                    className="p-3 rounded-lg"
-                    style={{ backgroundColor: '#E6F4F1' }}
-                  >
-                    <div className="flex flex-wrap items-center gap-3 text-sm">
-                      <span className="font-medium" style={{ color: '#1A1A1A' }}>
-                        {exp.nombre}
-                      </span>
-                      <span 
-                        className="px-2 py-1 rounded text-xs"
-                        style={{ backgroundColor: '#DDF4F2', color: '#005C6B' }}
-                      >
-                        {exp.fuente}
-                      </span>
-                      {exp.etiquetas.map((etiqueta, j) => (
-                        <span 
-                          key={j}
-                          className="px-2 py-1 rounded text-xs"
-                          style={{ backgroundColor: '#DDF4F2', color: '#00A6A6' }}
-                        >
-                          {etiqueta}
-                        </span>
-                      ))}
-                      <span className="text-xs ml-auto" style={{ color: '#1A1A1A', opacity: 0.6 }}>
-                        {exp.fecha}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-medium" style={{ color: '#005C6B' }}>
+                  Experiencias registradas:
+                </p>
+                <RepositoryFilePicker
+                  onSelect={handleSelectFiles}
+                  multiple={true}
+                  triggerLabel="Adjuntar"
+                />
               </div>
-            </div>
 
-            <button
-              onClick={() => navigate('/repositorio')}
-              className="text-sm font-medium hover:underline"
-              style={{ color: '#00A6A6' }}
-            >
-              Ver más en el Repositorio →
-            </button>
+              {experiencias.length > 0 ? (
+                <div className="space-y-2 mb-3">
+                  {experiencias.map((exp) => (
+                    <div 
+                      key={exp.id}
+                      className="p-3 rounded-lg flex items-center justify-between"
+                      style={{ backgroundColor: '#E6F4F1' }}
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-sm" style={{ color: '#1A1A1A' }}>
+                          {exp.url.split('/').pop()}
+                        </p>
+                        <div className="flex gap-2 mt-1">
+                          <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#DDF4F2', color: '#005C6B' }}>
+                            {exp.file_type || 'documento'}
+                          </span>
+                          <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.6 }}>
+                            {(exp.size_bytes / (1024 * 1024)).toFixed(2)} MB
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => quitarExperiencia(exp.id)}
+                      >
+                        <Trash2 className="w-4 h-4" style={{ color: '#005C6B' }} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm mb-3" style={{ color: '#1A1A1A', opacity: 0.7 }}>
+                  No hay experiencias adjuntadas. Usa el botón "Adjuntar" para agregar documentos.
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Panel de preguntas IA sugeridas */}
+        {/* Panel de preguntas IA */}
         <Card className="mb-6 border-0 shadow-md" style={{ backgroundColor: '#DDF4F2' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2" style={{ color: '#005C6B' }}>
@@ -227,54 +291,81 @@ export default function Manual() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!preguntasGeneradas ? (
+            {preguntasGeneradas.length === 0 ? (
               <Button 
                 onClick={generarPreguntas}
                 className="text-white font-medium"
                 style={{ backgroundColor: '#00A6A6' }}
+                disabled={!hasData || generatingQuestions}
               >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generar nuevas preguntas
+                {generatingQuestions ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generando preguntas con IA...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generar preguntas
+                  </>
+                )}
               </Button>
             ) : (
-              <div className="space-y-3">
-                {preguntasSugeridas.map((item, i) => {
-                  const IconComponent = item.icon;
-                  return (
-                    <div 
-                      key={i}
-                      className="p-4 rounded-lg"
-                      style={{ backgroundColor: '#E6F4F1' }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div 
-                          className="p-2 rounded-lg flex-shrink-0"
-                          style={{ backgroundColor: '#00A6A6' }}
-                        >
-                          <IconComponent className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-sm mb-1" style={{ color: '#005C6B' }}>
-                            {item.categoria}
-                          </p>
-                          <p className="text-sm" style={{ color: '#1A1A1A' }}>
-                            {item.pregunta}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                <Alert className="border-0 mt-4" style={{ backgroundColor: '#E6F4F1' }}>
-                  <Sparkles className="h-4 w-4" style={{ color: '#00A6A6' }} />
-                  <AlertDescription style={{ color: '#1A1A1A' }}>
-                    En la versión final, este panel usará la IA del módulo Docentes 2 con base en la rúbrica CNPIE 2025.
-                  </AlertDescription>
-                </Alert>
-              </div>
+              <QuestionsForm 
+                preguntas={preguntasGeneradas}
+                onSubmit={handleSubmitAnswers}
+                loading={generatingRecommendation}
+              />
             )}
           </CardContent>
         </Card>
+
+        {/* Recomendación */}
+        {recomendacion && (
+          <Card id="recomendacion" className="mb-6 border-0 shadow-lg" style={{ backgroundColor: '#00A6A6' }}>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-start gap-4">
+                <CheckCircle className="w-8 h-8 text-white flex-shrink-0 mt-1" />
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Recomendación: Proyecto {recomendacion.recomendacion}
+                  </h3>
+                  <p className="text-white/90 mb-3">
+                    {recomendacion.justificacion}
+                  </p>
+                  <div className="flex items-center gap-2 text-sm text-white/80 mb-4">
+                    <span>Confianza: {recomendacion.confianza}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                <div className="p-3 rounded-lg bg-white/10">
+                  <p className="font-semibold text-white mb-2">Fortalezas:</p>
+                  <ul className="list-disc list-inside space-y-1 text-white/90">
+                    {recomendacion.fortalezas.map((f, i) => (
+                      <li key={i}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="p-3 rounded-lg bg-white/10">
+                  <p className="font-semibold text-white mb-2">Aspectos a fortalecer:</p>
+                  <ul className="list-disc list-inside space-y-1 text-white/90">
+                    {recomendacion.aspectos_a_fortalecer.map((a, i) => (
+                      <li key={i}>{a}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <Alert className="border-0 bg-white/10">
+                <AlertDescription className="text-white text-sm">
+                  Continúa con la recomendación o elige manualmente otro tipo de proyecto abajo.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Selección de tipo de proyecto */}
         <div className="mb-8">

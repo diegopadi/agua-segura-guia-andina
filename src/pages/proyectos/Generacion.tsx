@@ -2,30 +2,38 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { FileText, Upload, Plus, Trash2, Sparkles, AlertCircle, CheckCircle2, ArrowLeft, BookOpen, Loader2 } from "lucide-react";
+import { FileText, Trash2, Sparkles, AlertCircle, CheckCircle2, ArrowLeft, BookOpen, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAcceleratorsSummary } from "@/hooks/useAcceleratorsSummary";
-
-interface Adjunto {
-  id: string;
-  nombre: string;
-  origen: "Repositorio" | "Subida";
-  etiquetas: string[];
-}
+import RepositoryFilePicker from "@/components/RepositoryFilePicker";
+import { FileRecord } from "@/hooks/useFileManager";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import QuestionsForm from "@/components/QuestionsForm";
 
 interface PreguntaGenerada {
   categoria: string;
-  preguntas: string[];
+  pregunta: string;
+  objetivo: string;
+}
+
+interface Recomendacion {
+  recomendacion: "2A" | "2B" | "2C";
+  confianza: number;
+  justificacion: string;
+  fortalezas: string[];
+  aspectos_a_fortalecer: string[];
 }
 
 export default function Generacion() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [diagnosticoImportado, setDiagnosticoImportado] = useState(false);
-  const [adjuntos, setAdjuntos] = useState<Adjunto[]>([]);
+  const [adjuntos, setAdjuntos] = useState<FileRecord[]>([]);
   const [preguntasGeneradas, setPreguntasGeneradas] = useState<PreguntaGenerada[]>([]);
-  const [preguntasPropias, setPreguntasPropias] = useState<string[]>([]);
-  const [nuevaPregunta, setNuevaPregunta] = useState("");
-  const [recomendacion, setRecomendacion] = useState<"2A" | "2B" | "2C" | null>(null);
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
+  const [recomendacion, setRecomendacion] = useState<Recomendacion | null>(null);
+  const [generatingRecommendation, setGeneratingRecommendation] = useState(false);
   const { hallazgos, generating, generateSummary, hasData } = useAcceleratorsSummary();
 
   const importarDiagnostico = async () => {
@@ -33,83 +41,92 @@ export default function Generacion() {
     setDiagnosticoImportado(true);
   };
 
-  const adjuntarDesdeRepositorio = () => {
-    // Simulación: agregar archivo del repositorio
-    const nuevoAdjunto: Adjunto = {
-      id: Date.now().toString(),
-      nombre: "Informe_Agua_Segura_2024.pdf",
-      origen: "Repositorio",
-      etiquetas: ["Agua", "2024", "Validado"]
-    };
-    setAdjuntos([...adjuntos, nuevoAdjunto]);
-  };
-
-  const subirArchivoTemporal = () => {
-    // Simulación: subir archivo temporal
-    const nuevoAdjunto: Adjunto = {
-      id: Date.now().toString(),
-      nombre: "Documento_Experiencia.pdf",
-      origen: "Subida",
-      etiquetas: ["Temporal", "Análisis"]
-    };
-    setAdjuntos([...adjuntos, nuevoAdjunto]);
+  const handleSelectFiles = (files: FileRecord[]) => {
+    setAdjuntos([...adjuntos, ...files]);
+    toast({
+      title: "Archivos adjuntados",
+      description: `${files.length} archivo(s) agregado(s) al análisis`
+    });
   };
 
   const quitarAdjunto = (id: string) => {
     setAdjuntos(adjuntos.filter(a => a.id !== id));
   };
 
-  const generarPreguntas = () => {
-    // Simulación: generar preguntas IA
-    const preguntas: PreguntaGenerada[] = [
-      {
-        categoria: "Coherencia (estrategias ↔ actividades ↔ resultados)",
-        preguntas: [
-          "¿Las actividades propuestas evidencian claramente el logro de los resultados esperados?",
-          "¿Existe coherencia entre las estrategias pedagógicas y los objetivos del proyecto?",
-          "¿Cómo se articulan las diferentes fases del proyecto para asegurar continuidad?"
-        ]
-      },
-      {
-        categoria: "Priorización de bienes y servicios (Validación CNPIE)",
-        preguntas: [
-          "¿Qué bienes y servicios son indispensables para iniciar y cuáles pueden postergarse?",
-          "¿Los recursos solicitados están justificados con base en las actividades planificadas?",
-          "¿Existe un análisis de costo-beneficio para cada componente del proyecto?"
-        ]
-      },
-      {
-        categoria: "Evidencias y sistematización",
-        preguntas: [
-          "¿Cómo clasificarás las evidencias para la sistematización de resultados?",
-          "¿Qué mecanismos de seguimiento y evaluación se implementarán durante el proyecto?",
-          "¿Dónde y cómo se registrarán las evidencias de impacto en los estudiantes?"
-        ]
-      }
-    ];
-    setPreguntasGeneradas(preguntas);
-    
-    // Generar recomendación automática
-    const tipos: Array<"2A" | "2B" | "2C"> = ["2A", "2B", "2C"];
-    const recomendacionSimulada = tipos[Math.floor(Math.random() * tipos.length)];
-    setRecomendacion(recomendacionSimulada);
-  };
+  const generarPreguntas = async () => {
+    if (!diagnosticoImportado || !hallazgos) {
+      toast({
+        title: "Error",
+        description: "Debes importar el diagnóstico primero",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const agregarPreguntaPropia = () => {
-    if (nuevaPregunta.trim()) {
-      setPreguntasPropias([...preguntasPropias, nuevaPregunta]);
-      setNuevaPregunta("");
+    try {
+      setGeneratingQuestions(true);
+
+      const { data, error } = await supabase.functions.invoke('generate-questions-from-context', {
+        body: {
+          diagnostico: hallazgos,
+          experiencias: adjuntos
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setPreguntasGeneradas(data.data.preguntas);
+        toast({
+          title: "Preguntas generadas",
+          description: `${data.data.preguntas.length} preguntas creadas con IA`
+        });
+      }
+    } catch (error) {
+      console.error('Error generando preguntas:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron generar las preguntas",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingQuestions(false);
     }
   };
 
-  const getRecomendacionTexto = (tipo: "2A" | "2B" | "2C") => {
-    const textos = {
-      "2A": "Proyecto Consolidado (≥2 años de implementación)",
-      "2B": "Proyecto En Implementación (<1 año de desarrollo)",
-      "2C": "Proyecto de Investigación-Acción Participativa"
-    };
-    return textos[tipo];
+  const handleSubmitAnswers = async (respuestas: Record<string, string>) => {
+    try {
+      setGeneratingRecommendation(true);
+
+      const { data, error } = await supabase.functions.invoke('recommend-project-type', {
+        body: {
+          diagnostico: hallazgos,
+          experiencias: adjuntos,
+          respuestas
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setRecomendacion(data.data);
+        toast({
+          title: "Recomendación generada",
+          description: `Proyecto ${data.data.recomendacion} sugerido`
+        });
+      }
+    } catch (error) {
+      console.error('Error generando recomendación:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo generar la recomendación",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingRecommendation(false);
+    }
   };
+
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#E6F4F1' }}>
@@ -205,7 +222,7 @@ export default function Generacion() {
         <Card className="mb-6 border-0 shadow-md" style={{ backgroundColor: '#DDF4F2' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2" style={{ color: '#005C6B' }}>
-              <Upload className="w-5 h-5" />
+              <FileText className="w-5 h-5" />
               Experiencias iniciales
             </CardTitle>
             <CardDescription style={{ color: '#1A1A1A', opacity: 0.7 }}>
@@ -213,24 +230,11 @@ export default function Generacion() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-3">
-              <Button 
-                onClick={adjuntarDesdeRepositorio}
-                className="text-white font-medium"
-                style={{ backgroundColor: '#005C6B' }}
-              >
-                <BookOpen className="w-4 h-4 mr-2" />
-                Adjuntar desde Repositorio
-              </Button>
-              <Button 
-                onClick={subirArchivoTemporal}
-                className="font-medium"
-                style={{ backgroundColor: '#E6F4F1', color: '#005C6B' }}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Subir archivo temporal
-              </Button>
-            </div>
+            <RepositoryFilePicker
+              onSelect={handleSelectFiles}
+              multiple={true}
+              triggerLabel="Adjuntar desde Repositorio"
+            />
 
             {adjuntos.length > 0 && (
               <div>
@@ -246,21 +250,15 @@ export default function Generacion() {
                     >
                       <div className="flex-1">
                         <p className="font-medium text-sm" style={{ color: '#1A1A1A' }}>
-                          {adjunto.nombre}
+                          {adjunto.url.split('/').pop()}
                         </p>
                         <div className="flex gap-2 mt-1">
                           <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#DDF4F2', color: '#005C6B' }}>
-                            {adjunto.origen}
+                            {adjunto.file_type || 'documento'}
                           </span>
-                          {adjunto.etiquetas.map((etiqueta, i) => (
-                            <span 
-                              key={i}
-                              className="text-xs px-2 py-1 rounded"
-                              style={{ backgroundColor: '#DDF4F2', color: '#00A6A6' }}
-                            >
-                              {etiqueta}
-                            </span>
-                          ))}
+                          <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.6 }}>
+                            {(adjunto.size_bytes / (1024 * 1024)).toFixed(2)} MB
+                          </span>
                         </div>
                       </div>
                       <Button
@@ -280,7 +278,7 @@ export default function Generacion() {
             <Alert className="border-0" style={{ backgroundColor: '#E6F4F1' }}>
               <AlertCircle className="h-4 w-4" style={{ color: '#00A6A6' }} />
               <AlertDescription style={{ color: '#1A1A1A' }}>
-                En producción estos archivos se enlazarán de forma persistente desde el Repositorio.
+                Los archivos del repositorio se vinculan permanentemente para el análisis de IA.
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -300,77 +298,26 @@ export default function Generacion() {
                 onClick={generarPreguntas}
                 className="text-white font-medium"
                 style={{ backgroundColor: '#00A6A6' }}
-                disabled={!diagnosticoImportado}
+                disabled={!diagnosticoImportado || generatingQuestions}
               >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generar preguntas
+                {generatingQuestions ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generando preguntas con IA...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generar preguntas
+                  </>
+                )}
               </Button>
             ) : (
-              <div className="space-y-4">
-                {preguntasGeneradas.map((grupo, i) => (
-                  <div key={i}>
-                    <h3 className="font-semibold mb-2" style={{ color: '#005C6B' }}>
-                      {grupo.categoria}
-                    </h3>
-                    <ul className="space-y-2">
-                      {grupo.preguntas.map((pregunta, j) => (
-                        <li 
-                          key={j}
-                          className="p-3 rounded-lg text-sm"
-                          style={{ backgroundColor: '#E6F4F1', color: '#1A1A1A' }}
-                        >
-                          {pregunta}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-
-                {/* Preguntas propias */}
-                <div>
-                  <h3 className="font-semibold mb-2" style={{ color: '#005C6B' }}>
-                    Añade tus propias preguntas
-                  </h3>
-                  <div className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={nuevaPregunta}
-                      onChange={(e) => setNuevaPregunta(e.target.value)}
-                      placeholder="Escribe tu pregunta..."
-                      className="flex-1 px-3 py-2 rounded-lg border-0"
-                      style={{ backgroundColor: '#E6F4F1', color: '#1A1A1A' }}
-                      onKeyPress={(e) => e.key === 'Enter' && agregarPreguntaPropia()}
-                    />
-                    <Button
-                      onClick={agregarPreguntaPropia}
-                      size="icon"
-                      style={{ backgroundColor: '#00A6A6' }}
-                    >
-                      <Plus className="w-4 h-4 text-white" />
-                    </Button>
-                  </div>
-                  {preguntasPropias.length > 0 && (
-                    <ul className="space-y-2">
-                      {preguntasPropias.map((pregunta, i) => (
-                        <li 
-                          key={i}
-                          className="p-3 rounded-lg text-sm"
-                          style={{ backgroundColor: '#E6F4F1', color: '#1A1A1A' }}
-                        >
-                          {pregunta}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <Alert className="border-0" style={{ backgroundColor: '#E6F4F1' }}>
-                  <AlertCircle className="h-4 w-4" style={{ color: '#00A6A6' }} />
-                  <AlertDescription style={{ color: '#1A1A1A' }}>
-                    En la versión final, este bloque usará el motor IA con la rúbrica CNPIE.
-                  </AlertDescription>
-                </Alert>
-              </div>
+              <QuestionsForm 
+                preguntas={preguntasGeneradas}
+                onSubmit={handleSubmitAnswers}
+                loading={generatingRecommendation}
+              />
             )}
           </CardContent>
         </Card>
@@ -378,21 +325,46 @@ export default function Generacion() {
         {/* Bloque D — Recomendación automática */}
         {recomendacion && (
           <Card className="mb-6 border-0 shadow-lg" style={{ backgroundColor: '#00A6A6' }}>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 space-y-4">
               <div className="flex items-start gap-4">
                 <CheckCircle2 className="w-8 h-8 text-white flex-shrink-0 mt-1" />
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-white mb-2">
-                    Recomendación: Proyecto {recomendacion}
+                    Recomendación: Proyecto {recomendacion.recomendacion}
                   </h3>
                   <p className="text-white/90 mb-3">
-                    {getRecomendacionTexto(recomendacion)}
+                    {recomendacion.justificacion}
                   </p>
-                  <p className="text-sm text-white/80">
-                    Puedes continuar con la recomendación o elegir manualmente otro tipo de proyecto.
-                  </p>
+                  <div className="flex items-center gap-2 text-sm text-white/80 mb-4">
+                    <span>Confianza: {recomendacion.confianza}%</span>
+                  </div>
                 </div>
               </div>
+
+              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                <div className="p-3 rounded-lg bg-white/10">
+                  <p className="font-semibold text-white mb-2">Fortalezas:</p>
+                  <ul className="list-disc list-inside space-y-1 text-white/90">
+                    {recomendacion.fortalezas.map((f, i) => (
+                      <li key={i}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="p-3 rounded-lg bg-white/10">
+                  <p className="font-semibold text-white mb-2">Aspectos a fortalecer:</p>
+                  <ul className="list-disc list-inside space-y-1 text-white/90">
+                    {recomendacion.aspectos_a_fortalecer.map((a, i) => (
+                      <li key={i}>{a}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <Alert className="border-0 bg-white/10">
+                <AlertDescription className="text-white text-sm">
+                  Puedes continuar con la recomendación o elegir manualmente otro tipo de proyecto.
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
         )}
@@ -403,10 +375,10 @@ export default function Generacion() {
             <div className="grid md:grid-cols-3 gap-4">
               <Button
                 onClick={() => navigate('/proyectos/2a')}
-                className={`h-auto py-4 flex flex-col gap-2 ${recomendacion === '2A' ? 'ring-4 ring-offset-2' : ''}`}
+                className={`h-auto py-4 flex flex-col gap-2 ${recomendacion.recomendacion === '2A' ? 'ring-4 ring-offset-2' : ''}`}
                 style={{ 
-                  backgroundColor: recomendacion === '2A' ? '#005C6B' : '#DDF4F2',
-                  color: recomendacion === '2A' ? 'white' : '#005C6B'
+                  backgroundColor: recomendacion.recomendacion === '2A' ? '#005C6B' : '#DDF4F2',
+                  color: recomendacion.recomendacion === '2A' ? 'white' : '#005C6B'
                 }}
               >
                 <span className="font-bold text-lg">Proyecto 2A</span>
@@ -415,10 +387,10 @@ export default function Generacion() {
               
               <Button
                 onClick={() => navigate('/proyectos/2b')}
-                className={`h-auto py-4 flex flex-col gap-2 ${recomendacion === '2B' ? 'ring-4 ring-offset-2' : ''}`}
-                style={{ 
-                  backgroundColor: recomendacion === '2B' ? '#005C6B' : '#DDF4F2',
-                  color: recomendacion === '2B' ? 'white' : '#005C6B'
+                className={`h-auto py-4 flex flex-col gap-2 ${recomendacion.recomendacion === '2B' ? 'ring-4 ring-offset-2' : ''}`}
+                style={{
+                  backgroundColor: recomendacion.recomendacion === '2B' ? '#00A6A6' : '#DDF4F2',
+                  color: recomendacion.recomendacion === '2B' ? 'white' : '#00A6A6'
                 }}
               >
                 <span className="font-bold text-lg">Proyecto 2B</span>
@@ -427,10 +399,10 @@ export default function Generacion() {
               
               <Button
                 onClick={() => navigate('/proyectos/2c')}
-                className={`h-auto py-4 flex flex-col gap-2 ${recomendacion === '2C' ? 'ring-4 ring-offset-2' : ''}`}
+                className={`h-auto py-4 flex flex-col gap-2 ${recomendacion.recomendacion === '2C' ? 'ring-4 ring-offset-2' : ''}`}
                 style={{ 
-                  backgroundColor: recomendacion === '2C' ? '#005C6B' : '#DDF4F2',
-                  color: recomendacion === '2C' ? 'white' : '#005C6B'
+                  backgroundColor: recomendacion.recomendacion === '2C' ? '#1BBEAE' : '#DDF4F2',
+                  color: recomendacion.recomendacion === '2C' ? 'white' : '#1BBEAE'
                 }}
               >
                 <span className="font-bold text-lg">Proyecto 2C</span>
