@@ -4,9 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { FileSearch, Zap, ClipboardCheck, ArrowLeft, BookOpen, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MiniCambioProyecto } from "@/components/MiniCambioProyecto";
+import { useCNPIEProject } from "@/hooks/useCNPIEProject";
 
 export default function Proyecto2A() {
   const navigate = useNavigate();
+  const { proyecto } = useCNPIEProject('2A');
+  
+  // Verificar si Etapa 1 está completa
+  const etapa1Completada = proyecto?.estado_aceleradores?.etapa1_acelerador1 === 'completado';
 
   const etapas = [
     {
@@ -24,7 +29,8 @@ export default function Proyecto2A() {
       descripcion: "Desarrollo de aceleradores específicos para fortalecer y sistematizar tu innovación educativa.",
       icon: Zap,
       color: "#00A6A6",
-      disponible: false
+      disponible: etapa1Completada,
+      ruta: '/cnpie/2a/etapa2/overview'
     },
     {
       numero: 3,

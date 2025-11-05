@@ -59,3 +59,12 @@ verify_jwt = true
 
 [functions.analyze-cnpie-intencionalidad]
 verify_jwt = true
+
+[functions.analyze-cnpie-impacto]
+verify_jwt = true
+
+[functions.analyze-cnpie-participacion]
+verify_jwt = true
+
+[functions.generate-etapa2-synthesis]
+verify_jwt = true
