@@ -54,9 +54,26 @@ Tu tarea es analizar un proyecto de categoría ${categoria} y asignar puntajes e
 Debes analizar los datos proporcionados del proyecto y:
 1. Asignar un puntaje estimado para cada criterio (0 hasta el máximo indicado)
 2. Calcular el porcentaje de cumplimiento por criterio
-3. Identificar 3-5 fortalezas específicas
-4. Identificar 3-5 áreas a mejorar
-5. Proporcionar recomendaciones concretas y accionables
+3. Contar los caracteres usados del campo evaluado
+4. Identificar 3-5 fortalezas específicas
+5. Identificar 3-5 áreas a mejorar
+6. Proporcionar recomendaciones concretas y accionables
+
+ADEMÁS de los puntajes, debes incluir en tu respuesta:
+- "caracteres_usados": número de caracteres reales del campo evaluado
+
+Ejemplo de respuesta esperada:
+{
+  "puntajes_criterios": {
+    "Originalidad": {
+      "puntaje": 24,
+      "maximo": 30,
+      "porcentaje": 80,
+      "caracteres_usados": 7850,
+      "justificacion": "..."
+    }
+  }
+}
 
 Sé objetivo, constructivo y específico en tu evaluación.`;
 

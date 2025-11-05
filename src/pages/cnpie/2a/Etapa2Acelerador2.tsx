@@ -197,8 +197,8 @@ export default function Etapa2Acelerador2() {
       onValidate={handleValidate}
       canProceed={canProceed}
       currentProgress={progress}
-      titulo="Originalidad y Metodología"
-      descripcion="Documenta tu metodología innovadora y cómo desarrolla el pensamiento crítico"
+      titulo="Originalidad y CNEB"
+      descripcion="Documenta tu metodología innovadora y su vinculación con competencias del CNEB"
     >
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">

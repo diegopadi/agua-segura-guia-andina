@@ -12,8 +12,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 const aceleradores = [
   {
     numero: 2,
-    titulo: "Vinculación al CNEB",
-    descripcion: "Vincula tu proyecto con competencias, capacidades y desempeños del CNEB",
+    titulo: "Originalidad y CNEB",
+    descripcion: "Documenta tu metodología innovadora y su vinculación con competencias del CNEB",
     icon: Target,
     color: "#00A6A6",
     ruta: '/cnpie/2a/etapa2/acelerador2'

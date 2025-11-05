@@ -8,6 +8,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -41,6 +42,17 @@ export function CNPIERubricScoreModal({
   }
 
   if (!evaluation) return null;
+
+  // Límites de caracteres por criterio CNPIE 2A
+  const caracteresLimites: Record<string, number> = {
+    'Intencionalidad': 3000,
+    'Originalidad': 8000,
+    'Pertinencia': 2000,
+    'Impacto': 4000,
+    'Participación': 3000,
+    'Sostenibilidad': 2500,
+    'Reflexión': 1500
+  };
 
   const getColorByPercentage = (percentage: number) => {
     if (percentage >= 75) return "text-green-600";
@@ -91,25 +103,61 @@ export function CNPIERubricScoreModal({
                 Desglose por Criterio
               </h3>
               <div className="space-y-3">
-                {Object.entries(evaluation.puntajes_criterios).map(([criterio, datos]: [string, any]) => (
-                  <Card key={criterio}>
-                    <CardContent className="pt-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium">{criterio}</span>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-lg font-bold ${getColorByPercentage(datos.porcentaje)}`}>
-                            {datos.puntaje}
-                          </span>
-                          <span className="text-muted-foreground">/ {datos.maximo}</span>
-                          <Badge variant={datos.porcentaje >= 75 ? "default" : "secondary"}>
-                            {datos.porcentaje}%
-                          </Badge>
+                {Object.entries(evaluation.puntajes_criterios).map(([criterio, datos]: [string, any]) => {
+                  const limiteCaracteres = caracteresLimites[criterio] || 3000;
+                  const caracteresUsados = datos.caracteres_usados || 0;
+                  const porcentajeCaracteres = Math.round((caracteresUsados / limiteCaracteres) * 100);
+                  const excedeCaracteres = caracteresUsados > limiteCaracteres;
+                  
+                  return (
+                    <Card key={criterio}>
+                      <CardContent className="pt-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <span className="font-medium">{criterio}</span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-muted-foreground">
+                                Caracteres: 
+                              </span>
+                              <span className={`text-xs font-mono ${excedeCaracteres ? 'text-red-600 font-bold' : 'text-green-600'}`}>
+                                {caracteresUsados.toLocaleString()} / {limiteCaracteres.toLocaleString()}
+                              </span>
+                              {excedeCaracteres && (
+                                <Badge variant="destructive" className="text-xs">¡Excede límite!</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-lg font-bold ${getColorByPercentage(datos.porcentaje)}`}>
+                                {datos.puntaje}
+                              </span>
+                              <span className="text-muted-foreground text-sm">/ {datos.maximo} pts</span>
+                            </div>
+                            <Badge variant={datos.porcentaje >= 75 ? "default" : "secondary"}>
+                              {datos.porcentaje}%
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
-                      <Progress value={datos.porcentaje} className="h-2" />
-                    </CardContent>
-                  </Card>
-                ))}
+                        <Progress value={datos.porcentaje} className="h-2 mb-2" />
+                        
+                        {datos.justificacion && (
+                          <p className="text-xs text-muted-foreground mt-2 italic">
+                            "{datos.justificacion}"
+                          </p>
+                        )}
+                        
+                        {excedeCaracteres && (
+                          <Alert className="mt-2 py-2 border-red-500 bg-red-50">
+                            <AlertDescription className="text-xs text-red-900">
+                              Debes reducir el texto en {(caracteresUsados - limiteCaracteres).toLocaleString()} caracteres para cumplir con los requisitos de CNPIE.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
 
