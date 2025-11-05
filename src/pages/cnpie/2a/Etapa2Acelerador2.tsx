@@ -172,8 +172,7 @@ export default function Etapa2Acelerador2() {
   const canProceed = !!(
     formData.metodologiaDescripcion &&
     formData.nombreMetodologia &&
-    formData.estrategias.length >= 3 &&
-    (areaFaltante || formData.competenciasCNEB.length >= 2)
+    formData.estrategias.length >= 3
   );
 
   const progress = (
@@ -430,6 +429,20 @@ export default function Etapa2Acelerador2() {
                 </p>
               </CardContent>
             </Card>
+          )}
+
+          {/* Advertencia: Competencias CNEB recomendadas */}
+          {!areaFaltante && formData.competenciasCNEB.length < 2 && (
+            <Alert className="border-blue-500 bg-blue-50">
+              <Lightbulb className="h-4 w-4 text-blue-600" />
+              <AlertTitle>Recomendación importante</AlertTitle>
+              <AlertDescription>
+                <p className="text-sm">
+                  Se recomienda seleccionar al menos <strong>2 competencias CNEB</strong> para una evaluación más completa de tu proyecto. 
+                  Las competencias ayudan a evidenciar la alineación curricular de tu metodología.
+                </p>
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* Botón de Análisis */}
