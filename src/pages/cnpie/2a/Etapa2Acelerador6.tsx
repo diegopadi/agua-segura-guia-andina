@@ -59,7 +59,12 @@ export default function Etapa2Acelerador6() {
       if (error) throw error;
 
       if (data.success) {
-        setAnalysis(data.analysis);
+        setAnalysis({
+          ...data.analysis,
+          fortalezas: data.analysis.fortalezas || [],
+          areas_mejorar: data.analysis.areas_mejorar || [],
+          sugerencias: data.analysis.sugerencias || []
+        });
         toast({
           title: "Análisis completado",
           description: `Puntaje estimado: ${data.analysis.puntaje_estimado}/25 puntos`
