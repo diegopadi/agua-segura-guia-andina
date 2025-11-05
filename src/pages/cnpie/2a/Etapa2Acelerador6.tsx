@@ -34,7 +34,14 @@ export default function Etapa2Acelerador6() {
   useEffect(() => {
     const savedData = getAcceleratorData(2, 6);
     if (savedData) {
-      setFormData(savedData);
+      setFormData(prev => ({
+        fundamentacionPedagogica: savedData.fundamentacionPedagogica ?? '',
+        enfoquePedagogico: savedData.enfoquePedagogico ?? '',
+        articulacionCurriculo: savedData.articulacionCurriculo ?? '',
+        metodologias: savedData.metodologias ?? '',
+        evaluacionAprendizajes: savedData.evaluacionAprendizajes ?? '',
+        adaptaciones: savedData.adaptaciones ?? ''
+      }));
     }
   }, [proyecto]);
 
@@ -211,14 +218,14 @@ export default function Etapa2Acelerador6() {
             </CardHeader>
             <CardContent>
               <Textarea
-                value={formData.fundamentacionPedagogica}
+                value={formData.fundamentacionPedagogica ?? ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, fundamentacionPedagogica: e.target.value }))}
                 placeholder="¿En qué teorías o enfoques pedagógicos se basa tu proyecto? (constructivismo, aprendizaje situado, pedagogía crítica, etc.)..."
                 className="min-h-[150px]"
                 maxLength={rubricaPertinencia?.extension_maxima || 2500}
               />
               <div className="text-xs text-muted-foreground mt-2">
-                {formData.fundamentacionPedagogica.length} / {rubricaPertinencia?.extension_maxima || 2500} caracteres
+                {(formData.fundamentacionPedagogica ?? '').length} / {rubricaPertinencia?.extension_maxima || 2500} caracteres
               </div>
             </CardContent>
           </Card>
@@ -233,7 +240,7 @@ export default function Etapa2Acelerador6() {
             </CardHeader>
             <CardContent>
               <Textarea
-                value={formData.enfoquePedagogico}
+                value={formData.enfoquePedagogico ?? ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, enfoquePedagogico: e.target.value }))}
                 placeholder="Ej: Aprendizaje Basado en Proyectos (ABP), Aprendizaje Colaborativo, Gamificación, STEAM, etc..."
                 className="min-h-[120px]"
@@ -251,7 +258,7 @@ export default function Etapa2Acelerador6() {
             </CardHeader>
             <CardContent>
               <Textarea
-                value={formData.articulacionCurriculo}
+                value={formData.articulacionCurriculo ?? ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, articulacionCurriculo: e.target.value }))}
                 placeholder="¿Cómo se vincula con competencias, capacidades, desempeños del CNEB? ¿Responde a los enfoques transversales?..."
                 className="min-h-[120px]"
@@ -269,7 +276,7 @@ export default function Etapa2Acelerador6() {
             </CardHeader>
             <CardContent>
               <Textarea
-                value={formData.metodologias}
+                value={formData.metodologias ?? ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, metodologias: e.target.value }))}
                 placeholder="Describe las estrategias didácticas específicas: trabajo cooperativo, indagación, etc..."
                 className="min-h-[120px]"
@@ -287,7 +294,7 @@ export default function Etapa2Acelerador6() {
             </CardHeader>
             <CardContent>
               <Textarea
-                value={formData.evaluacionAprendizajes}
+                value={formData.evaluacionAprendizajes ?? ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, evaluacionAprendizajes: e.target.value }))}
                 placeholder="¿Qué instrumentos de evaluación se usan? ¿Cómo se da la retroalimentación? ¿Hay evaluación formativa?..."
                 className="min-h-[120px]"
@@ -305,7 +312,7 @@ export default function Etapa2Acelerador6() {
             </CardHeader>
             <CardContent>
               <Textarea
-                value={formData.adaptaciones}
+                value={formData.adaptaciones ?? ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, adaptaciones: e.target.value }))}
                 placeholder="Describe adaptaciones para estudiantes con NEE, ritmos de aprendizaje diversos, etc..."
                 className="min-h-[100px]"
