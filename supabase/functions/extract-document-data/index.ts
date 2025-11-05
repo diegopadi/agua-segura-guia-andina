@@ -2,6 +2,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import pdf from 'npm:pdf-parse@1.1.1';
+import mammoth from 'npm:mammoth@1.8.0';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -41,21 +43,50 @@ serve(async (req) => {
       throw new Error(`Error descargando documento: ${downloadError.message}`);
     }
 
-    // Convertir a texto (simplificado - en producción usar librerías específicas)
-    const fileContent = await fileData.text();
+    // Extraer texto según el tipo de archivo
+    let fileContent = '';
     const fileExt = documentName.split('.').pop()?.toLowerCase();
+
+    if (fileExt === 'pdf') {
+      // Extraer texto de PDF
+      const arrayBuffer = await fileData.arrayBuffer();
+      const pdfData = await pdf(new Uint8Array(arrayBuffer));
+      fileContent = pdfData.text;
+      console.log('PDF extracted. Pages:', pdfData.numpages, 'Text length:', fileContent.length);
+      
+    } else if (fileExt === 'docx' || fileExt === 'doc') {
+      // Extraer texto de DOCX
+      const arrayBuffer = await fileData.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      fileContent = result.value;
+      console.log('DOCX extracted. Text length:', fileContent.length);
+      
+    } else {
+      // Para otros formatos, intentar como texto plano
+      fileContent = await fileData.text();
+      console.log('Plain text extracted. Length:', fileContent.length);
+    }
 
     console.log('File type:', fileExt, 'Content length:', fileContent.length);
 
-    // Detectar si el documento tiene contenido útil
-    if (fileContent.length < 100) {
+    // Validar que el contenido sea útil
+    const meaningfulContent = fileContent.trim().replace(/\s+/g, ' ');
+    if (meaningfulContent.length < 100) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'El documento parece estar vacío o es una imagen escaneada sin texto. Por favor, usa un documento con texto seleccionable.'
+        error: 'El documento parece estar vacío, es muy corto, o puede ser una imagen escaneada sin texto OCR. Por favor, verifica que el documento contenga texto seleccionable.'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('Document extraction summary:', {
+      fileName: documentName,
+      fileType: fileExt,
+      contentLength: fileContent.length,
+      wordCount: fileContent.split(/\s+/).length,
+      hasUsefulContent: fileContent.length > 100
+    });
 
     // Construir el prompt para GPT
     const fieldDescriptions = expectedFields.map((f: any) => 

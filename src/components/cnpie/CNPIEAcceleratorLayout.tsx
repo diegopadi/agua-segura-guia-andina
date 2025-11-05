@@ -46,9 +46,17 @@ export function CNPIEAcceleratorLayout({
     const success = await onValidate();
     if (success) {
       setShowValidationModal(false);
-      // Navegar al siguiente acelerador
-      if (aceleradorNumber < 8) {
-        navigate(`/cnpie/${tipoProyecto.toLowerCase()}/etapa${etapaNumber}/acelerador${aceleradorNumber + 1}`);
+      
+      // Lógica de navegación inteligente
+      if (etapaNumber === 1 && aceleradorNumber === 1) {
+        // Después de Etapa 1, ir a Overview de Etapa 2
+        navigate(`/cnpie/${tipoProyecto.toLowerCase()}/etapa2/overview`);
+      } else if (etapaNumber === 2 && aceleradorNumber >= 4 && aceleradorNumber < 9) {
+        // Dentro de Etapa 2, ir al siguiente acelerador
+        navigate(`/cnpie/${tipoProyecto.toLowerCase()}/etapa2/acelerador${aceleradorNumber + 1}`);
+      } else if (etapaNumber === 2 && aceleradorNumber === 9) {
+        // Después del último acelerador de Etapa 2, volver al overview
+        navigate(`/cnpie/${tipoProyecto.toLowerCase()}/etapa2/overview`);
       }
     }
   };
