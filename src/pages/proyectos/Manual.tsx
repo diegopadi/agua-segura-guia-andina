@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { FileText, Sparkles, CheckCircle, ArrowLeft, BookOpen, Target, Clock, FileCheck, Users, BookMarked } from "lucide-react";
+import { FileText, Sparkles, CheckCircle, ArrowLeft, BookOpen, Target, Clock, FileCheck, Users, BookMarked, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAcceleratorsSummary } from "@/hooks/useAcceleratorsSummary";
 
 interface Experiencia {
   fuente: "Repositorio" | "Subida local";
@@ -15,6 +16,14 @@ interface Experiencia {
 export default function Manual() {
   const navigate = useNavigate();
   const [preguntasGeneradas, setPreguntasGeneradas] = useState(false);
+  const { hallazgos, loading, generating, generateSummary, hasData } = useAcceleratorsSummary();
+
+  // Generar resumen automáticamente al cargar
+  useEffect(() => {
+    if (!hasData && !loading && !generating) {
+      generateSummary();
+    }
+  }, []);
 
   const experiencias: Experiencia[] = [
     {
@@ -91,37 +100,73 @@ export default function Manual() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Datos del diagnóstico */}
-            <div className="grid md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="font-medium" style={{ color: '#005C6B' }}>Docente:</p>
-                <p style={{ color: '#1A1A1A' }}>María González Pérez</p>
+            {loading || generating ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#00A6A6' }} />
+                <span className="ml-3" style={{ color: '#005C6B' }}>
+                  Generando resumen con IA...
+                </span>
               </div>
-              <div>
-                <p className="font-medium" style={{ color: '#005C6B' }}>Institución:</p>
-                <p style={{ color: '#1A1A1A' }}>IE San Martín de Porres</p>
+            ) : !hasData ? (
+              <div className="py-8 text-center">
+                <p className="mb-4" style={{ color: '#1A1A1A' }}>
+                  No se encontraron datos de diagnóstico. Completa los aceleradores 1, 2 y 3 primero.
+                </p>
+                <Button 
+                  onClick={generateSummary}
+                  className="text-white font-medium"
+                  style={{ backgroundColor: '#00A6A6' }}
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Intentar generar resumen
+                </Button>
               </div>
-              <div>
-                <p className="font-medium" style={{ color: '#005C6B' }}>Región:</p>
-                <p style={{ color: '#1A1A1A' }}>Apurímac, Abancay</p>
-              </div>
-              <div>
-                <p className="font-medium" style={{ color: '#005C6B' }}>Fecha:</p>
-                <p style={{ color: '#1A1A1A' }}>15 de octubre, 2024</p>
-              </div>
-            </div>
+            ) : (
+              <>
+                {/* Datos del diagnóstico */}
+                <div className="grid md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="font-medium" style={{ color: '#005C6B' }}>Docente:</p>
+                    <p style={{ color: '#1A1A1A' }}>{hallazgos?.docente}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium" style={{ color: '#005C6B' }}>Institución:</p>
+                    <p style={{ color: '#1A1A1A' }}>{hallazgos?.institucion}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium" style={{ color: '#005C6B' }}>Región:</p>
+                    <p style={{ color: '#1A1A1A' }}>{hallazgos?.region}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium" style={{ color: '#005C6B' }}>Fecha:</p>
+                    <p style={{ color: '#1A1A1A' }}>{hallazgos?.fecha}</p>
+                  </div>
+                </div>
 
-            {/* Hallazgos clave */}
-            <div>
-              <p className="font-medium mb-2" style={{ color: '#005C6B' }}>Hallazgos clave:</p>
-              <ul className="list-disc list-inside space-y-1 text-sm" style={{ color: '#1A1A1A' }}>
-                <li>Necesidad de fortalecer prácticas de higiene en estudiantes</li>
-                <li>Infraestructura de agua requiere mejoras</li>
-                <li>Alto interés de la comunidad educativa</li>
-                <li>Experiencias previas en proyectos ambientales</li>
-                <li>Potencial para sistematización de buenas prácticas</li>
-              </ul>
-            </div>
+                {/* Hallazgos clave */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-medium" style={{ color: '#005C6B' }}>Hallazgos clave:</p>
+                    <Button
+                      onClick={generateSummary}
+                      variant="ghost"
+                      size="sm"
+                      disabled={generating}
+                      className="text-xs"
+                      style={{ color: '#00A6A6' }}
+                    >
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Regenerar
+                    </Button>
+                  </div>
+                  <ul className="list-disc list-inside space-y-1 text-sm" style={{ color: '#1A1A1A' }}>
+                    {hallazgos?.hallazgos.map((hallazgo, i) => (
+                      <li key={i}>{hallazgo}</li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )}
 
             {/* Tabla de experiencias */}
             <div>

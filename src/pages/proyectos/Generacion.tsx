@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { FileText, Upload, Plus, Trash2, Sparkles, AlertCircle, CheckCircle2, ArrowLeft, BookOpen } from "lucide-react";
+import { FileText, Upload, Plus, Trash2, Sparkles, AlertCircle, CheckCircle2, ArrowLeft, BookOpen, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAcceleratorsSummary } from "@/hooks/useAcceleratorsSummary";
 
 interface Adjunto {
   id: string;
@@ -25,8 +26,10 @@ export default function Generacion() {
   const [preguntasPropias, setPreguntasPropias] = useState<string[]>([]);
   const [nuevaPregunta, setNuevaPregunta] = useState("");
   const [recomendacion, setRecomendacion] = useState<"2A" | "2B" | "2C" | null>(null);
+  const { hallazgos, generating, generateSummary, hasData } = useAcceleratorsSummary();
 
-  const importarDiagnostico = () => {
+  const importarDiagnostico = async () => {
+    await generateSummary();
     setDiagnosticoImportado(true);
   };
 
@@ -138,44 +141,61 @@ export default function Generacion() {
                 onClick={importarDiagnostico}
                 className="text-white font-medium"
                 style={{ backgroundColor: '#005C6B' }}
+                disabled={generating}
               >
-                Importar diagnóstico de Docentes.IA (modo lectura)
+                {generating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Importando y analizando...
+                  </>
+                ) : (
+                  'Importar diagnóstico de Docentes.IA (modo lectura)'
+                )}
               </Button>
             ) : (
               <div className="space-y-3">
                 <Alert className="border-0" style={{ backgroundColor: '#E6F4F1' }}>
                   <AlertCircle className="h-4 w-4" style={{ color: '#00A6A6' }} />
                   <AlertDescription style={{ color: '#1A1A1A' }}>
-                    Esta es una vista de solo lectura; no se edita aquí.
+                    Resumen generado automáticamente con IA a partir de tus aceleradores completados.
                   </AlertDescription>
                 </Alert>
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="font-medium" style={{ color: '#005C6B' }}>Docente:</p>
-                    <p style={{ color: '#1A1A1A' }}>María González Pérez</p>
+                {hasData && hallazgos ? (
+                  <>
+                    <div className="grid md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="font-medium" style={{ color: '#005C6B' }}>Docente:</p>
+                        <p style={{ color: '#1A1A1A' }}>{hallazgos.docente}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium" style={{ color: '#005C6B' }}>Institución:</p>
+                        <p style={{ color: '#1A1A1A' }}>{hallazgos.institucion}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium" style={{ color: '#005C6B' }}>Región:</p>
+                        <p style={{ color: '#1A1A1A' }}>{hallazgos.region}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium" style={{ color: '#005C6B' }}>Fecha:</p>
+                        <p style={{ color: '#1A1A1A' }}>{hallazgos.fecha}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="font-medium mb-2" style={{ color: '#005C6B' }}>Hallazgos clave:</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm" style={{ color: '#1A1A1A' }}>
+                        {hallazgos.hallazgos.map((hallazgo, i) => (
+                          <li key={i}>{hallazgo}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-4 text-center">
+                    <p style={{ color: '#1A1A1A' }}>
+                      No se encontraron datos. Completa los aceleradores 1, 2 y 3 primero.
+                    </p>
                   </div>
-                  <div>
-                    <p className="font-medium" style={{ color: '#005C6B' }}>Institución:</p>
-                    <p style={{ color: '#1A1A1A' }}>IE San Martín de Porres</p>
-                  </div>
-                  <div>
-                    <p className="font-medium" style={{ color: '#005C6B' }}>Región:</p>
-                    <p style={{ color: '#1A1A1A' }}>Apurímac, Abancay</p>
-                  </div>
-                  <div>
-                    <p className="font-medium" style={{ color: '#005C6B' }}>Fecha:</p>
-                    <p style={{ color: '#1A1A1A' }}>15 de octubre, 2024</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="font-medium mb-2" style={{ color: '#005C6B' }}>Hallazgos clave:</p>
-                  <ul className="list-disc list-inside space-y-1 text-sm" style={{ color: '#1A1A1A' }}>
-                    <li>Necesidad de fortalecer prácticas de higiene en estudiantes</li>
-                    <li>Infraestructura de agua requiere mejoras</li>
-                    <li>Alto interés de la comunidad educativa</li>
-                    <li>Experiencias previas en proyectos ambientales</li>
-                  </ul>
-                </div>
+                )}
               </div>
             )}
           </CardContent>
