@@ -15,7 +15,8 @@ export default function Proyecto2A() {
       descripcion: "Lectura del diagnóstico importado y análisis de la situación actual del proyecto consolidado.",
       icon: FileSearch,
       color: "#005C6B",
-      disponible: false
+      disponible: true,
+      ruta: '/cnpie/2a/etapa1/acelerador1'
     },
     {
       numero: 2,
@@ -99,6 +100,7 @@ export default function Proyecto2A() {
                     <Button 
                       className="w-full font-medium"
                       disabled={!etapa.disponible}
+                      onClick={() => etapa.disponible && etapa.ruta && navigate(etapa.ruta)}
                       style={{ 
                         backgroundColor: etapa.disponible ? etapa.color : '#E6F4F1',
                         color: etapa.disponible ? 'white' : '#005C6B',

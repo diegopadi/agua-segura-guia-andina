@@ -34,6 +34,7 @@ import Proyecto2B from "./pages/proyectos/Proyecto2B";
 import Proyecto2C from "./pages/proyectos/Proyecto2C";
 import Repositorio from "./pages/Repositorio";
 import MiniCambioProyecto from "./pages/MiniCambioProyecto";
+import Etapa1Acelerador1 from "./pages/cnpie/2a/Etapa1Acelerador1";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,8 @@ const App = () => (
                     <Route path="/proyectos/2c" element={<Proyecto2C />} />
                     <Route path="/repositorio" element={<Repositorio />} />
                     <Route path="/mini-cambio-proyecto" element={<MiniCambioProyecto />} />
+                    {/* CNPIE Routes */}
+                    <Route path="/cnpie/2a/etapa1/acelerador1" element={<Etapa1Acelerador1 />} />
                     <Route path="/etapa1" element={<Etapa1 />} />
                     <Route path="/etapa1/acelerador1" element={<Acelerador1 />} />
                     <Route path="/etapa1/acelerador2" element={<Acelerador2 />} />

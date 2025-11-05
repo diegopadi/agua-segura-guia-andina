@@ -80,6 +80,146 @@ export type Database = {
         }
         Relationships: []
       }
+      cnpie_evaluaciones_predictivas: {
+        Row: {
+          areas_fuertes: string[] | null
+          areas_mejorar: string[] | null
+          created_at: string | null
+          id: string
+          porcentaje_cumplimiento: number
+          proyecto_id: string
+          puntaje_maximo: number
+          puntaje_total: number
+          puntajes_criterios: Json
+          recomendaciones_ia: string[] | null
+          tipo_evaluacion: string
+        }
+        Insert: {
+          areas_fuertes?: string[] | null
+          areas_mejorar?: string[] | null
+          created_at?: string | null
+          id?: string
+          porcentaje_cumplimiento: number
+          proyecto_id: string
+          puntaje_maximo: number
+          puntaje_total: number
+          puntajes_criterios?: Json
+          recomendaciones_ia?: string[] | null
+          tipo_evaluacion: string
+        }
+        Update: {
+          areas_fuertes?: string[] | null
+          areas_mejorar?: string[] | null
+          created_at?: string | null
+          id?: string
+          porcentaje_cumplimiento?: number
+          proyecto_id?: string
+          puntaje_maximo?: number
+          puntaje_total?: number
+          puntajes_criterios?: Json
+          recomendaciones_ia?: string[] | null
+          tipo_evaluacion?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cnpie_evaluaciones_predictivas_proyecto_id_fkey"
+            columns: ["proyecto_id"]
+            isOneToOne: false
+            referencedRelation: "cnpie_proyectos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cnpie_proyectos: {
+        Row: {
+          acelerador_actual: number | null
+          created_at: string | null
+          datos_aceleradores: Json | null
+          diagnostico_resumen: Json | null
+          estado_aceleradores: Json | null
+          etapa_actual: number | null
+          experiencias_ids: string[] | null
+          id: string
+          preguntas_respuestas: Json | null
+          recomendacion_ia: Json | null
+          tipo_proyecto: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          acelerador_actual?: number | null
+          created_at?: string | null
+          datos_aceleradores?: Json | null
+          diagnostico_resumen?: Json | null
+          estado_aceleradores?: Json | null
+          etapa_actual?: number | null
+          experiencias_ids?: string[] | null
+          id?: string
+          preguntas_respuestas?: Json | null
+          recomendacion_ia?: Json | null
+          tipo_proyecto: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          acelerador_actual?: number | null
+          created_at?: string | null
+          datos_aceleradores?: Json | null
+          diagnostico_resumen?: Json | null
+          estado_aceleradores?: Json | null
+          etapa_actual?: number | null
+          experiencias_ids?: string[] | null
+          id?: string
+          preguntas_respuestas?: Json | null
+          recomendacion_ia?: Json | null
+          tipo_proyecto?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cnpie_rubricas: {
+        Row: {
+          categoria: string
+          created_at: string | null
+          criterio: string
+          descripcion: string | null
+          ejemplos: Json | null
+          extension_maxima: number | null
+          id: string
+          indicador: string
+          orden: number | null
+          puntaje_maximo: number
+          recomendaciones: string | null
+        }
+        Insert: {
+          categoria: string
+          created_at?: string | null
+          criterio: string
+          descripcion?: string | null
+          ejemplos?: Json | null
+          extension_maxima?: number | null
+          id?: string
+          indicador: string
+          orden?: number | null
+          puntaje_maximo: number
+          recomendaciones?: string | null
+        }
+        Update: {
+          categoria?: string
+          created_at?: string | null
+          criterio?: string
+          descripcion?: string | null
+          ejemplos?: Json | null
+          extension_maxima?: number | null
+          id?: string
+          indicador?: string
+          orden?: number | null
+          puntaje_maximo?: number
+          recomendaciones?: string | null
+        }
+        Relationships: []
+      }
       diagnostic_reports: {
         Row: {
           created_at: string
@@ -337,8 +477,12 @@ export type Database = {
           id: string
           inicio: string | null
           needs_review: boolean | null
+          regenerated_at: string | null
+          regenerated_reason: string | null
           rubrica_json: Json | null
           session_index: number
+          source_hash: string | null
+          source_snapshot: Json | null
           titulo: string
           unidad_id: string
           updated_at: string
@@ -354,8 +498,12 @@ export type Database = {
           id?: string
           inicio?: string | null
           needs_review?: boolean | null
+          regenerated_at?: string | null
+          regenerated_reason?: string | null
           rubrica_json?: Json | null
           session_index: number
+          source_hash?: string | null
+          source_snapshot?: Json | null
           titulo: string
           unidad_id: string
           updated_at?: string
@@ -371,8 +519,12 @@ export type Database = {
           id?: string
           inicio?: string | null
           needs_review?: boolean | null
+          regenerated_at?: string | null
+          regenerated_reason?: string | null
           rubrica_json?: Json | null
           session_index?: number
+          source_hash?: string | null
+          source_snapshot?: Json | null
           titulo?: string
           unidad_id?: string
           updated_at?: string
@@ -763,14 +915,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      acquire_unit_lock: {
-        Args: { unidad_id_param: string }
-        Returns: boolean
-      }
-      calculate_unidad_hash: {
-        Args: { unidad_data: Json }
-        Returns: string
-      }
+      acquire_unit_lock: { Args: { unidad_id_param: string }; Returns: boolean }
+      calculate_unidad_hash: { Args: { unidad_data: Json }; Returns: string }
       check_a7_data_exists: {
         Args: { unidad_id_param: string; user_id_param: string }
         Returns: Json
@@ -786,10 +932,7 @@ export type Database = {
         Args: { participant_token_param: string; survey_id_param: string }
         Returns: boolean
       }
-      generate_unique_participant_token: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_unique_participant_token: { Args: never; Returns: string }
       get_public_survey_data: {
         Args: { token_param: string }
         Returns: {
@@ -807,10 +950,7 @@ export type Database = {
         Args: { survey_id_param: string }
         Returns: number
       }
-      release_unit_lock: {
-        Args: { unidad_id_param: string }
-        Returns: boolean
-      }
+      release_unit_lock: { Args: { unidad_id_param: string }; Returns: boolean }
       sync_survey_participants: {
         Args: { survey_id_param: string }
         Returns: number

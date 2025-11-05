@@ -53,3 +53,9 @@ verify_jwt = true
 
 [functions.generate-session-structure]
 verify_jwt = true
+
+[functions.evaluate-cnpie-project]
+verify_jwt = true
+
+[functions.analyze-cnpie-intencionalidad]
+verify_jwt = true
