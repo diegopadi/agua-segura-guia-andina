@@ -12,7 +12,8 @@ export interface FileRecord {
   created_at: string;
 }
 
-const MAX_STORAGE_BYTES = 100 * 1024 * 1024; // 100MB
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB por archivo
+const MAX_STORAGE_BYTES = 500 * 1024 * 1024; // 500MB total
 
 export function useFileManager() {
   const [files, setFiles] = useState<FileRecord[]>([]);
@@ -61,12 +62,22 @@ export function useFileManager() {
       return null;
     }
 
+    // Check file size limit (50MB per file)
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast({
+        title: "Archivo muy grande",
+        description: `El archivo excede el límite de 50MB. Tamaño: ${(file.size / (1024 * 1024)).toFixed(2)}MB`,
+        variant: "destructive",
+      });
+      return null;
+    }
+
     // Check storage quota
     const currentUsage = getTotalStorageUsed();
     if (currentUsage + file.size > MAX_STORAGE_BYTES) {
       toast({
         title: "Cuota excedida",
-        description: `El archivo excede su cuota de 100MB. Elimine otros archivos primero.`,
+        description: `El archivo excede su cuota de almacenamiento (${(MAX_STORAGE_BYTES / (1024 * 1024)).toFixed(0)}MB). Elimine otros archivos primero.`,
         variant: "destructive",
       });
       return null;
@@ -169,6 +180,19 @@ export function useFileManager() {
     }
   };
 
+  const uploadMultipleFiles = async (files: FileList, fileType?: string): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const url = await uploadFile(files[i], fileType);
+      if (url) {
+        uploadedUrls.push(url);
+      }
+    }
+    
+    return uploadedUrls;
+  };
+
   return {
     files,
     loading,
@@ -176,8 +200,10 @@ export function useFileManager() {
     totalStorageUsed: getTotalStorageUsed(),
     storageUsagePercentage: getStorageUsagePercentage(),
     maxStorageBytes: MAX_STORAGE_BYTES,
+    maxFileSize: MAX_FILE_SIZE_BYTES,
     fetchFiles,
     uploadFile,
+    uploadMultipleFiles,
     deleteFile,
   };
 }

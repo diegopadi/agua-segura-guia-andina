@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Upload, FileText, Filter, Download, Trash2, Tag, Eye, AlertCircle, Info, ArrowLeft } from "lucide-react";
+import { Upload, FileText, Filter, Download, Trash2, Tag, Eye, AlertCircle, Info, ArrowLeft, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useFileManager } from "@/hooks/useFileManager";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -22,117 +24,109 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-interface Documento {
-  id: string;
-  nombre: string;
-  tipo: string;
-  fechaCarga: string;
-  etapa?: string;
-  acelerador?: string;
-  descripcion?: string;
-}
-
 export default function Repositorio() {
   const navigate = useNavigate();
-  const [documentos, setDocumentos] = useState<Documento[]>([
-    {
-      id: "1",
-      nombre: "Informe_Agua_Segura_2024.pdf",
-      tipo: "Informe",
-      fechaCarga: "15/10/2024",
-      etapa: "Diagnóstico",
-      acelerador: "Validación",
-      descripcion: "Informe validado del programa Agua Segura"
-    },
-    {
-      id: "2",
-      nombre: "Diagnostico_Inicial.pdf",
-      tipo: "Diagnóstico",
-      fechaCarga: "20/10/2024",
-      etapa: "Diagnóstico",
-      descripcion: "Diagnóstico inicial de la institución"
-    }
-  ]);
-  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    files,
+    loading,
+    uploadProgress,
+    totalStorageUsed,
+    storageUsagePercentage,
+    maxStorageBytes,
+    maxFileSize,
+    fetchFiles,
+    uploadMultipleFiles,
+    deleteFile,
+  } = useFileManager();
+
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
   const [filtroEtapa, setFiltroEtapa] = useState<string>("todos");
-  const [documentoClasificar, setDocumentoClasificar] = useState<Documento | null>(null);
+  const [documentoClasificar, setDocumentoClasificar] = useState<any | null>(null);
   const [clasificacionData, setClasificacionData] = useState({
     etapa: "",
     acelerador: "",
     descripcion: ""
   });
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  const subirArchivo = () => {
-    const nuevoDoc: Documento = {
-      id: Date.now().toString(),
-      nombre: `Documento_${Date.now()}.pdf`,
-      tipo: "Otro",
-      fechaCarga: new Date().toLocaleDateString('es-PE')
-    };
-    setDocumentos([...documentos, nuevoDoc]);
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = event.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    // Validate file count
+    if (selectedFiles.length > 10) {
+      alert("Solo puedes subir un máximo de 10 archivos a la vez");
+      return;
+    }
+
+    setUploading(true);
+    await uploadMultipleFiles(selectedFiles, "documento");
+    setUploading(false);
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
-  const eliminarDocumento = (id: string) => {
-    setDocumentos(documentos.filter(doc => doc.id !== id));
+  const eliminarDocumento = async (fileId: string, fileUrl: string) => {
+    if (confirm("¿Estás seguro de que deseas eliminar este archivo?")) {
+      await deleteFile(fileId, fileUrl);
+    }
   };
 
-  const abrirClasificacion = (doc: Documento) => {
+  const abrirClasificacion = (doc: any) => {
     setDocumentoClasificar(doc);
     setClasificacionData({
-      etapa: doc.etapa || "",
-      acelerador: doc.acelerador || "",
-      descripcion: doc.descripcion || ""
+      etapa: (doc.file_type === "diagnostico" ? "Diagnóstico" : doc.file_type === "informe" ? "Aceleración" : ""),
+      acelerador: "",
+      descripcion: ""
     });
   };
 
   const guardarClasificacion = () => {
-    if (documentoClasificar) {
-      setDocumentos(documentos.map(doc => 
-        doc.id === documentoClasificar.id 
-          ? { ...doc, ...clasificacionData }
-          : doc
-      ));
-      setDocumentoClasificar(null);
-      setClasificacionData({ etapa: "", acelerador: "", descripcion: "" });
-    }
+    // In a real implementation, you would update the file_type in the database
+    // For now, just close the dialog
+    setDocumentoClasificar(null);
+    setClasificacionData({ etapa: "", acelerador: "", descripcion: "" });
   };
 
   const exportarCSV = () => {
-    const headers = ["Nombre", "Tipo", "Fecha de Carga", "Etapa", "Acelerador", "Descripción"];
-    const rows = documentosFiltrados.map(doc => [
-      doc.nombre,
-      doc.tipo,
-      doc.fechaCarga,
-      doc.etapa || "-",
-      doc.acelerador || "-",
-      doc.descripcion || "-"
-    ]);
+    const headers = ["Nombre", "Tipo", "Fecha de Carga", "Tamaño (MB)"];
+    const rows = documentosFiltrados.map(file => {
+      const fileName = file.url.split('/').pop() || 'archivo';
+      return [
+        fileName,
+        file.file_type || "documento",
+        new Date(file.created_at).toLocaleDateString('es-PE'),
+        (file.size_bytes / (1024 * 1024)).toFixed(2)
+      ];
+    });
     
     const csvContent = [
       headers.join(","),
       ...rows.map(row => row.join(","))
     ].join("\n");
     
-    const blob = new Blob([csvContent], { type: "text/csv" });
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = "repositorio_documentos.csv";
     a.click();
+    window.URL.revokeObjectURL(url);
   };
 
-  const limpiarTabla = () => {
-    if (confirm("¿Estás seguro de que deseas limpiar toda la tabla?")) {
-      setDocumentos([]);
-    }
-  };
-
-  const documentosFiltrados = documentos.filter(doc => {
-    const cumpleTipo = filtroTipo === "todos" || doc.tipo === filtroTipo;
-    const cumpleEtapa = filtroEtapa === "todos" || doc.etapa === filtroEtapa;
-    return cumpleTipo && cumpleEtapa;
+  const documentosFiltrados = files.filter(file => {
+    const cumpleTipo = filtroTipo === "todos" || file.file_type === filtroTipo;
+    // For now, we don't have etapa filtering in the database
+    return cumpleTipo;
   });
 
   return (
@@ -160,24 +154,57 @@ export default function Repositorio() {
               Subir archivo
             </CardTitle>
             <CardDescription style={{ color: '#1A1A1A', opacity: 0.7 }}>
-              Tipos permitidos: .pdf, .doc, .docx
+              Tipos permitidos: .pdf, .doc, .docx • Máx. 50MB por archivo • Hasta 10 archivos a la vez
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
             <Button 
-              onClick={subirArchivo}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || loading}
               className="text-white font-medium"
               style={{ backgroundColor: '#005C6B' }}
             >
-              <Upload className="w-4 h-4 mr-2" />
-              Subir archivo
+              {uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Subir archivo
+                </>
+              )}
             </Button>
-            <Alert className="border-0" style={{ backgroundColor: '#E6F4F1' }}>
-              <AlertCircle className="h-4 w-4" style={{ color: '#00A6A6' }} />
-              <AlertDescription style={{ color: '#1A1A1A' }}>
-                Los archivos subidos aquí se guardan solo en esta sesión (modo simulado).
-              </AlertDescription>
-            </Alert>
+            
+            {uploading && uploadProgress > 0 && (
+              <Progress value={uploadProgress} className="w-full" />
+            )}
+            
+            <div className="space-y-2">
+              <Alert className="border-0" style={{ backgroundColor: '#E6F4F1' }}>
+                <Info className="h-4 w-4" style={{ color: '#00A6A6' }} />
+                <AlertDescription style={{ color: '#1A1A1A' }}>
+                  <strong>Almacenamiento:</strong> {(totalStorageUsed / (1024 * 1024)).toFixed(2)}MB / {(maxStorageBytes / (1024 * 1024)).toFixed(0)}MB utilizado
+                </AlertDescription>
+              </Alert>
+              {storageUsagePercentage > 80 && (
+                <Alert className="border-0" style={{ backgroundColor: '#FFF4E6' }}>
+                  <AlertCircle className="h-4 w-4" style={{ color: '#FF9800' }} />
+                  <AlertDescription style={{ color: '#1A1A1A' }}>
+                    Tu almacenamiento está al {storageUsagePercentage.toFixed(0)}%. Considera eliminar archivos antiguos.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -224,20 +251,12 @@ export default function Repositorio() {
             <div className="flex gap-3">
               <Button
                 onClick={exportarCSV}
+                disabled={documentosFiltrados.length === 0}
                 className="font-medium"
                 style={{ backgroundColor: '#00A6A6', color: 'white' }}
               >
                 <Download className="w-4 h-4 mr-2" />
                 Exportar listado (CSV)
-              </Button>
-              <Button
-                onClick={limpiarTabla}
-                variant="outline"
-                className="font-medium"
-                style={{ backgroundColor: '#DDF4F2', color: '#005C6B' }}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Limpiar tabla
               </Button>
             </div>
           </CardContent>
@@ -277,59 +296,67 @@ export default function Repositorio() {
                   </tr>
                 </thead>
                 <tbody>
-                  {documentosFiltrados.map((doc) => (
-                    <tr 
-                      key={doc.id}
-                      className="border-b"
-                      style={{ borderColor: '#E6F4F1' }}
-                    >
-                      <td className="p-3" style={{ color: '#1A1A1A' }}>
-                        {doc.nombre}
-                      </td>
-                      <td className="p-3">
-                        <span 
-                          className="px-2 py-1 rounded text-xs"
-                          style={{ backgroundColor: '#E6F4F1', color: '#005C6B' }}
-                        >
-                          {doc.tipo}
-                        </span>
-                      </td>
-                      <td className="p-3" style={{ color: '#1A1A1A' }}>
-                        {doc.fechaCarga}
-                      </td>
-                      <td className="p-3" style={{ color: '#1A1A1A' }}>
-                        {doc.etapa || "-"}
-                      </td>
-                      <td className="p-3" style={{ color: '#1A1A1A' }}>
-                        {doc.acelerador || "-"}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex gap-2">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => alert('Vista previa (simulado)')}
+                  {documentosFiltrados.map((file) => {
+                    const fileName = file.url.split('/').pop() || 'archivo';
+                    return (
+                      <tr 
+                        key={file.id}
+                        className="border-b"
+                        style={{ borderColor: '#E6F4F1' }}
+                      >
+                        <td className="p-3" style={{ color: '#1A1A1A' }}>
+                          <div className="max-w-xs truncate" title={fileName}>
+                            {fileName}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <span 
+                            className="px-2 py-1 rounded text-xs"
+                            style={{ backgroundColor: '#E6F4F1', color: '#005C6B' }}
                           >
-                            <Eye className="w-4 h-4" style={{ color: '#00A6A6' }} />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => abrirClasificacion(doc)}
-                          >
-                            <Tag className="w-4 h-4" style={{ color: '#005C6B' }} />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => eliminarDocumento(doc.id)}
-                          >
-                            <Trash2 className="w-4 h-4" style={{ color: '#005C6B' }} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {file.file_type || "documento"}
+                          </span>
+                        </td>
+                        <td className="p-3" style={{ color: '#1A1A1A' }}>
+                          {new Date(file.created_at).toLocaleDateString('es-PE')}
+                        </td>
+                        <td className="p-3" style={{ color: '#1A1A1A' }}>
+                          {(file.size_bytes / (1024 * 1024)).toFixed(2)} MB
+                        </td>
+                        <td className="p-3" style={{ color: '#1A1A1A' }}>
+                          -
+                        </td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => window.open(file.url, '_blank')}
+                              title="Ver archivo"
+                            >
+                              <Eye className="w-4 h-4" style={{ color: '#00A6A6' }} />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => abrirClasificacion(file)}
+                              title="Clasificar"
+                            >
+                              <Tag className="w-4 h-4" style={{ color: '#005C6B' }} />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => eliminarDocumento(file.id, file.url)}
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" style={{ color: '#005C6B' }} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               {documentosFiltrados.length === 0 && (
