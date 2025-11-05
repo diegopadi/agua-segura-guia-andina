@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Lightbulb, Plus, X, BookOpen } from "lucide-react";
 import { DocumentFieldSchema } from "@/types/document-extraction";
-import { CompetenciasMultiSelect } from "@/components/CompetenciasMultiSelect";
+import CompetenciasMultiSelect from "@/components/CompetenciasMultiSelect";
 
 export default function Etapa2Acelerador4() {
   const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
@@ -110,7 +110,7 @@ export default function Etapa2Acelerador4() {
 
   const handleValidate = async () => {
     await handleSave();
-    return await validateAccelerador(2, 4);
+    return await validateAccelerator(2, 4);
   };
 
   const handleAnalyze = async () => {
@@ -392,8 +392,9 @@ export default function Etapa2Acelerador4() {
             </CardHeader>
             <CardContent>
               <CompetenciasMultiSelect
-                value={formData.competenciasCNEB}
-                onChange={(competencias) => setFormData(prev => ({ ...prev, competenciasCNEB: competencias }))}
+                areaCurricular={etapa1Data?.areaCurricular || ''}
+                selectedCompetencias={formData.competenciasCNEB}
+                onCompetenciasChange={(competencias) => setFormData(prev => ({ ...prev, competenciasCNEB: competencias }))}
               />
             </CardContent>
           </Card>
