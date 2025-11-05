@@ -15,7 +15,7 @@ import { useUnidadHash } from '@/hooks/useUnidadHash';
 import { supabase } from '@/integrations/supabase/client';
 import { useEtapa3V2, RubricaEvaluacion } from '@/hooks/useEtapa3V2';
 
-export default function Acelerador7() {
+export default function Acelerador9() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { unidad, rubrica, loading, saving, saveRubrica, closeAccelerator, progress } = useEtapa3V2();
@@ -505,7 +505,7 @@ export default function Acelerador7() {
         needs_review: false
       });
       
-      await closeAccelerator('A7');
+      await closeAccelerator('A9');
       
       toast({
         title: "Acelerador 7 cerrado",
@@ -544,8 +544,8 @@ export default function Acelerador7() {
   };
 
   // State calculations (continued)
-  const canProceedToA8 = progress.a7_completed && isClosed && !needsReview;
-  const canAccessA7 = progress.a6_completed;
+  const canProceedToA10 = progress.a9_completed && isClosed && !needsReview;
+  const canAccessA9 = progress.a8_completed;
   const hasRubricas = rubricaData.criteria.length > 0;
   const formValid = rubricaData.criteria.length >= 4 && rubricaData.criteria.length <= 8 && 
     rubricaData.criteria.every(c => 
@@ -606,13 +606,13 @@ export default function Acelerador7() {
       formValid,
       analysisComplete,
       hasRubricas,
-      canProceedToA8,
-      canAccessA7,
+      canProceedToA10,
+      canAccessA9,
       needsReview,
       progress: {
-        a6_completed: progress.a6_completed,
-        a7_completed: progress.a7_completed,
         a8_completed: progress.a8_completed,
+        a9_completed: progress.a9_completed,
+        a10_completed: progress.a10_completed,
         overall_progress: progress.overall_progress
       },
       unidadEstado: unidad?.estado || 'N/A',
@@ -635,15 +635,15 @@ export default function Acelerador7() {
         regenerateVisible: !isClosed && rubrica?.estado !== 'CERRADO',
         saveVisible: !isClosed && hasRubricas,
         saveAndCloseVisible: !isClosed && analysisComplete,
-        continueToA8Visible: canProceedToA8,
+        continueToA10Visible: canProceedToA10,
         editVisible: isClosed,
       }
     };
     
     console.log('[A7:DIAGNOSTIC]', diagnosticData);
   }, [
-    isClosed, formValid, analysisComplete, hasRubricas, canProceedToA8, canAccessA7,
-    needsReview, progress, unidad?.estado, rubrica?.estado, rubricaData.criteria.length, 
+    isClosed, formValid, analysisComplete, hasRubricas, canProceedToA10, canAccessA9,
+    needsReview, progress, unidad?.estado, rubrica?.estado, rubricaData.criteria.length,
     rubricaData.levels.length, generationLoading, regenerationLoading, generationComplete, 
     autoSaving, saving, validationErrors.length, unidadHash?.hash, rubrica?.source_hash
   ]);
@@ -659,7 +659,7 @@ export default function Acelerador7() {
     );
   }
 
-  if (!canAccessA7) {
+  if (!canAccessA9) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -699,7 +699,7 @@ export default function Acelerador7() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {progress.a7_completed && (
+            {progress.a9_completed && (
               <Badge variant="secondary" className="bg-green-100 text-green-700">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 A7 Completado
@@ -976,12 +976,12 @@ export default function Acelerador7() {
               </Button>
             )}
 
-            {isClosed && progress.a7_completed && !rubrica?.needs_review && (
+            {isClosed && progress.a9_completed && !rubrica?.needs_review && (
               <Button
-                onClick={() => navigate('/etapa3/acelerador8')}
+                onClick={() => navigate('/etapa3/acelerador10')}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
-                Continuar a A8
+                Continuar a A10
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             )}

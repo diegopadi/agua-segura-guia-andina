@@ -70,9 +70,9 @@ export interface SesionClase {
 }
 
 export interface Etapa3Progress {
-  a6_completed: boolean;
-  a7_completed: boolean;
   a8_completed: boolean;
+  a9_completed: boolean;
+  a10_completed: boolean;
   overall_progress: number;
 }
 
@@ -395,39 +395,39 @@ export function useEtapa3V2() {
   };
 
   const getProgress = (): Etapa3Progress => {
-    const a6_completed = unidad?.estado === 'CERRADO';
-    const a7_completed = rubrica?.estado === 'CERRADO';
-    const a8_completed = sesiones.length > 0 && sesiones.every(s => s.estado === 'CERRADO');
+    const a8_completed = unidad?.estado === 'CERRADO';
+    const a9_completed = rubrica?.estado === 'CERRADO';
+    const a10_completed = sesiones.length > 0 && sesiones.every(s => s.estado === 'CERRADO');
     
     let completed = 0;
-    if (a6_completed) completed++;
-    if (a7_completed) completed++;
     if (a8_completed) completed++;
+    if (a9_completed) completed++;
+    if (a10_completed) completed++;
     
     return {
-      a6_completed,
-      a7_completed,
       a8_completed,
+      a9_completed,
+      a10_completed,
       overall_progress: Math.round((completed / 3) * 100)
     };
   };
 
-  const closeAccelerator = async (accelerator: 'A6' | 'A7' | 'A8') => {
+  const closeAccelerator = async (accelerator: 'A8' | 'A9' | 'A10') => {
     try {
       setSaving(true);
 
       switch (accelerator) {
-        case 'A6':
+        case 'A8':
           if (unidad) {
             await saveUnidad({ ...unidad, estado: 'CERRADO', closed_at: new Date().toISOString() });
           }
           break;
-        case 'A7':
+        case 'A9':
           if (rubrica) {
             await saveRubrica({ ...rubrica, estado: 'CERRADO', closed_at: new Date().toISOString() });
           }
           break;
-        case 'A8':
+        case 'A10':
           if (sesiones.length > 0) {
             const updatedSesiones = sesiones.map(s => ({ 
               ...s, 

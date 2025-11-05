@@ -1,879 +1,595 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Bot, CheckCircle, Save, Lock, Plus, Trash2, Edit3, RefreshCw, FileText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, FileText, Bot, CheckCircle, Save, Lock, AlertCircle, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { supabase } from '@/integrations/supabase/client';
-import { useEtapa3V2, SesionClase } from '@/hooks/useEtapa3V2';
-import { useUnidadHash } from '@/hooks/useUnidadHash';
+import { useEtapa3V2 } from '@/hooks/useEtapa3V2';
+import CompetenciasMultiSelect from '@/components/CompetenciasMultiSelect';
 
-export default function Acelerador8() {
+const AREAS_CURRICULARES = [
+  'Comunicación', 'Matemática', 'Ciencias Sociales', 'Ciencia y Tecnología',
+  'Educación Física', 'Arte y Cultura', 'Inglés', 'Educación Religiosa',
+  'Educación para el Trabajo', 'Tutoría'
+];
+
+const GRADOS = ['1ro', '2do', '3ro', '4to', '5to'];
+
+export default function Acelerador6() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { unidad, sesiones, loading, saving, saveSesiones, closeAccelerator, progress } = useEtapa3V2();
-  const unidadHash = useUnidadHash(unidad);
+  const { unidad, loading, saving, saveUnidad, closeAccelerator, progress } = useEtapa3V2();
   
-  const [sesionesData, setSesionesData] = useState<SesionClase[]>([]);
-  const [generationLoading, setGenerationLoading] = useState(false);
-  const [regenerationLoading, setRegenerationLoading] = useState(false);
-  const [generationComplete, setGenerationComplete] = useState(false);
+  const [formData, setFormData] = useState({
+    titulo: '',
+    area_curricular: '',
+    grado: '',
+    numero_sesiones: 4,
+    duracion_min: 90,
+    proposito: '',
+    evidencias: '',
+    diagnostico_text: '',
+    diagnostico_pdf_url: '',
+    ia_recomendaciones: '',
+    competencias_ids: [] as string[],
+  });
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfExtracting, setPdfExtracting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showReopenDialog, setShowReopenDialog] = useState(false);
-  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
-  const [lastGenerationTime, setLastGenerationTime] = useState<number>(0);
-  const [lastAutoSaveTime, setLastAutoSaveTime] = useState<number>(0);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [lastAutoSaveAt, setLastAutoSaveAt] = useState(0);
+  const [extractedPdfText, setExtractedPdfText] = useState(''); // Separate state for PDF text
   
-  // Ping connectivity test
-  const [pingOk, setPingOk] = useState<boolean | null>(null);
-  const [lastHttpStatus, setLastHttpStatus] = useState<number | null>(null);
-  const [lastNetworkError, setLastNetworkError] = useState<string | null>(null);
-  const [payloadBytes, setPayloadBytes] = useState<number>(0);
-  
-  // Regeneration error state
-  const [regenerationError, setRegenerationError] = useState<{
-    requestId: string;
-    message: string;
-    code: string;
-  } | null>(null);
-  const [lastRequestId, setLastRequestId] = useState<string | null>(null);
-  
-  const lastAutoSaveRef = useRef<NodeJS.Timeout>();
-  const throttleRef = useRef<NodeJS.Timeout>();
-  
-  // Debounced sesiones data for auto-save (5s debounce)
-  const debouncedSesionesData = useDebounce(sesionesData, 5000);
+  // Debounced form data for auto-save (5s debounce + 10s throttle)
+  const debouncedFormData = useDebounce(formData, 5000);
 
-  // Test connectivity on mount
-  useEffect(() => {
-    const testConnectivity = async () => {
-      try {
-        console.log('[A8:PING]', { timestamp: new Date().toISOString() });
-        
-        const { data, error } = await supabase.functions.invoke('a8-ping', {
-          body: {}
-        });
-        
-        if (error) {
-          console.log('[A8:PING_FAIL]', { error: error.message });
-          setPingOk(false);
-        } else {
-          console.log('[A8:PING_OK]', { response: data });
-          setPingOk(true);
-        }
-      } catch (err: any) {
-        console.log('[A8:PING_FAIL]', { error: err.message });
-        setPingOk(false);
-      }
-    };
-
-    testConnectivity();
-  }, []);
-
-  // Load existing sessions data
-  useEffect(() => {
-    if (sesiones && sesiones.length > 0) {
-      setSesionesData(sesiones);
-      setGenerationComplete(true);
-    } else if (unidad && unidad.numero_sesiones) {
-      // Initialize empty sessions based on unit configuration
-      const emptySessions: SesionClase[] = Array.from(
-        { length: unidad.numero_sesiones }, 
-        (_, index) => ({
-          id: crypto.randomUUID(),
-          unidad_id: unidad.id,
-          user_id: unidad.user_id,
-          session_index: index + 1,
-          titulo: `Sesión ${index + 1}`,
-          inicio: '',
-          desarrollo: '',
-          cierre: '',
-          evidencias: [],
-          rubrica_json: { criteria: [] },
-          estado: 'BORRADOR',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-      );
-      setSesionesData(emptySessions);
+  // Helper functions and computed values
+  const getCombinedDiagnosticText = () => {
+    const parts = [];
+    if (extractedPdfText) {
+      parts.push(`=== DIAGNÓSTICO DESDE PDF ===\n${extractedPdfText}`);
     }
-  }, [sesiones, unidad]);
-
-  // Computed values
-  const areSessionsClosed = sesiones.length > 0 && sesiones.every(s => s.estado === 'CERRADO');
-  const canAccessA8 = progress.a7_completed;
-  const hasSesiones = sesionesData.length > 0;
-  const formValid = sesionesData.some(sesion => 
-    sesion.titulo.trim() || sesion.inicio.trim() || sesion.desarrollo.trim() || sesion.cierre.trim()
-  );
-  const analysisComplete = generationComplete;
-
-  // Mutex to prevent concurrent saves
-  const [isSavingMutex, setIsSavingMutex] = useState(false);
-
-  // Enhanced auto-save with debounce (5s) + throttle (20s)
-  useEffect(() => {
-    // Clear existing timeouts
-    if (lastAutoSaveRef.current) {
-      clearTimeout(lastAutoSaveRef.current);
+    if (formData.diagnostico_text?.trim()) {
+      parts.push(`=== INFORMACIÓN ADICIONAL ===\n${formData.diagnostico_text.trim()}`);
     }
-    
-    // Check conditions to pause auto-save - CRITICAL: block during regeneration
-    const shouldPause = !autoSaveEnabled || areSessionsClosed || generationLoading || 
-                       regenerationLoading || !generationComplete || saving || autoSaving || isSavingMutex;
-    
-    // Additional guard: never auto-save during regeneration
-    if (regenerationLoading) {
-      console.log('[A8:AUTOSAVE_BLOCKED]', { reason: 'regeneration_loading' });
-      return;
-    }
-    
-    if (debouncedSesionesData.length > 0 && !shouldPause && sesiones.length > 0) {
-      lastAutoSaveRef.current = setTimeout(() => {
-        handleAutoSave();
-      }, 100); // Small delay to batch rapid changes
-    }
-  }, [debouncedSesionesData, autoSaveEnabled, areSessionsClosed, generationLoading, 
-      regenerationLoading, generationComplete, saving, autoSaving, isSavingMutex, sesiones]);
+    return parts.join('\n\n');
+  };
 
-  // Expose debug info to window
-  useEffect(() => {
-    (window as any).__A8_DEBUG = {
-      regenLoading: regenerationLoading,
-      lastRequestId: lastRequestId,
-      lastHttpStatus: lastHttpStatus,
-      lastNetworkError: lastNetworkError,
-      autoSaveEnabled: autoSaveEnabled,
-      sessionsCount: sesionesData.length
-    };
-  }, [regenerationLoading, lastRequestId, lastHttpStatus, lastNetworkError, autoSaveEnabled, sesionesData.length]);
+  const getTotalDiagnosticCharacters = () => {
+    return getCombinedDiagnosticText().length;
+  };
 
-  const handleAutoSave = useCallback(async () => {
-    if (saving || isSavingMutex || !sesionesData || sesionesData.length === 0) return;
-    
-    const now = Date.now();
-    
-    // Throttle: don't save more than once every 10 seconds
-    if (lastAutoSaveTime && (now - lastAutoSaveTime) < 10000) {
-      return;
-    }
-    
-    // Check if data has actually changed
-    const hasChanges = sesionesData.some(sesion => 
-      sesion.titulo !== '' || 
-      sesion.inicio !== '' || 
-      sesion.desarrollo !== '' || 
-      sesion.cierre !== ''
+  const isFormValid = () => {
+    return !!(
+      formData.titulo?.trim() &&
+      formData.area_curricular &&
+      formData.grado &&
+      formData.proposito?.trim() &&
+      formData.evidencias?.trim() &&
+      formData.numero_sesiones &&
+      formData.duracion_min
     );
+  };
+
+  const getMissingFields = () => {
+    const missing = [];
+    if (!formData.titulo?.trim()) missing.push('Título');
+    if (!formData.area_curricular) missing.push('Área Curricular');
+    if (!formData.grado) missing.push('Grado');
+    if (!formData.proposito?.trim()) missing.push('Propósito');
+    if (!formData.evidencias?.trim()) missing.push('Evidencias');
+    if (!formData.numero_sesiones) missing.push('Número de Sesiones');
+    if (!formData.duracion_min) missing.push('Duración');
+    return missing;
+  };
+
+  const isClosed = unidad?.estado === 'CERRADO';
+  const analysisComplete = !!formData.ia_recomendaciones;
+  const canProceedToA9 = progress.a8_completed && isClosed && analysisComplete && isFormValid();
+
+  // Load existing data
+  useEffect(() => {
+    if (unidad) {
+      setFormData({
+        titulo: unidad.titulo || '',
+        area_curricular: unidad.area_curricular || '',
+        grado: unidad.grado || '',
+        numero_sesiones: unidad.numero_sesiones || 4,
+        duracion_min: unidad.duracion_min || 90,
+        proposito: unidad.proposito || '',
+        evidencias: unidad.evidencias || '',
+        diagnostico_text: unidad.diagnostico_text || '',
+        diagnostico_pdf_url: unidad.diagnostico_pdf_url || '',
+        ia_recomendaciones: unidad.ia_recomendaciones || '',
+        competencias_ids: unidad.competencias_ids || [],
+      });
+    }
+  }, [unidad]);
+
+  // Silent auto-save functionality with debounce and throttle
+  useEffect(() => {
+    const now = Date.now();
+    const THROTTLE_MS = 10000; // 10s minimum between auto-saves
     
-    if (!hasChanges) return;
+    if (
+      !isClosed && // NO auto-save if closed
+      !saving &&
+      !autoSaving &&
+      unidad &&
+      debouncedFormData.titulo &&
+      debouncedFormData.area_curricular &&
+      (lastAutoSaveAt === 0 || now - lastAutoSaveAt >= THROTTLE_MS)
+    ) {
+      handleAutoSave();
+      setLastAutoSaveAt(now);
+    }
+  }, [debouncedFormData, isClosed, saving, autoSaving, unidad, lastAutoSaveAt]);
+
+  const handleAutoSave = async () => {
+    if (!formData.titulo || !formData.area_curricular) return;
     
-    // Skip autosave toast if regeneration dialog is open and loading
-    const skipToast = showRegenerateDialog && regenerationLoading;
+    console.log('[A6:AUTOSAVE]', { 
+      timestamp: new Date().toISOString(),
+      silent: true, 
+      payloadKeys: ['titulo', 'area_curricular', 'grado', 'numero_sesiones', 'duracion_min', 'proposito', 'evidencias', 'diagnostico_text', 'diagnostico_pdf_url', 'ia_recomendaciones', 'competencias_ids'],
+      estadoBefore: unidad?.estado 
+    });
     
-    setIsSavingMutex(true);
     try {
-      console.log('[A8:AUTOSAVE]', { timestamp: new Date().toISOString() });
       setAutoSaving(true);
-      setLastAutoSaveTime(now);
+      await saveUnidad({
+        titulo: formData.titulo,
+        area_curricular: formData.area_curricular,
+        grado: formData.grado,
+        numero_sesiones: formData.numero_sesiones,
+        duracion_min: formData.duracion_min,
+        proposito: formData.proposito,
+        evidencias: formData.evidencias,
+        diagnostico_text: formData.diagnostico_text,
+        diagnostico_pdf_url: formData.diagnostico_pdf_url,
+        ia_recomendaciones: formData.ia_recomendaciones,
+        competencias_ids: formData.competencias_ids,
+      }, { silent: true }); // Silent auto-save - NO toast
       
-      const success = await saveSesiones(sesionesData);
-      
-      if (success) {
-        console.log('[A8:AUTOSAVE_SUCCESS]', { timestamp: new Date().toISOString() });
-        
-        if (!skipToast) {
-          toast({
-            title: "Guardado automático",
-            description: "Las sesiones se han guardado automáticamente",
-            duration: 2000
-          });
-        }
-      } else {
-        console.log('[A8:AUTOSAVE_FAILED]', { timestamp: new Date().toISOString() });
-      }
-    } catch (error: any) {
-      console.log('[A8:AUTOSAVE_ERROR]', { 
-        message: error.message, 
-        timestamp: new Date().toISOString() 
+      console.log('[A6:AUTOSAVE_SUCCESS]', { timestamp: new Date().toISOString() });
+    } catch (error) {
+      console.error('[A6:AUTOSAVE_ERROR]', error);
+      // Only show error toast for auto-save failures (no success toast)
+      toast({
+        title: "Error en guardado automático",
+        description: "No se pudieron guardar los cambios automáticamente",
+        variant: "destructive",
       });
     } finally {
       setAutoSaving(false);
-      setIsSavingMutex(false);
     }
-  }, [sesionesData, lastAutoSaveTime, saveSesiones, showRegenerateDialog, regenerationLoading, toast, saving, isSavingMutex]);
-
-  // Payload sanitizer to avoid size limits
-  const sanitizeUnidadForPayload = (unidad: any) => {
-    return {
-      id: unidad.id,
-      user_id: unidad.user_id,
-      titulo: unidad.titulo,                       // ej. Seguridad hídrica
-      area_curricular: unidad.area_curricular,
-      grado: unidad.grado,
-      numero_sesiones: unidad.numero_sesiones,
-      duracion_min: unidad.duracion_min,
-      proposito: unidad.proposito,
-      competencias_ids: unidad.competencias_ids,   // o array/cadenas
-      evidencias: unidad.evidencias,
-      diagnostico_text: unidad.diagnostico_text?.slice(0, 12000) || "", // subir límite sin romper payload
-      ia_recomendaciones: unidad.ia_recomendaciones || null,            // del A6 (JSON/string)
-      tema_transversal: unidad.tema_transversal || unidad.titulo || "",       // anchor temático
-    };
   };
 
-  const handleGenerateSessions = async () => {
-    if (!unidad || generationLoading) return;
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
-    const requestId = crypto.randomUUID();
-    setGenerationLoading(true);
-    setAutoSaveEnabled(false);
+  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    try {
-      const sanitizedUnidad = sanitizeUnidadForPayload(unidad);
-      const payloadSize = new TextEncoder().encode(JSON.stringify({ request_id: requestId, unidad_data: sanitizedUnidad })).length;
-      
-      setPayloadBytes(payloadSize);
-      setLastHttpStatus(null);
-      setLastNetworkError(null);
-
-      console.log('[A8:GEN_CONTEXT]', {
-        titulo: sanitizedUnidad.titulo,
-        tema_transversal: sanitizedUnidad.tema_transversal,
-        diag_len: sanitizedUnidad.diagnostico_text.length,
-        has_recs: !!sanitizedUnidad.ia_recomendaciones
-      });
-
-      console.log('[A8:GEN_PAYLOAD]', {
-        payload_size_bytes: payloadSize,
-        sanitized_fields: Object.keys(sanitizedUnidad)
-      });
-
-      console.log('[A8:GEN_REQUEST]', {
-        request_id: requestId,
-        endpoint: 'generate-session-structure',
-        unidad_id: unidad?.id,
-        payload_size_bytes: payloadSize,
-        titulo: unidad?.titulo,
-        area: unidad?.area_curricular,
-        prereq: { 
-          a6_completed: progress.a6_completed,
-          a7_completed: progress.a7_completed
-        }
-      });
-
-      const { data, error } = await supabase.functions.invoke('generate-session-structure', {
-        body: {
-          request_id: requestId,
-          unidad_data: sanitizedUnidad
-        }
-      });
-
-      console.log('[A8:GEN_RESPONSE]', {
-        request_id: requestId,
-        http_status: data ? 200 : (error ? 500 : 0),
-        success: data?.success || false,
-        sessions_count: data?.sessions?.length || 0,
-        preview: data?.sessions ? JSON.stringify(data.sessions).slice(0, 200) + '...' : null
-      });
-
-      setLastHttpStatus(data ? 200 : (error ? 500 : 0));
-
-      if (error) {
-        throw error;
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to generate sessions');
-      }
-
-      // Validate structure
-      if (!Array.isArray(data.sessions) || data.sessions.length === 0) {
-        console.log('[A8:GEN_INVALID]', { 
-          hasSessionsArray: Array.isArray(data.sessions),
-          sessionsLength: data.sessions?.length || 0
-        });
-        throw new Error('Estructura de sesiones inválida');
-      }
-
-      // Validate each session
-      for (const session of data.sessions) {
-        const hasContent = session.titulo || session.inicio || session.desarrollo || session.cierre;
-        const criteriaCount = session.rubrica_sesion?.criteria?.length || 0;
-        
-        if (!hasContent) {
-          throw new Error('Sesión sin contenido detectada');
-        }
-        
-        if (criteriaCount < 4 || criteriaCount > 8) {
-          throw new Error(`Sesión con criterios inválidos: ${criteriaCount} (debe ser 4-8)`);
-        }
-      }
-
-      console.log('[A8:GEN_VALID]', {
-        hasLevels: true,
-        hasCriteria: true,
-        hasTools: true,
-        sessions_count: data.sessions.length,
-        total_criteria: data.sessions.reduce((acc: number, s: any) => acc + (s.rubrica_sesion?.criteria?.length || 0), 0)
-      });
-
-      // Apply sessions data
-      setSesionesData(data.sessions.map((session: any, index: number) => ({
-        id: crypto.randomUUID(),
-        session_index: index + 1,
-        titulo: session.titulo || `Sesión ${index + 1}`,
-        inicio: session.inicio || '',
-        desarrollo: session.desarrollo || '',
-        cierre: session.cierre || '',
-        evidencias: session.evidencias || [],
-        rubrica_json: session.rubrica_sesion || { levels: ['Inicio', 'Proceso', 'Logro'], criteria: [] },
-        unidad_id: unidad.id,
-        user_id: unidad.user_id,
-        is_active: true,
-        estado: 'ABIERTO',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })));
-
-      setGenerationComplete(true);
+    // File validation
+    if (file.type !== 'application/pdf') {
       toast({
-        title: "Sesiones generadas",
-        description: "Las sesiones se han generado exitosamente",
+        title: "Error",
+        description: "Solo se permiten archivos PDF",
+        variant: "destructive",
       });
-
-    } catch (error: any) {
-      console.log('[A8:GEN_ERROR]', { 
-        request_id: requestId, 
-        message: error.message, 
-        code: error.code || 'UNKNOWN' 
-      });
-      
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        console.log('[A8:GEN_NETWORK_ERROR]', { message: error.message });
-        toast({
-          title: "Error de conectividad",
-          description: "No se pudo contactar la función de Edge (A8). Revise CORS/nombre/estado de despliegue.",
-          variant: "destructive",
-        });
-        setLastNetworkError(error.message);
-      } else {
-        console.log('[A8:GEN_ERROR]', { 
-          request_id: requestId, 
-          message: error.message, 
-          code: error.code || 'UNKNOWN',
-          http_status: lastHttpStatus 
-        });
-        
-        toast({
-          title: `Error en A8 (ID: ${requestId})`,
-          description: `${error.code || 'UNKNOWN_ERROR'} - ${error.message}`,
-          variant: "destructive",
-          duration: 7000 // 7 seconds to avoid interference
-        });
-      }
-    } finally {
-      setGenerationLoading(false);
-      setAutoSaveEnabled(true);
-    }
-  };
-
-  const handleRegenerateClick = () => {
-    console.log('[A8:REGEN_CLICK]', { timestamp: new Date().toISOString() });
-    setShowRegenerateDialog(true);
-    console.log('[A8:REGEN_CONFIRM_OPEN]', { timestamp: new Date().toISOString() });
-  };
-
-  const handleRegenerateSessions = async () => {
-    if (regenerationLoading) {
-      console.log('[A8:REGEN_GUARD]', { timestamp: new Date().toISOString() });
       return;
     }
 
-    const requestId = crypto.randomUUID();
-    setLastRequestId(requestId);
-    setRegenerationError(null);
-    setRegenerationLoading(true);
-    setAutoSaveEnabled(false);
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast({
+        title: "Error",
+        description: "El archivo PDF no puede exceder 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Check if there are changes but don't block regeneration
-    const existingHash = sesiones.length > 0 ? (sesiones[0] as any)?.source_hash : null;
-    const hasChanges = !existingHash || !unidadHash?.hash || existingHash !== unidadHash.hash;
-    
-    console.log('[A8:REGEN_CONFIRM]', { 
-      accepted: true, 
-      request_id: requestId
-    });
-    
-    console.log('[A8:REGEN_STATUS]', {
-      has_changes: hasChanges,
-      existing_hash: existingHash,
-      current_hash: unidadHash?.hash,
-      force_regeneration: true
-    });
-
-    console.log('[A8:REGEN_REQUEST]', {
-      request_id: requestId,
-      unidad_id: unidad?.id,
-      titulo: unidad?.titulo,
-      source_hash: unidadHash?.hash,
-      sessions_before: sesionesData.length
-    });
-    
     try {
-      // Sanitize payload for regeneration too
-      const sanitizedUnidad = sanitizeUnidadForPayload(unidad);
-      const payloadSize = new TextEncoder().encode(JSON.stringify({
-        request_id: requestId,
-        unidad_data: sanitizedUnidad,
-        force: true,
-        source_hash: unidadHash?.hash,
-        previous_sessions_ids: sesionesData.map(s => s.id)
-      })).length;
-      
-      console.log('[A8:REGEN_REQUEST]', {
-        request_id: requestId,
-        unidad_id: unidad?.id,
-        titulo: unidad?.titulo,
-        source_hash: unidadHash?.hash,
-        sessions_before: sesionesData.length,
-        criteria_before: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0),
-        previous_sessions_ids: sesionesData.map(s => s.id),
-        payload_size_bytes: payloadSize
+      setPdfUploading(true);
+
+      // Get current user ID for RLS compliance
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      // Generate unique file path with user_id as first folder for RLS compliance
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${timestamp}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      const filePath = `${user.id}/diagnosticos/${fileName}`;
+
+      // Upload to diagnosticos-pdf bucket
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('diagnosticos-pdf')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw new Error(`Error subiendo archivo: ${uploadError.message}`);
+      }
+
+      // Get public URL for the uploaded file
+      const { data: urlData } = supabase.storage
+        .from('diagnosticos-pdf')
+        .getPublicUrl(filePath);
+
+      // Update form data with PDF URL
+      handleInputChange('diagnostico_pdf_url', urlData.publicUrl);
+
+      toast({
+        title: "PDF subido exitosamente",
+        description: "Extrayendo texto automáticamente...",
       });
 
-      setPayloadBytes(payloadSize);
-      setLastHttpStatus(null);
-      setLastNetworkError(null);
+      // Start text extraction
+      setPdfExtracting(true);
 
-      const { data, error } = await supabase.functions.invoke('generate-session-structure', {
-        body: {
-          request_id: requestId,
-          unidad_data: sanitizedUnidad,
-          force: true,
-          source_hash: unidadHash?.hash,
-          previous_sessions_ids: sesionesData.map(s => s.id)
-        }
+      const { data: extractData, error: extractError } = await supabase.functions.invoke('extract-diagnostico-text', {
+        body: { file_path: filePath }
       });
 
-      // Log response immediately after invocation
-      console.log('[A8:REGEN_RESPONSE]', {
-        request_id: requestId,
-        http_status: data ? 200 : (error ? 500 : 0),
-        success: !!data?.success,
-        sessions_count: data?.sessions?.length || 0,
-        preview: data?.sessions ? JSON.stringify(data.sessions).slice(0, 200) + '…' : null
-      });
+      if (extractError) {
+        console.error('Extract error:', extractError);
+        throw new Error(`Error extrayendo texto: ${extractError.message}`);
+      }
 
-      setLastHttpStatus(data ? 200 : (error ? 500 : 0));
-
-      if (error) {
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-          console.log('[A8:REGEN_NETWORK_ERROR]', { 
-            request_id: requestId, 
-            message: error.message 
+      if (extractData.success && extractData.text) {
+        const extractedText = extractData.text.trim();
+        
+        if (extractedText.length > 100) {
+          // Store PDF text separately, don't populate textarea
+          setExtractedPdfText(extractedText);
+          
+          toast({
+            title: "PDF procesado exitosamente",
+            description: `Texto extraído (${extractedText.length} caracteres). ${formData.diagnostico_text?.trim() ? 'Se combinará con su texto adicional.' : 'Puede agregar información adicional en el campo de texto.'}`,
           });
-          setLastNetworkError(error.message);
+          
+          // Telemetry event for successful extraction
+          console.log('A6 PDF Text Extracted Successfully', {
+            event: 'a6_pdf_text_extracted_ok',
+            file_size: file.size,
+            text_length: extractedText.length,
+            timestamp: new Date().toISOString()
+          });
+          
+        } else {
+          toast({
+            title: "Texto extraído parcialmente",
+            description: "Se extrajo poco texto del PDF. Por favor, ingrese el texto manualmente en el campo de abajo.",
+            variant: "destructive",
+          });
+          
+          // Telemetry event for partial extraction
+          console.log('A6 PDF Text Extraction Partial', {
+            event: 'a6_pdf_text_extracted_partial',
+            file_size: file.size,
+            text_length: extractedText.length,
+            timestamp: new Date().toISOString()
+          });
         }
-        throw error;
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to regenerate sessions');
-      }
-
-      if (data.success && data.sessions) {
-        // Enhanced validation for regeneration
-        const hasValidSessions = Array.isArray(data.sessions) && data.sessions.length > 0;
-        const allSessionsHaveContent = data.sessions.every((session: any) => 
-          session.titulo || session.inicio || session.desarrollo || session.cierre
-        );
-        const allSessionsHaveValidRubric = data.sessions.every((session: any) => 
-          session.rubrica_sesion?.criteria && 
-          Array.isArray(session.rubrica_sesion.criteria) &&
-          session.rubrica_sesion.criteria.length >= 2 && 
-          session.rubrica_sesion.criteria.length <= 8
-        );
-
-        if (!hasValidSessions || !allSessionsHaveContent || !allSessionsHaveValidRubric) {
-          throw new Error('Estructura de sesiones inválida');
-        }
-
-        const regeneratedSessions = data.sessions.map((session: any, index: number) => ({
-          id: crypto.randomUUID(),
-          unidad_id: unidad.id,
-          user_id: unidad.user_id,
-          session_index: index + 1,
-          titulo: session.titulo || `Sesión ${index + 1}`,
-          inicio: session.inicio || '',
-          desarrollo: session.desarrollo || '',
-          cierre: session.cierre || '',
-          evidencias: session.evidencias || [],
-          rubrica_json: session.rubrica_sesion || { criteria: [] },
-          source_hash: unidadHash?.hash,
-          source_snapshot: unidadHash?.snapshot,
-          regenerated_at: new Date().toISOString(),
-          needs_review: false,
-          estado: 'BORRADOR' as const,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }));
-        
-        setSesionesData(regeneratedSessions);
-        setGenerationComplete(true);
-        
-        console.log('[A8:REGEN_APPLY]', {
-          request_id: requestId,
-          sessions_after: regeneratedSessions.length,
-          criteria_after: regeneratedSessions.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0)
-        });
-
-        // Silent save with new hash/snapshot
-        await saveSesiones(regeneratedSessions);
-        console.log('[A8:REGEN_SAVE]', { request_id: requestId, silent: true });
-        
-        // Success - close modal and update
-        setShowRegenerateDialog(false);
-        setLastGenerationTime(Date.now());
-        console.log('[A8:REGEN_SUCCESS]', {
-          request_id: requestId,
-          sessions_updated: data.sessions.length,
-          criteria_updated: data.sessions.reduce((acc: number, s: any) => acc + (s?.rubrica_sesion?.criteria?.length || 0), 0)
-        });
-
-        toast({
-          title: "Sesiones regeneradas",
-          description: "Las sesiones se han regenerado con nuevos enfoques y estrategias",
-          duration: 5000
-        });
       } else {
-        throw new Error(data.error || 'Error en la regeneración');
+        throw new Error(extractData.error || 'No se pudo extraer texto del PDF');
       }
+
+      // Telemetry event for successful PDF upload
+      console.log('A6 PDF Uploaded Successfully', {
+        event: 'a6_pdf_uploaded',
+        file_size: file.size,
+        file_name: fileName,
+        timestamp: new Date().toISOString()
+      });
 
     } catch (error: any) {
-      console.log('[A8:REGEN_ERROR]', { 
-        request_id: requestId, 
-        message: error?.message || 'UNKNOWN', 
-        code: error?.code || 'UNKNOWN' 
-      });
+      console.error('PDF upload/extract error:', error);
       
-      // Set error state for banner display - DON'T close modal
-      setRegenerationError({
-        requestId,
-        message: error?.message || 'Error desconocido durante la regeneración',
-        code: error?.code || 'UNKNOWN'
+      // Telemetry event for failed extraction
+      console.log('A6 PDF Processing Failed', {
+        event: 'a6_pdf_text_extracted_fail',
+        error: error.message,
+        file_size: file?.size || 0,
+        timestamp: new Date().toISOString()
       });
-      
-      // Don't show toast, banner will be shown in modal
+
+      toast({
+        title: "Error procesando PDF",
+        description: `${error.message}. Por favor, ingrese el texto manualmente.`,
+        variant: "destructive",
+      });
     } finally {
-      setRegenerationLoading(false);
-      setAutoSaveEnabled(true);
-      // Only close modal on success (moved to success block)
+      setPdfUploading(false);
+      setPdfExtracting(false);
+      
+      // Reset file input
+      const input = document.getElementById('pdf-upload') as HTMLInputElement;
+      if (input) input.value = '';
     }
   };
 
-  const updateSession = (index: number, field: keyof SesionClase, value: any) => {
-    setSesionesData(prev => 
-      prev.map((sesion, i) => 
-        i === index 
-          ? { ...sesion, [field]: value, updated_at: new Date().toISOString() }
-          : sesion
-      )
-    );
-  };
-
-  const addEvidence = (sessionIndex: number, evidence: string) => {
-    if (!evidence.trim()) return;
+  const handleAnalyzeCoherence = async () => {
+    // Combine PDF text and manual text for comprehensive analysis
+    const combinedText = getCombinedDiagnosticText();
     
-    setSesionesData(prev =>
-      prev.map((sesion, i) =>
-        i === sessionIndex
-          ? { 
-              ...sesion, 
-              evidencias: [...sesion.evidencias, evidence.trim()],
-              updated_at: new Date().toISOString()
-            }
-          : sesion
-      )
-    );
-  };
+    if (!combinedText || combinedText.length < 300) {
+      const hasText = formData.diagnostico_text?.trim();
+      const hasPdf = extractedPdfText;
+      let description = "El diagnóstico debe tener al menos 300 caracteres";
+      
+      if (!hasText && !hasPdf) {
+        description = "Suba un PDF o escriba al menos 300 caracteres en el campo de diagnóstico";
+      } else if (hasText && !hasPdf) {
+        description = "El texto del diagnóstico debe tener al menos 300 caracteres";
+      } else if (!hasText && hasPdf) {
+        description = "El PDF debe contener al menos 300 caracteres de texto";
+      }
+      
+      toast({
+        title: "Texto insuficiente",
+        description,
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const removeEvidence = (sessionIndex: number, evidenceIndex: number) => {
-    setSesionesData(prev =>
-      prev.map((sesion, i) =>
-        i === sessionIndex
-          ? { 
-              ...sesion, 
-              evidencias: sesion.evidencias.filter((_, ei) => ei !== evidenceIndex),
-              updated_at: new Date().toISOString()
-            }
-          : sesion
-      )
-    );
-  };
+    if (!isFormValid()) {
+      const missingFields = getMissingFields();
+      toast({
+        title: "Campos requeridos faltantes",
+        description: `Complete los siguientes campos: ${missingFields.join(', ')}`,
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const addRubricCriterion = (sessionIndex: number, criterion: string) => {
-    if (!criterion.trim()) return;
-    
-    setSesionesData(prev =>
-      prev.map((sesion, i) =>
-        i === sessionIndex
-          ? { 
-              ...sesion, 
-              rubrica_json: {
-                ...sesion.rubrica_json,
-                criteria: [...sesion.rubrica_json.criteria, criterion.trim()]
-              },
-              updated_at: new Date().toISOString()
-            }
-          : sesion
-      )
-    );
-  };
+    // Truncate combined text if too long (max ~15000 chars to stay under token limit)
+    const truncatedText = combinedText.length > 15000 
+      ? combinedText.substring(0, 15000) + '...[texto truncado para análisis]'
+      : combinedText;
 
-  const removeRubricCriterion = (sessionIndex: number, criterionIndex: number) => {
-    setSesionesData(prev =>
-      prev.map((sesion, i) =>
-        i === sessionIndex
-          ? { 
-              ...sesion, 
-              rubrica_json: {
-                ...sesion.rubrica_json,
-                criteria: sesion.rubrica_json.criteria.filter((_, ci) => ci !== criterionIndex)
-              },
-              updated_at: new Date().toISOString()
-            }
-          : sesion
-      )
-    );
+    const requestId = crypto.randomUUID();
+    console.log('[A6:AI_REQUEST]', {
+      request_id: requestId,
+      chars_pdf: extractedPdfText?.length || 0,
+      chars_manual: formData.diagnostico_text?.length || 0,
+      chars_combined: combinedText.length,
+      chars_truncated: truncatedText.length,
+      source: extractedPdfText && formData.diagnostico_text?.trim() ? 'PDF+Manual' 
+            : extractedPdfText ? 'PDF' : 'Manual',
+      titulo: formData.titulo,
+      area: formData.area_curricular,
+      grado: formData.grado,
+      sesiones: formData.numero_sesiones,
+      duracion_min: formData.duracion_min
+    });
+
+    try {
+      setIsAnalyzing(true);
+
+      const { data, error } = await supabase.functions.invoke('analyze-unit-coherence', {
+        body: {
+          unidad_data: formData,
+          diagnostico_text: truncatedText
+        }
+      });
+
+      if (error) {
+        console.error('[A6:AI_ERROR]', { request_id: requestId, error });
+        throw error;
+      }
+
+      console.log('[A6:AI_RESPONSE]', {
+        request_id: requestId,
+        success: data?.success,
+        has_analysis: !!data?.analysis,
+        response_preview: JSON.stringify(data).substring(0, 200)
+      });
+
+      if (data.success && data.analysis) {
+        // Validate JSON structure
+        try {
+          JSON.parse(JSON.stringify(data.analysis));
+          const analysisString = JSON.stringify(data.analysis, null, 2);
+          
+          console.log('[A6:AI_VALID]', {
+            request_id: requestId,
+            analysis_preview: analysisString.substring(0, 200),
+            analysis_length: analysisString.length
+          });
+          
+          handleInputChange('ia_recomendaciones', analysisString);
+          
+          toast({
+            title: "Análisis completado",
+            description: "El análisis de coherencia se ha generado exitosamente usando todos los insumos disponibles",
+          });
+        } catch (jsonError) {
+          console.error('[A6:INVALID_JSON]', { request_id: requestId, jsonError });
+          throw new Error('Respuesta de IA con formato inválido');
+        }
+      } else {
+        throw new Error(data.error || 'Error en el análisis');
+      }
+
+    } catch (error: any) {
+      console.error('[A6:AI_FINAL_ERROR]', { request_id: requestId, error: error.message });
+      toast({
+        title: "Error en el análisis",
+        description: "No se pudo completar el análisis. Intente nuevamente o continúe editando manualmente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleSave = async () => {
+    console.log('[A6:SAVE]', { 
+      silent: false, 
+      payloadKeys: Object.keys(formData), 
+      estadoBefore: unidad?.estado 
+    });
+    
     try {
-      console.log('[A8:SAVE]', { 
-        items: { 
-          sessions: sesionesData.length, 
-          criteria: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0) 
-        }, 
-        is_closed: false, 
-        timestamp: new Date().toISOString() 
+      await saveUnidad({
+        titulo: formData.titulo,
+        area_curricular: formData.area_curricular,
+        grado: formData.grado,
+        numero_sesiones: formData.numero_sesiones,
+        duracion_min: formData.duracion_min,
+        proposito: formData.proposito,
+        evidencias: formData.evidencias,
+        diagnostico_text: formData.diagnostico_text,
+        diagnostico_pdf_url: formData.diagnostico_pdf_url,
+        ia_recomendaciones: formData.ia_recomendaciones,
+        competencias_ids: formData.competencias_ids,
       });
       
-      await saveSesiones(sesionesData);
+      toast({
+        title: "Unidad guardada",
+        description: "La unidad de aprendizaje se ha guardado exitosamente",
+      });
     } catch (error) {
-      console.error('Save error:', error);
+      console.error('[A6:SAVE_ERROR]', error);
+      toast({
+        title: "Error al guardar",
+        description: "No se pudo guardar la unidad",
+        variant: "destructive",
+      });
     }
   };
 
   const handleClose = async () => {
-    console.log('Closing A8...');
-    
-    // Validate sessions before closing
-    const validSessions = sesionesData.filter(sesion => 
-      sesion.titulo && sesion.titulo.trim().length > 0
-    );
-    
-    if (validSessions.length === 0) {
+    if (!isFormValid()) {
       toast({
-        title: "Error",
-        description: "Debe tener al menos una sesión válida para cerrar",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Save current state first
-    const success = await saveSesiones(sesionesData);
-    if (!success) {
-      toast({
-        title: "Error",
-        description: "Error al guardar las sesiones antes de cerrar",
+        title: "Formulario incompleto",
+        description: "Debe completar todos los campos requeridos antes de cerrar",
         variant: "destructive",
       });
       return;
     }
 
-    // Close the accelerator
+    console.log('[A6:CLOSE]', { 
+      newEstado: 'CERRADO', 
+      closed_at: true,
+      formValid: isFormValid(),
+      analysisComplete
+    });
+
     try {
+      await handleSave();
       await closeAccelerator('A8');
+      
       toast({
-        title: "Acelerador cerrado",
-        description: "A8 cerrado correctamente",
+        title: "A8 cerrado exitosamente",
+        description: "La unidad está lista. Ahora puede continuar a A9.",
       });
     } catch (error) {
+      console.error('[A8:CLOSE_ERROR]', error);
       toast({
-        title: "Error",
-        description: "Error al cerrar el acelerador",
+        title: "Error al cerrar",
+        description: "No se pudo cerrar A8",
         variant: "destructive",
       });
     }
   };
 
   const handleReopen = async () => {
-    console.log('Reopening A8...');
+    console.log('[A6:REOPEN]', { 
+      estadoBefore: unidad?.estado,
+      newEstado: 'BORRADOR', 
+      closed_at: null 
+    });
     
-    // Update sessions to draft state
-    const updatedSesiones = sesionesData.map(sesion => ({
-      ...sesion,
-      estado: 'BORRADOR' as const,
-      closed_at: null
-    }));
-    
-    setSesionesData(updatedSesiones);
-    
-    // Save the updated state
-    const success = await saveSesiones(updatedSesiones);
-    if (!success) {
-      toast({
-        title: "Error",
-        description: "Error al reabrir las sesiones",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Also reopen the accelerator in the database
     try {
-      await supabase
-        .from('unidades_aprendizaje')
-        .update({ 
-          estado: 'BORRADOR',
-          closed_at: null
-        })
-        .eq('id', unidad?.id)
-        .eq('user_id', unidad?.user_id);
+      await saveUnidad({
+        ...formData,
+        estado: 'BORRADOR',
+        closed_at: null
+      });
       
       toast({
-        title: "Acelerador reabierto",
-        description: "Sesiones reabiertas para edición",
+        title: "A6 reabierto exitosamente",
+        description: "La unidad se ha reabierto para edición. A7 y A8 requerirán revisión.",
       });
+      
       setShowReopenDialog(false);
     } catch (error) {
-      console.error('Error reopening accelerator:', error);
+      console.error('[A6:REOPEN_ERROR]', error);
       toast({
-        title: "Error",
-        description: "Error al reabrir el acelerador",
+        title: "Error al reabrir",
+        description: "No se pudo reabrir la unidad",
         variant: "destructive",
       });
     }
   };
 
-  // Enhanced Debug and State Exposure
+  // JSON validation check
   useEffect(() => {
-    const debugData = {
-      isClosed: areSessionsClosed,
-      generationLoading,
-      regenLoading: regenerationLoading,
-      autoSaving,
-      saving,
-      sessionsCount: sesionesData.length,
-      criteriaTotal: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0),
-      lastAutoSaveAt: lastAutoSaveTime ? new Date(lastAutoSaveTime).toISOString() : null,
-      unidadId: unidad?.id || null,
-      autoSaveEnabled,
-      formValid,
-      // Connectivity debug
-      pingOk,
-      functionName: 'generate-session-structure',
-      corsOkGuess: pingOk === true,
-      lastHttpStatus,
-      lastNetworkError,
-      payloadBytes
-    };
-
-    (window as any).__A8_DEBUG = debugData;
-
-    const diagnosticData = {
-      // Core state variables
-      isClosed: areSessionsClosed,
-      formValid,
-      analysisComplete,
-      hasSesiones,
-      canProceedToNext: false, // A8 is final
-      canAccessA8,
-      
-      // Progress flags
-      progress: {
-        a6_completed: progress.a6_completed,
-        a7_completed: progress.a7_completed,
-        a8_completed: progress.a8_completed,
-        overall_progress: progress.overall_progress
-      },
-      
-      // Unit state
-      unidadEstado: unidad?.estado || 'N/A',
-      
-      // Sessions details
-      sesionesCount: sesionesData.length,
-      expectedSesiones: unidad?.numero_sesiones || 0,
-      sesionesWithContent: sesionesData.filter(s => 
-        s.titulo.trim() || s.inicio.trim() || s.desarrollo.trim() || s.cierre.trim()
-      ).length,
-      
-      // Generation state
-      generationLoading,
-      regenerationLoading,
-      generationComplete,
-      autoSaving,
-      saving,
-      
-      counts: {
-        criterios: sesionesData.reduce((acc, s) => acc + s.rubrica_json.criteria.length, 0),
-        niveles: 3, // Standard evaluation levels
-        tools: sesionesData.length
+    if (formData.ia_recomendaciones) {
+      try { 
+        JSON.parse(formData.ia_recomendaciones);
+        console.log('[A6:JSON_VALID]', { length: formData.ia_recomendaciones.length });
+      } catch(e) { 
+        console.error('[A6:INVALID_JSON]', e, { preview: formData.ia_recomendaciones.substring(0, 100) });
       }
-    };
-    
-    console.log('[A8:DIAGNOSTIC]', diagnosticData);
+    }
+  }, [formData.ia_recomendaciones]);
 
-    // Button visibility logging
-    const buttonStates = {
-      generateVisible: !generationComplete && !areSessionsClosed,
-      regenerateVisible: generationComplete && !areSessionsClosed && sesionesData.length > 0,
-      saveVisible: !areSessionsClosed && formValid,
-      closeVisible: !areSessionsClosed && formValid,
-      continueVisible: false // A8 is final
-    };
+  // Helper function to parse IA recommendations
+  const parseIARecommendations = (iaRecommendations: string): string[] | null => {
+    if (!iaRecommendations) return null;
     
-    console.log('[A8:BUTTONS]', buttonStates);
-  }, [
-    areSessionsClosed, formValid, analysisComplete, hasSesiones, canAccessA8,
-    progress, unidad?.estado, sesionesData, unidad?.numero_sesiones,
-    generationLoading, regenerationLoading, generationComplete, autoSaving, saving, 
-    showReopenDialog, lastAutoSaveTime, autoSaveEnabled,
-    pingOk, lastHttpStatus, lastNetworkError, payloadBytes
-  ]);
+    try {
+      const parsed = JSON.parse(iaRecommendations);
+      if (parsed.ajustes_sugeridos_unidad && Array.isArray(parsed.ajustes_sugeridos_unidad)) {
+        return parsed.ajustes_sugeridos_unidad;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Debug logging for A6 runtime state (UI conditions)
+  console.log('[A6:UI]', {
+    isClosed,
+    diagnosticoLength: formData.diagnostico_text?.length || 0,
+    hasRecs: !!formData.ia_recomendaciones,
+    formValid: isFormValid(),
+    unidadEstado: unidad?.estado,
+    progress,
+    analysisComplete,
+    autoSaving,
+    lastAutoSaveAt: new Date(lastAutoSaveAt).toLocaleTimeString(),
+    canProceedToA9
+  });
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Cargando Acelerador 8...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!canAccessA8) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Acceso Restringido</h2>
-          <p className="text-muted-foreground mb-6">
-            Debe completar los Aceleradores 6 y 7 antes de acceder al Acelerador 8
-          </p>
-          <Button onClick={() => navigate('/etapa3')}>
-            Volver a Etapa 3
-          </Button>
+          <p className="text-muted-foreground">Cargando Acelerador 6...</p>
         </div>
       </div>
     );
@@ -881,7 +597,7 @@ export default function Acelerador8() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -890,386 +606,573 @@ export default function Acelerador8() {
               Volver a Etapa 3
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Acelerador 8</h1>
-              <p className="text-muted-foreground">Diseño de Sesiones</p>
+              <h1 className="text-2xl font-bold text-foreground">Acelerador 6</h1>
+              <p className="text-muted-foreground">Diseño de Unidad de Aprendizaje</p>
             </div>
           </div>
 
-            <div className="flex items-center gap-3">
-              {progress.a7_completed && sesionesData.length > 0 && (
-                <Button 
-                  onClick={() => navigate('/etapa3/acelerador8/visor')}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Ver documento completo
-                </Button>
-              )}
-              {autoSaving && (
-                <Badge variant="outline" className="gap-2">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b border-muted-foreground"></div>
-                  Guardando...
-                </Badge>
-              )}
-              {areSessionsClosed && (
-                <Badge variant="default" className="gap-2">
-                  <Lock className="h-4 w-4" />
-                  Cerrado
-                </Badge>
-              )}
-              {areSessionsClosed ? (
-                <Button onClick={() => setShowReopenDialog(true)} variant="outline">
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Editar
-                </Button>
-              ) : (
-                <>
-                  <Button onClick={handleSave} disabled={saving || autoSaving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {saving ? "Guardando..." : "Guardar"}
-                  </Button>
-                  
-                  {progress.a7_completed && sesionesData.length > 0 && (
-                    <Button
-                      onClick={() => navigate('/etapa3/acelerador8/visor')}
-                      variant="outline"
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Ver Documento Completo
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
+          <div className="flex items-center gap-3">
+            {autoSaving && (
+              <Badge variant="outline" className="gap-2">
+                <div className="animate-spin rounded-full h-3 w-3 border-b border-muted-foreground"></div>
+                Guardando...
+              </Badge>
+            )}
+            {isClosed && (
+              <Badge variant="default" className="gap-2">
+                <Lock className="h-4 w-4" />
+                Cerrado
+              </Badge>
+            )}
+            {isClosed ? (
+              <Button onClick={() => setShowReopenDialog(true)} variant="outline">
+                <Edit3 className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            ) : (
+              <Button onClick={handleSave} disabled={saving || autoSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Guardando..." : "Guardar"}
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Unit Context */}
-        {unidad && (
-          <Card className="mb-6">
+        {/* Progress Stepper */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              {/* Step 1 - Basic Info */}
+              <div className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  formData.titulo && formData.area_curricular 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  1
+                </div>
+                <span className="ml-2 text-sm font-medium">Información Básica</span>
+              </div>
+              
+              {/* Connector */}
+              <div className="w-8 h-px bg-border" />
+              
+               {/* Step 2 - Diagnosis */}
+               <div className="flex items-center">
+                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                   getTotalDiagnosticCharacters() >= 300
+                     ? 'bg-primary text-primary-foreground' 
+                     : 'bg-muted text-muted-foreground'
+                 }`}>
+                   2
+                 </div>
+                 <span className="ml-2 text-sm font-medium">
+                   Diagnóstico ({getTotalDiagnosticCharacters()} caracteres)
+                 </span>
+               </div>
+              
+              {/* Connector */}
+              <div className="w-8 h-px bg-border" />
+              
+              {/* Step 3 - AI Analysis */}
+              <div className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  analysisComplete 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  3
+                </div>
+                <span className="ml-2 text-sm font-medium">Análisis IA</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Form */}
+        <div className="grid gap-6">
+          
+          {/* Basic Information */}
+          <Card>
             <CardHeader>
-              <CardTitle>Contexto de la Unidad</CardTitle>
+              <CardTitle>Información Básica</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <span className="font-medium">Título:</span> {unidad.titulo}
+                  <Label htmlFor="titulo">Título de la Unidad *</Label>
+                  <Input
+                    id="titulo"
+                    value={formData.titulo}
+                    onChange={(e) => handleInputChange('titulo', e.target.value)}
+                    placeholder="Ingrese el título de la unidad"
+                    disabled={isClosed}
+                  />
                 </div>
                 <div>
-                  <span className="font-medium">Sesiones:</span> {unidad.numero_sesiones}
+                  <Label htmlFor="area">Área Curricular *</Label>
+                  <Select
+                    value={formData.area_curricular}
+                    onValueChange={(value) => {
+                      handleInputChange('area_curricular', value);
+                      // Reset competencias when area changes
+                      handleInputChange('competencias_ids', []);
+                    }}
+                    disabled={isClosed}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione el área" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AREAS_CURRICULARES.map(area => (
+                        <SelectItem key={area} value={area}>{area}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="grado">Grado *</Label>
+                  <Select
+                    value={formData.grado}
+                    onValueChange={(value) => handleInputChange('grado', value)}
+                    disabled={isClosed}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione el grado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GRADOS.map(grado => (
+                        <SelectItem key={grado} value={grado}>{grado}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <span className="font-medium">Duración:</span> {unidad.duracion_min} min
+                  <Label htmlFor="sesiones">N° de Sesiones *</Label>
+                  <Input
+                    id="sesiones"
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={formData.numero_sesiones}
+                    onChange={(e) => handleInputChange('numero_sesiones', parseInt(e.target.value))}
+                    disabled={isClosed}
+                  />
                 </div>
                 <div>
-                  <span className="font-medium">Área:</span> {unidad.area_curricular}
+                  <Label htmlFor="duracion">Duración (minutos) *</Label>
+                  <Input
+                    id="duracion"
+                    type="number"
+                    min={30}
+                    max={120}
+                    value={formData.duracion_min}
+                    onChange={(e) => handleInputChange('duracion_min', parseInt(e.target.value))}
+                    disabled={isClosed}
+                  />
                 </div>
+              </div>
+
+              {/* CNEB Competencies Multi-Select */}
+              <div className="col-span-2">
+                <CompetenciasMultiSelect
+                  areaCurricular={formData.area_curricular}
+                  selectedCompetencias={formData.competencias_ids}
+                  onCompetenciasChange={(competencias) => 
+                    handleInputChange('competencias_ids', competencias)
+                  }
+                  disabled={isClosed}
+                  maxCompetencias={2}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="proposito">Propósito de la Unidad *</Label>
+                <Textarea
+                  id="proposito"
+                  value={formData.proposito}
+                  onChange={(e) => handleInputChange('proposito', e.target.value)}
+                  placeholder="Describa el propósito de esta unidad de aprendizaje"
+                  className="min-h-[100px]"
+                  disabled={isClosed}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="evidencias">Evidencias de Aprendizaje *</Label>
+                <Textarea
+                  id="evidencias"
+                  value={formData.evidencias}
+                  onChange={(e) => handleInputChange('evidencias', e.target.value)}
+                  placeholder="Describa las evidencias que demostrarán el aprendizaje de los estudiantes"
+                  className="min-h-[80px]"
+                  disabled={isClosed}
+                />
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Generation Section */}
-        {!generationComplete && !areSessionsClosed && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                {/* Connectivity warning */}
-                {pingOk === false && (
-                  <div className="bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded-lg text-sm">
-                    ⚠️ Conectividad con funciones no disponible
+          {/* Diagnosis Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Diagnóstico Pedagógico</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!formData.diagnostico_pdf_url && (
+                <div>
+                  <Label>Subir PDF de Diagnóstico (opcional)</Label>
+                  <div className="mt-2">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handlePdfUpload}
+                      className="hidden"
+                      id="pdf-upload"
+                      disabled={isClosed || pdfUploading}
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={() => document.getElementById('pdf-upload')?.click()}
+                      disabled={isClosed || pdfUploading}
+                      className="w-full"
+                    >
+                      {pdfUploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                          {pdfExtracting ? "Extrayendo texto..." : "Subiendo PDF..."}
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Seleccionar PDF
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Máximo 5MB. El texto se extraerá automáticamente.
+                    </p>
                   </div>
-                )}
+                </div>
+              )}
 
-                <div className="text-center">
-                  <p className="text-muted-foreground mb-4">
-                    Genere sugerencias de sesiones basadas en su unidad de aprendizaje
-                  </p>
+              {formData.diagnostico_pdf_url && (
+                <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <div>
+                      <p className="text-sm font-medium">PDF procesado exitosamente</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formData.diagnostico_pdf_url.split('/').pop()?.substring(0, 50)}...
+                      </p>
+                    </div>
+                  </div>
+                   <Button 
+                     variant="ghost" 
+                     size="sm"
+                     onClick={() => {
+                       handleInputChange('diagnostico_pdf_url', '');
+                       handleInputChange('diagnostico_text', '');
+                       setExtractedPdfText(''); // Clear PDF text too
+                     }}
+                     disabled={isClosed}
+                   >
+                     Eliminar
+                   </Button>
+                </div>
+              )}
+
+               <div>
+                 <Label htmlFor="diagnostico">
+                   Información Adicional del Diagnóstico
+                   {extractedPdfText && (
+                     <span className="text-sm text-muted-foreground ml-2">
+                       (Complementa el PDF cargado - {extractedPdfText.length} caracteres)
+                     </span>
+                   )}
+                 </Label>
+                 <Textarea
+                   id="diagnostico"
+                   value={formData.diagnostico_text}
+                   onChange={(e) => handleInputChange('diagnostico_text', e.target.value)}
+                   placeholder={
+                     extractedPdfText 
+                       ? "Agregue información adicional que complemente el PDF: contexto específico, observaciones recientes, detalles particulares del grupo, etc."
+                       : "Pegue aquí el texto del diagnóstico pedagógico o escriba un resumen detallado (mínimo 300 caracteres)..."
+                   }
+                   className="min-h-[120px]"
+                   disabled={isClosed}
+                 />
+                 <div className="flex justify-between items-center mt-1">
+                   <p className="text-sm text-muted-foreground">
+                     Total disponible para análisis: {getTotalDiagnosticCharacters()} caracteres
+                     {getTotalDiagnosticCharacters() < 300 && (
+                       <span className="text-orange-600"> (mínimo 300 requeridos)</span>
+                     )}
+                   </p>
+                   {(extractedPdfText || formData.diagnostico_text?.trim()) && (
+                     <span className="text-xs text-muted-foreground">
+                       {extractedPdfText && formData.diagnostico_text?.trim() 
+                         ? `PDF: ${extractedPdfText.length} + Manual: ${formData.diagnostico_text.length}`
+                         : extractedPdfText 
+                           ? `Solo PDF: ${extractedPdfText.length}` 
+                           : `Solo Manual: ${formData.diagnostico_text.length}`
+                       }
+                     </span>
+                   )}
+                 </div>
+               </div>
+
+                {/* Show analysis button if we have enough combined text */}
+                {getTotalDiagnosticCharacters() >= 300 && !isClosed && (
                   <Button 
-                    onClick={handleGenerateSessions}
-                    disabled={generationLoading || regenerationLoading || !unidad}
-                    aria-busy={generationLoading || regenerationLoading}
-                    size="lg"
+                    onClick={handleAnalyzeCoherence}
+                    disabled={isAnalyzing || !isFormValid()}
+                    className="w-full"
                   >
-                    {generationLoading ? (
+                    {isAnalyzing ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Generando sesiones...
+                        Analizando coherencia...
                       </>
                     ) : (
                       <>
                         <Bot className="h-4 w-4 mr-2" />
-                        Generar Sesiones con IA
+                        {extractedPdfText && formData.diagnostico_text?.trim() 
+                          ? 'Analizar Coherencia (PDF + Información Adicional)'
+                          : extractedPdfText 
+                            ? 'Analizar Coherencia con PDF' 
+                            : 'Analizar Coherencia con IA'
+                        }
                       </>
                     )}
                   </Button>
+                )}
+
+                {/* Show missing fields warning if form is invalid but we have diagnosis text */}
+                {getTotalDiagnosticCharacters() >= 300 && !isClosed && !isFormValid() && (
+                  <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-orange-800">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="text-sm font-medium">Campos requeridos faltantes</span>
+                    </div>
+                    <p className="text-sm text-orange-700 mt-1">
+                      Complete los siguientes campos para activar el análisis: {getMissingFields().join(', ')}
+                    </p>
+                  </div>
+                )}
+
+              {formData.ia_recomendaciones && (
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <p className="font-medium text-green-800 dark:text-green-200">
+                      Análisis de Coherencia Completado
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <Label>Recomendaciones de IA</Label>
+                    {(() => {
+                      if (!formData.ia_recomendaciones) {
+                        return (
+                          <Textarea
+                            value="No se generaron recomendaciones"
+                            onChange={(e) => handleInputChange('ia_recomendaciones', e.target.value)}
+                            className="min-h-[150px] mt-2"
+                            disabled={isClosed}
+                            placeholder="Las recomendaciones aparecerán aquí después del análisis..."
+                          />
+                        );
+                      }
+
+                      try {
+                        const parsed = JSON.parse(formData.ia_recomendaciones);
+                        
+                        if (parsed.recomendaciones && Array.isArray(parsed.recomendaciones) && parsed.recomendaciones.length > 0) {
+                          return (
+                            <div className="mt-2 space-y-4">
+                              <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                                <div className="text-sm font-medium mb-2">
+                                  Coherencia Global: {parsed.coherencia_global}%
+                                </div>
+                                {parsed.hallazgos_clave && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {parsed.hallazgos_clave.length} hallazgos identificados
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="space-y-3">
+                                {parsed.recomendaciones.map((rec: any, index: number) => (
+                                  <div key={index} className="border rounded-lg p-4 bg-card">
+                                    <div className="flex items-start justify-between mb-3">
+                                      <h4 className="font-medium text-sm flex-1">{rec.titulo}</h4>
+                                      <div className="flex gap-2 ml-3">
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                          rec.impacto === 'alto' ? 'bg-green-100 text-green-800' :
+                                          rec.impacto === 'medio' ? 'bg-yellow-100 text-yellow-800' :
+                                          'bg-gray-100 text-gray-800'
+                                        }`}>
+                                          Impacto: {rec.impacto}
+                                        </span>
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                          rec.esfuerzo === 'alto' ? 'bg-red-100 text-red-800' :
+                                          rec.esfuerzo === 'medio' ? 'bg-yellow-100 text-yellow-800' :
+                                          'bg-green-100 text-green-800'
+                                        }`}>
+                                          Esfuerzo: {rec.esfuerzo}
+                                        </span>
+                                        {rec.requiere_dato_faltante && (
+                                          <span className="px-2 py-1 rounded text-xs bg-orange-100 text-orange-800">
+                                            ⚠️ Requiere datos
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    {rec.vinculo_diagnostico?.cita && (
+                                      <div className="text-xs text-muted-foreground mb-3 italic">
+                                        "Vinculado a: {rec.vinculo_diagnostico.cita}"
+                                      </div>
+                                    )}
+                                    
+                                    <div className="space-y-3 text-sm">
+                                      {rec.por_que && (
+                                        <div>
+                                          <span className="font-medium">Por qué:</span> {rec.por_que}
+                                        </div>
+                                      )}
+                                      
+                                      {rec.como && Array.isArray(rec.como) && (
+                                        <div>
+                                          <span className="font-medium">Cómo:</span>
+                                          <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
+                                            {rec.como.map((step: string, stepIndex: number) => (
+                                              <li key={stepIndex}>{step}</li>
+                                            ))}
+                                          </ol>
+                                        </div>
+                                      )}
+                                      
+                                      {rec.ejemplo_actividad && (
+                                        <div>
+                                          <span className="font-medium">Ejemplo:</span> {rec.ejemplo_actividad.nombre}
+                                          <div className="ml-4 mt-1 text-xs text-muted-foreground">
+                                            {rec.ejemplo_actividad.descripcion}
+                                            {rec.ejemplo_actividad.duracion_min && (
+                                              <span className="block mt-1">Duración: {rec.ejemplo_actividad.duracion_min} min</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                      
+                                      {rec.recursos && Array.isArray(rec.recursos) && (
+                                        <div>
+                                          <span className="font-medium">Recursos:</span> {rec.recursos.join(', ')}
+                                        </div>
+                                      )}
+                                      
+                                      {rec.tiempo_estimado && (
+                                        <div>
+                                          <span className="font-medium">Cuándo:</span> {rec.tiempo_estimado}
+                                        </div>
+                                      )}
+                                      
+                                      {rec.requiere_dato_faltante && rec.como_levantar_dato && (
+                                        <div className="bg-orange-50 p-2 rounded text-xs">
+                                          <span className="font-medium">⚠️ Cómo obtener el dato faltante:</span> {rec.como_levantar_dato}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                      } catch (e) {
+                        // Fall back to editable textarea for invalid JSON
+                      }
+                      
+                      return (
+                        <Textarea
+                          value={formData.ia_recomendaciones}
+                          onChange={(e) => handleInputChange('ia_recomendaciones', e.target.value)}
+                          className="min-h-[150px] mt-2"
+                          disabled={isClosed}
+                          placeholder="Contenido de recomendaciones (editable)..."
+                        />
+                      );
+                    })()}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
-        )}
 
-        {/* Sessions Editor */}
-        {sesionesData.length > 0 && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <h2 className="text-lg font-semibold">Editor de Sesiones</h2>
-              </div>
-              {generationComplete && !areSessionsClosed && (
-                <Button 
-                  onClick={handleRegenerateClick}
-                  disabled={regenerationLoading || generationLoading || !unidad}
-                  aria-busy={regenerationLoading}
-                  variant="outline"
-                  data-testid="regen-sessions-btn"
-                >
-                  {regenerationLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                      Regenerando...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Regenerar con IA
-                    </>
-                  )}
+          {/* Action Buttons */}
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => navigate('/etapa3')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+
+            <div className="flex gap-3">
+              {!isClosed && (
+                <>
+                  <Button 
+                    onClick={handleSave}
+                    disabled={!isFormValid() || saving}
+                    variant="outline"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Guardar
+                  </Button>
+                  <Button 
+                    onClick={handleClose}
+                    disabled={!isFormValid() || saving || !analysisComplete}
+                    variant="default"
+                  >
+                    Guardar y Cerrar A6
+                  </Button>
+                </>
+              )}
+              
+              {isClosed && analysisComplete && isFormValid() && (
+                <Button onClick={() => navigate('/etapa3/acelerador9')}>
+                  Continuar a A9
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               )}
             </div>
-
-            {sesionesData.map((sesion, index) => (
-              <Card key={sesion.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span>Sesión {sesion.session_index}</span>
-                     {sesion.estado === 'CERRADO' && (
-                       <Badge variant="secondary">
-                         <Lock className="h-3 w-3 mr-1" />
-                         Cerrado
-                       </Badge>
-                     )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  
-                  {/* Session Title */}
-                  <div>
-                    <Label htmlFor={`titulo-${index}`}>Título de la Sesión</Label>
-                    <Input
-                      id={`titulo-${index}`}
-                      value={sesion.titulo}
-                      onChange={(e) => updateSession(index, 'titulo', e.target.value)}
-                      placeholder="Ingrese el título de la sesión"
-                      disabled={areSessionsClosed}
-                    />
-                  </div>
-
-                  {/* Session Structure */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor={`inicio-${index}`}>Inicio (Motivación/Saberes previos)</Label>
-                      <Textarea
-                        id={`inicio-${index}`}
-                        value={sesion.inicio || ''}
-                        onChange={(e) => updateSession(index, 'inicio', e.target.value)}
-                        placeholder="Actividades de inicio..."
-                        className="min-h-[100px]"
-                        disabled={areSessionsClosed}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`desarrollo-${index}`}>Desarrollo (Construcción del aprendizaje)</Label>
-                      <Textarea
-                        id={`desarrollo-${index}`}
-                        value={sesion.desarrollo || ''}
-                        onChange={(e) => updateSession(index, 'desarrollo', e.target.value)}
-                        placeholder="Actividades de desarrollo..."
-                        className="min-h-[100px]"
-                        disabled={areSessionsClosed}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`cierre-${index}`}>Cierre (Consolidación/Evaluación)</Label>
-                      <Textarea
-                        id={`cierre-${index}`}
-                        value={sesion.cierre || ''}
-                        onChange={(e) => updateSession(index, 'cierre', e.target.value)}
-                        placeholder="Actividades de cierre..."
-                        className="min-h-[100px]"
-                        disabled={areSessionsClosed}
-                      />
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Evidences */}
-                  <div>
-                    <Label>Evidencias de la Sesión</Label>
-                    <div className="space-y-2 mt-2">
-                      {sesion.evidencias.map((evidence, eIndex) => (
-                        <div key={eIndex} className="flex items-center gap-2">
-                          <span className="text-sm flex-1 p-2 bg-muted rounded">{evidence}</span>
-                          {!areSessionsClosed && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => removeEvidence(index, eIndex)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      {!areSessionsClosed && (
-                        <div className="flex gap-2">
-                          <Input 
-                            placeholder="Agregar evidencia..."
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                addEvidence(index, e.currentTarget.value);
-                                e.currentTarget.value = '';
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Mini Rubric */}
-                  <div>
-                    <Label>Criterios de Evaluación para esta Sesión</Label>
-                    <div className="space-y-2 mt-2">
-                      {sesion.rubrica_json.criteria.map((criterion, cIndex) => (
-                        <div key={cIndex} className="flex items-center gap-2">
-                          <span className="text-sm flex-1 p-2 bg-muted rounded">{criterion}</span>
-                          {!areSessionsClosed && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => removeRubricCriterion(index, cIndex)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      {!areSessionsClosed && (
-                        <div className="flex gap-2">
-                          <Input 
-                            placeholder="Agregar criterio observable..."
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                addRubricCriterion(index, e.currentTarget.value);
-                                e.currentTarget.value = '';
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
           </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex justify-between mt-6">
-          <Button variant="outline" onClick={() => navigate('/etapa3')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver
-          </Button>
-
-          {!areSessionsClosed && (
-            <Button 
-              onClick={handleClose}
-              disabled={saving}
-              variant="default"
-            >
-              Guardar y Cerrar A8
-            </Button>
-          )}
         </div>
-
-        {/* Regenerate Confirmation Dialog */}
-        <AlertDialog open={showRegenerateDialog} onOpenChange={setShowRegenerateDialog}>
-          <AlertDialogContent>            
-            {/* Error Banner */}
-            {regenerationError && (
-              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <div className="text-destructive font-medium text-sm">
-                  Error en la regeneración
-                </div>
-                <div className="text-destructive/80 text-xs mt-1">
-                  ID: {regenerationError.requestId}
-                </div>
-                <div className="text-destructive text-sm mt-2">
-                  {regenerationError.message}
-                </div>
-              </div>
-            )}
-            
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Regenerar sesiones con IA?</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2">
-                <p>Esta acción reemplazará completamente todas las sesiones actuales con nuevas versiones generadas por IA.</p>
-                <p className="text-orange-600 font-medium">⚠️ Los cambios manuales se perderán.</p>
-                <p>¿Está seguro de que desea continuar?</p>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel 
-                onClick={() => {
-                  console.log('[A8:REGEN_CONFIRM]', { accepted: false, timestamp: new Date().toISOString() });
-                  setShowRegenerateDialog(false);
-                  setRegenerationError(null);
-                }}
-              >
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleRegenerateSessions}
-                disabled={regenerationLoading}
-                aria-busy={regenerationLoading}
-                data-testid="regen-confirm"
-              >
-                {regenerationLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Regenerando...
-                  </>
-                ) : (
-                  'Regenerar'
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Reopen Dialog */}
-        <AlertDialog open={showReopenDialog} onOpenChange={setShowReopenDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Reabrir para edición?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción permitirá editar las sesiones nuevamente. Podrá cerrar el acelerador cuando termine.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleReopen}>
-                Reabrir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
+
+      {/* Reopen Confirmation Dialog */}
+      <AlertDialog open={showReopenDialog} onOpenChange={setShowReopenDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Reabrir Acelerador 6?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Al reabrir esta unidad de aprendizaje, los Aceleradores 7 (Rúbrica) y 8 (Sesiones) 
+              quedarán marcados como "pendientes de revisión" ya que pueden necesitar actualizaciones 
+              basadas en los cambios que realice.
+              <br /><br />
+              ¿Está seguro de que desea continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReopen}>
+              Sí, reabrir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -110,7 +110,7 @@ export default function Etapa2Acelerador7() {
       proyectoId={proyecto.id}
       tipoProyecto="2A"
       etapaNumber={2}
-      aceleradorNumber={9}
+      aceleradorNumber={7}
       onSave={handleSave}
       onValidate={handleValidate}
       canProceed={canProceed}

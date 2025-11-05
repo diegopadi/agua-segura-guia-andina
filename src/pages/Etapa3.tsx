@@ -11,30 +11,30 @@ import { useEtapa3V2 } from "@/hooks/useEtapa3V2";
 // Configuration for each accelerator in Etapa 3 V2
 const accelerators = [
   {
-    number: 6,
+    number: 8,
     title: "Unidad de Aprendizaje",
     description: "Diseña una unidad de aprendizaje completa con diagnóstico y análisis de coherencia",
     icon: BookOpen,
     color: "bg-blue-500",
-    route: "/etapa3/acelerador6",
+    route: "/etapa3/acelerador8",
     estimatedTime: "45-60 min"
   },
   {
-    number: 7,
+    number: 9,
     title: "Rúbrica de Evaluación", 
     description: "Crea rúbricas personalizadas para evaluar los aprendizajes de la unidad",
     icon: Target,
     color: "bg-green-500",
-    route: "/etapa3/acelerador7", 
+    route: "/etapa3/acelerador9",
     estimatedTime: "30-45 min"
   },
   {
-    number: 8,
+    number: 10,
     title: "Diseño de Sesiones",
     description: "Genera y estructura las sesiones de clase que componen la unidad",
     icon: Brain,
     color: "bg-purple-500",
-    route: "/etapa3/acelerador8",
+    route: "/etapa3/acelerador10",
     estimatedTime: "30-40 min"
   }
 ];
@@ -45,18 +45,18 @@ export default function Etapa3() {
 
   const getStatusBadge = (acceleratorNumber: number) => {
     switch (acceleratorNumber) {
-      case 6:
-        return progress.a6_completed ? 
+      case 8:
+        return progress.a8_completed ? 
           <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Completado</Badge> :
           (unidad ? <Badge variant="default" className="bg-blue-600"><Play className="w-3 h-3 mr-1" />En progreso</Badge> :
            <Badge variant="secondary">No iniciado</Badge>);
-      case 7:
-        return progress.a7_completed ? 
+      case 9:
+        return progress.a9_completed ? 
           <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Completado</Badge> :
           (rubrica ? <Badge variant="default" className="bg-blue-600"><Play className="w-3 h-3 mr-1" />En progreso</Badge> :
            <Badge variant="secondary">No iniciado</Badge>);
-      case 8:
-        return progress.a8_completed ? 
+      case 10:
+        return progress.a10_completed ? 
           <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Completado</Badge> :
           (sesiones.length > 0 ? <Badge variant="default" className="bg-blue-600"><Play className="w-3 h-3 mr-1" />En progreso</Badge> :
            <Badge variant="secondary">No iniciado</Badge>);
@@ -67,12 +67,12 @@ export default function Etapa3() {
 
   const canAccess = (acceleratorNumber: number) => {
     switch (acceleratorNumber) {
-      case 6:
-        return true; // A6 always accessible
-      case 7:
-        return progress.a6_completed;
       case 8:
-        return progress.a7_completed;
+        return true; // A8 always accessible
+      case 9:
+        return progress.a8_completed;
+      case 10:
+        return progress.a9_completed;
       default:
         return false;
     }
@@ -80,12 +80,12 @@ export default function Etapa3() {
 
   const getProgress = (acceleratorNumber: number) => {
     switch (acceleratorNumber) {
-      case 6:
-        return progress.a6_completed ? 100 : (unidad ? 50 : 0);
-      case 7:
-        return progress.a7_completed ? 100 : (rubrica ? 50 : 0);
       case 8:
-        return progress.a8_completed ? 100 : (sesiones.length > 0 ? 50 : 0);
+        return progress.a8_completed ? 100 : (unidad ? 50 : 0);
+      case 9:
+        return progress.a9_completed ? 100 : (rubrica ? 50 : 0);
+      case 10:
+        return progress.a10_completed ? 100 : (sesiones.length > 0 ? 50 : 0);
       default:
         return 0;
     }
@@ -159,7 +159,7 @@ export default function Etapa3() {
                 {progress.overall_progress}%
               </div>
               <p className="text-muted-foreground">
-                Completado ({[progress.a6_completed, progress.a7_completed, progress.a8_completed].filter(Boolean).length} de 3 aceleradores)
+                Completado ({[progress.a8_completed, progress.a9_completed, progress.a10_completed].filter(Boolean).length} de 3 aceleradores)
               </p>
               
               {unidad && (
