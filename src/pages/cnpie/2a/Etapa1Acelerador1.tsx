@@ -10,9 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Lightbulb, Plus, X } from "lucide-react";
+import { Lightbulb, Plus, X, BookOpen } from "lucide-react";
 
 export default function Etapa1Acelerador1() {
   const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData } = useCNPIEProject('2A');
@@ -26,7 +27,8 @@ export default function Etapa1Acelerador1() {
     causas: [] as string[],
     consecuencias: [] as string[],
     objetivo: '',
-    contexto: ''
+    contexto: '',
+    areaCurricular: ''
   });
 
   const [nuevaCausa, setNuevaCausa] = useState('');
@@ -126,12 +128,13 @@ export default function Etapa1Acelerador1() {
     }));
   };
 
-  const canProceed = !!(formData.problemaDescripcion && formData.causas.length > 0 && formData.objetivo);
+  const canProceed = !!(formData.problemaDescripcion && formData.causas.length > 0 && formData.objetivo && formData.areaCurricular);
   const progress = (
-    (formData.problemaDescripcion ? 25 : 0) +
-    (formData.causas.length > 0 ? 25 : 0) +
-    (formData.consecuencias.length > 0 ? 20 : 0) +
-    (formData.objetivo ? 30 : 0)
+    (formData.problemaDescripcion ? 20 : 0) +
+    (formData.causas.length > 0 ? 20 : 0) +
+    (formData.consecuencias.length > 0 ? 15 : 0) +
+    (formData.objetivo ? 25 : 0) +
+    (formData.areaCurricular ? 20 : 0)
   );
 
   if (!proyecto) {
@@ -154,6 +157,51 @@ export default function Etapa1Acelerador1() {
       <div className="grid md:grid-cols-3 gap-6">
         {/* Formulario principal */}
         <div className="md:col-span-2 space-y-6">
+          {/* Área Curricular - NUEVO */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                Área Curricular
+              </CardTitle>
+              <CardDescription>
+                Selecciona el área curricular en la que desarrollarás tu proyecto pedagógico (según CNEB Secundaria)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select
+                value={formData.areaCurricular}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, areaCurricular: value }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecciona un área curricular..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Comunicación">Comunicación</SelectItem>
+                  <SelectItem value="Matemática">Matemática</SelectItem>
+                  <SelectItem value="Ciencia y Tecnología">Ciencia y Tecnología</SelectItem>
+                  <SelectItem value="Ciencias Sociales">Ciencias Sociales</SelectItem>
+                  <SelectItem value="Desarrollo Personal, Ciudadanía y Cívica">Desarrollo Personal, Ciudadanía y Cívica</SelectItem>
+                  <SelectItem value="Educación para el Trabajo">Educación para el Trabajo</SelectItem>
+                  <SelectItem value="Educación Física">Educación Física</SelectItem>
+                  <SelectItem value="Arte y Cultura">Arte y Cultura</SelectItem>
+                  <SelectItem value="Educación Religiosa">Educación Religiosa</SelectItem>
+                  <SelectItem value="Inglés como Lengua Extranjera">Inglés como Lengua Extranjera</SelectItem>
+                </SelectContent>
+              </Select>
+              {formData.areaCurricular && (
+                <div className="mt-3 p-3 bg-primary/5 rounded-md">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Área seleccionada:</strong> {formData.areaCurricular}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Las competencias CNEB que podrás seleccionar en los siguientes aceleradores estarán filtradas según esta área.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Problema Central */}
           <Card>
             <CardHeader>
