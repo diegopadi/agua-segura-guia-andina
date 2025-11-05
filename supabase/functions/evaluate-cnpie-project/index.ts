@@ -89,13 +89,32 @@ Proporciona tu evaluación en formato JSON con esta estructura:
       "puntaje": number,
       "maximo": number,
       "porcentaje": number,
-      "justificacion": "string"
+      "caracteres_usados": number,
+      "justificacion": "string breve (máximo 100 caracteres)"
     }
   },
   "areas_fuertes": ["string"],
   "areas_mejorar": ["string"],
-  "recomendaciones_ia": ["string"]
-}`;
+  "recomendaciones_ia": [
+    {
+      "criterio": "nombre_criterio",
+      "acelerador": number (1-7),
+      "puntaje_actual": number,
+      "puntaje_maximo": number,
+      "puntos_potenciales": number,
+      "accion": "Acción específica y concreta (qué hacer exactamente)",
+      "prioridad": "alta|media|baja"
+    }
+  ]
+}
+
+IMPORTANTE para recomendaciones:
+- Deben ser ACCIONABLES y específicas, no genéricas
+- Ejemplo BUENO: "Agrega 2-3 ejemplos concretos de cómo tu metodología difiere de prácticas tradicionales"
+- Ejemplo MALO: "Mejora la originalidad"
+- Ordena por puntos_potenciales (más impacto primero)
+- Calcula puntos_potenciales como la diferencia entre el puntaje máximo del criterio y el puntaje actual
+- Asigna prioridad "alta" si puntos_potenciales >= 5, "media" si >= 3, "baja" si < 3`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

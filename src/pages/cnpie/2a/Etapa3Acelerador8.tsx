@@ -100,6 +100,7 @@ export default function Etapa3Acelerador8() {
       if (error) throw error;
 
       if (data.success) {
+        console.log('📊 Evaluación recibida:', data.evaluation);
         setEvaluacion(data.evaluation);
       }
     } catch (error: any) {
