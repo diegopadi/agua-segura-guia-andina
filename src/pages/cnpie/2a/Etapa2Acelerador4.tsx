@@ -37,7 +37,7 @@ export default function Etapa2Acelerador4() {
   const [analysis, setAnalysis] = useState<any>(null);
 
   useEffect(() => {
-    const savedData = getAcceleratorData(2, 6);
+    const savedData = getAcceleratorData(2, 4);
     if (savedData) {
       setFormData(savedData);
       if (savedData.analysis) setAnalysis(savedData.analysis);
@@ -46,7 +46,7 @@ export default function Etapa2Acelerador4() {
 
   const handleSave = async () => {
     const dataToSave = { ...formData, analysis };
-    return await saveAcceleratorData(2, 6, dataToSave);
+    return await saveAcceleratorData(2, 4, dataToSave);
   };
 
   const handleValidate = async () => {
@@ -109,7 +109,7 @@ export default function Etapa2Acelerador4() {
       proyectoId={proyecto.id}
       tipoProyecto="2A"
       etapaNumber={2}
-      aceleradorNumber={6}
+      aceleradorNumber={4}
       onSave={handleSave}
       onValidate={handleValidate}
       canProceed={canProceed}
