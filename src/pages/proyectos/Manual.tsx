@@ -11,7 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import QuestionsForm from "@/components/QuestionsForm";
 
-
 interface PreguntaGenerada {
   categoria: string;
   pregunta: string;
@@ -36,7 +35,6 @@ export default function Manual() {
   const [generatingRecommendation, setGeneratingRecommendation] = useState(false);
   const { hallazgos, loading, generating, generateSummary, hasData } = useAcceleratorsSummary();
 
-  // Generar resumen automáticamente al cargar
   useEffect(() => {
     if (!hasData && !loading && !generating) {
       generateSummary();
@@ -117,7 +115,6 @@ export default function Manual() {
           description: `Proyecto ${data.data.recomendacion} sugerido`
         });
         
-        // Scroll to recommendation
         setTimeout(() => {
           document.getElementById('recomendacion')?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
@@ -185,7 +182,6 @@ export default function Manual() {
               </div>
             ) : (
               <>
-                {/* Datos del diagnóstico */}
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="font-medium" style={{ color: '#005C6B' }}>Docente:</p>
@@ -205,7 +201,6 @@ export default function Manual() {
                   </div>
                 </div>
 
-                {/* Hallazgos clave */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <p className="font-medium" style={{ color: '#005C6B' }}>Hallazgos clave:</p>
@@ -230,7 +225,6 @@ export default function Manual() {
               </>
             )}
 
-            {/* Experiencias con selector del repositorio */}
             <div>
               <p className="font-medium mb-3" style={{ color: '#005C6B' }}>
                 Experiencias registradas en tu repositorio:
@@ -269,7 +263,7 @@ export default function Manual() {
                 </div>
               ) : (
                 <p className="text-sm mb-3" style={{ color: '#1A1A1A', opacity: 0.7 }}>
-                  No hay experiencias adjuntadas. Usa el botón "Adjuntar" para agregar documentos.
+                  No hay experiencias adjuntadas. Los documentos de tu repositorio serán utilizados por la IA.
                 </p>
               )}
             </div>
@@ -368,7 +362,7 @@ export default function Manual() {
           </h2>
           
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Tarjeta 2A - Consolidado */}
+            {/* Tarjeta 2A */}
             <Card 
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
               style={{ backgroundColor: '#005C6B' }}
@@ -400,7 +394,7 @@ export default function Manual() {
               </CardContent>
             </Card>
 
-            {/* Tarjeta 2B - Implementación */}
+            {/* Tarjeta 2B */}
             <Card 
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
               style={{ backgroundColor: '#00A6A6' }}
@@ -423,7 +417,7 @@ export default function Manual() {
                   Innovación Educativa en Implementación (menos de 1 año de ejecución).
                 </p>
                 <Button 
-                  onClick(() => navigate('/proyectos/2b')}
+                  onClick={() => navigate('/proyectos/2b')}
                   className="w-full bg-white font-medium hover:bg-white/90"
                   style={{ color: '#00A6A6' }}
                 >
@@ -432,7 +426,7 @@ export default function Manual() {
               </CardContent>
             </Card>
 
-            {/* Tarjeta 2C - Investigación-Acción */}
+            {/* Tarjeta 2C */}
             <Card 
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
               style={{ backgroundColor: '#1BBEAE' }}
@@ -440,7 +434,7 @@ export default function Manual() {
               <CardHeader>
                 <div className="flex items-center justify-center mb-4">
                   <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/20">
-                    <BookMarked className="w-8 h-8 text-white" />
+                    <Target className="w-8 h-8 text-white" />
                   </div>
                 </div>
                 <CardTitle className="text-center text-white text-xl">
@@ -474,15 +468,7 @@ export default function Manual() {
             </AlertDescription>
           </Alert>
 
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-6 pt-4 border-t border-gray-300">
-            <button
-              onClick={() => navigate('/proyectos')}
-              className="flex items-center gap-2 text-sm font-medium hover:underline"
-              style={{ color: '#005C6B' }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Volver al menú CNPIE
-            </button>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-6 pt-4">
             <button
               onClick={() => navigate('/repositorio')}
               className="flex items-center gap-2 text-sm font-medium hover:underline"
@@ -490,6 +476,14 @@ export default function Manual() {
             >
               <BookOpen className="w-4 h-4" />
               Ir al Repositorio de experiencias
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 text-sm font-medium hover:underline"
+              style={{ color: '#005C6B' }}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Volver al inicio
             </button>
           </div>
         </div>
