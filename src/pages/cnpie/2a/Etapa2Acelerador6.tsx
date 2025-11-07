@@ -4,6 +4,7 @@ import { useCNPIERubric } from "@/hooks/useCNPIERubric";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
 import { DocumentosExtractionButton } from "@/components/DocumentosExtractionButton";
+import { RepositoryExtractionButton } from "@/components/RepositoryExtractionButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -149,6 +150,13 @@ export default function Etapa2Acelerador6() {
         <div className="md:col-span-2 space-y-6">
           <DocumentosExtractionButton
             documentos={documentos}
+            expectedFields={documentFieldSchema}
+            contextoProyecto={getAllData()}
+            onDataExtracted={handleAutoFill}
+            aceleradorKey="etapa2_acelerador6"
+          />
+
+          <RepositoryExtractionButton
             expectedFields={documentFieldSchema}
             contextoProyecto={getAllData()}
             onDataExtracted={handleAutoFill}

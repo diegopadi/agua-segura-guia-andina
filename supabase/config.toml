@@ -80,3 +80,9 @@ verify_jwt = true
 
 [functions.validate-etapa3-coherence]
 verify_jwt = true
+
+[functions.extract-document-data]
+verify_jwt = true
+
+[functions.extract-repository-data]
+verify_jwt = true
