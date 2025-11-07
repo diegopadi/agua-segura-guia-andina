@@ -191,7 +191,13 @@ Devuelve un JSON con esta estructura:
     const fieldsFound = Object.keys(extractedData).filter(k => extractedData[k])
     const fieldsMissing = expectedFields
       .map(f => f.fieldName)
-      .filter(name => !extractedData[name] || extractedData[name].trim() === '')
+      .filter(name => {
+        const value = extractedData[name]
+        if (!value) return true
+        if (typeof value === 'string') return value.trim() === ''
+        if (Array.isArray(value)) return value.length === 0
+        return false
+      })
 
     console.log(`✅ Extracción completada: ${fieldsFound.length} campos encontrados`)
 
