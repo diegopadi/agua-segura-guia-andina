@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useToast } from "./use-toast";
@@ -44,6 +44,11 @@ export function useFileManager() {
       });
     }
   }, [user, toast]);
+
+  // Auto-fetch files when hook mounts or user changes
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
 
   const getTotalStorageUsed = useCallback(() => {
     return files.reduce((total, file) => total + file.size_bytes, 0);
