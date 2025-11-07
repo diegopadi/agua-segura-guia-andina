@@ -12,13 +12,16 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Lightbulb, Users } from "lucide-react";
+import { DocumentosExtractionButton } from "@/components/DocumentosExtractionButton";
+import { DocumentFieldSchema } from "@/types/document-extraction";
 
 export default function Etapa2Acelerador4() {
-  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
+  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData, getDocumentosPostulacion } = useCNPIEProject('2A');
   const { getCriterioByName } = useCNPIERubric('2A');
   const { toast } = useToast();
 
   const rubricaParticipacion = getCriterioByName('Participación');
+  const documentos = getDocumentosPostulacion();
 
   const [formData, setFormData] = useState({
     participacionEstudiantes: '',
@@ -35,6 +38,27 @@ export default function Etapa2Acelerador4() {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
+
+  const documentFieldSchema: DocumentFieldSchema[] = [
+    { fieldName: 'participacionEstudiantes', label: 'Participación de Estudiantes', type: 'textarea', description: 'Describe la participación de estudiantes' },
+    { fieldName: 'numeroEstudiantes', label: 'Número de Estudiantes', type: 'number', description: 'Cantidad de estudiantes participantes' },
+    { fieldName: 'rolEstudiantes', label: 'Rol de los Estudiantes', type: 'text', description: 'Rol que cumplen los estudiantes' },
+    { fieldName: 'participacionFamilias', label: 'Participación de Familias', type: 'textarea', description: 'Describe la participación de familias' },
+    { fieldName: 'numeroFamilias', label: 'Número de Familias', type: 'number', description: 'Cantidad de familias participantes' },
+    { fieldName: 'participacionDocentes', label: 'Participación de Docentes', type: 'textarea', description: 'Describe la participación de docentes' },
+    { fieldName: 'numeroDocentes', label: 'Número de Docentes', type: 'number', description: 'Cantidad de docentes involucrados' }
+  ];
+
+  const handleAutoFill = (extractedData: any) => {
+    setFormData(prev => ({
+      ...prev,
+      ...extractedData
+    }));
+    toast({
+      title: "Datos aplicados",
+      description: "La información extraída se ha aplicado al formulario"
+    });
+  };
 
   useEffect(() => {
     const savedData = getAcceleratorData(2, 4);

@@ -14,9 +14,11 @@ import { MessageSquare, Lightbulb } from "lucide-react";
 import { DocumentFieldSchema } from "@/types/document-extraction";
 
 export default function Etapa2Acelerador7() {
-  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
+  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData, getDocumentosPostulacion } = useCNPIEProject('2A');
   const { getCriterioByName } = useCNPIERubric('2A');
   const { toast } = useToast();
+  
+  const documentos = getDocumentosPostulacion();
 
   const rubricaReflexion = getCriterioByName('Reflexión');
 
@@ -31,6 +33,26 @@ export default function Etapa2Acelerador7() {
 
   const [synthesizing, setSynthesizing] = useState(false);
   const [synthesis, setSynthesis] = useState<any>(null);
+
+  const documentFieldSchema: DocumentFieldSchema[] = [
+    { fieldName: 'desafiosEnfrentados', label: 'Desafíos Enfrentados', type: 'textarea', description: 'Principales desafíos y obstáculos' },
+    { fieldName: 'estrategiasSuperacion', label: 'Estrategias de Superación', type: 'textarea', description: 'Cómo se superaron los desafíos' },
+    { fieldName: 'leccionesAprendidas', label: 'Lecciones Aprendidas', type: 'textarea', description: 'Aprendizajes de la experiencia' },
+    { fieldName: 'buenasPracticas', label: 'Buenas Prácticas', type: 'textarea', description: 'Prácticas exitosas identificadas' },
+    { fieldName: 'aspectosMejorar', label: 'Aspectos a Mejorar', type: 'textarea', description: 'Qué mejorar en futuras implementaciones' },
+    { fieldName: 'proyeccionFuturo', label: 'Proyección Futura', type: 'textarea', description: 'Planes y proyección del proyecto' }
+  ];
+
+  const handleAutoFill = (extractedData: any) => {
+    setFormData(prev => ({
+      ...prev,
+      ...extractedData
+    }));
+    toast({
+      title: "Datos aplicados",
+      description: "La información extraída se ha aplicado al formulario"
+    });
+  };
 
   useEffect(() => {
     const savedData = getAcceleratorData(2, 7);

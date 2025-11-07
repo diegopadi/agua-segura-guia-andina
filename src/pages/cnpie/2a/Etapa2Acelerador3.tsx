@@ -23,11 +23,12 @@ interface Indicador {
 }
 
 export default function Etapa2Acelerador3() {
-  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
+  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData, getDocumentosPostulacion } = useCNPIEProject('2A');
   const { getCriterioByName } = useCNPIERubric('2A');
   const { toast } = useToast();
 
   const rubricaImpacto = getCriterioByName('Impacto');
+  const documentos = getDocumentosPostulacion();
 
   const [formData, setFormData] = useState({
     descripcionImpacto: '',
@@ -46,6 +47,24 @@ export default function Etapa2Acelerador3() {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
+
+  const documentFieldSchema: DocumentFieldSchema[] = [
+    { fieldName: 'descripcionImpacto', label: 'Descripción del Impacto', type: 'textarea', description: 'Describe el impacto del proyecto' },
+    { fieldName: 'evidenciasDocumentales', label: 'Evidencias Documentales', type: 'textarea', description: 'Evidencias que sustentan el impacto' },
+    { fieldName: 'testimonios', label: 'Testimonios', type: 'textarea', description: 'Testimonios de beneficiarios' },
+    { fieldName: 'datosComparativos', label: 'Datos Comparativos', type: 'textarea', description: 'Datos comparativos antes/después' }
+  ];
+
+  const handleAutoFill = (extractedData: any) => {
+    setFormData(prev => ({
+      ...prev,
+      ...extractedData
+    }));
+    toast({
+      title: "Datos aplicados",
+      description: "La información extraída se ha aplicado al formulario"
+    });
+  };
 
   useEffect(() => {
     const savedData = getAcceleratorData(2, 3);

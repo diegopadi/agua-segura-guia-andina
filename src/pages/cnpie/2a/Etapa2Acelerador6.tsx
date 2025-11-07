@@ -15,11 +15,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { DocumentFieldSchema } from "@/types/document-extraction";
 
 export default function Etapa2Acelerador6() {
-  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
+  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData, getDocumentosPostulacion } = useCNPIEProject('2A');
   const { getCriterioByName } = useCNPIERubric('2A');
   const { toast } = useToast();
 
   const rubricaPertinencia = getCriterioByName('Pertinencia');
+  const documentos = getDocumentosPostulacion();
 
   const [formData, setFormData] = useState({
     fundamentacionPedagogica: '',
@@ -32,6 +33,25 @@ export default function Etapa2Acelerador6() {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
+
+  const documentFieldSchema: DocumentFieldSchema[] = [
+    { fieldName: 'fundamentacionPedagogica', label: 'Fundamentación Pedagógica', type: 'textarea', description: 'Fundamentación pedagógica del proyecto' },
+    { fieldName: 'enfoquePedagogico', label: 'Enfoque Pedagógico', type: 'textarea', description: 'Enfoque pedagógico utilizado' },
+    { fieldName: 'articulacionCurriculo', label: 'Articulación con Currículo', type: 'textarea', description: 'Cómo se articula con el currículo nacional' },
+    { fieldName: 'metodologias', label: 'Metodologías', type: 'textarea', description: 'Metodologías pedagógicas aplicadas' },
+    { fieldName: 'evaluacionAprendizajes', label: 'Evaluación de Aprendizajes', type: 'textarea', description: 'Cómo se evalúan los aprendizajes' }
+  ];
+
+  const handleAutoFill = (extractedData: any) => {
+    setFormData(prev => ({
+      ...prev,
+      ...extractedData
+    }));
+    toast({
+      title: "Datos aplicados",
+      description: "La información extraída se ha aplicado al formulario"
+    });
+  };
 
   useEffect(() => {
     const savedData = getAcceleratorData(2, 6);

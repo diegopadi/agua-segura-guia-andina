@@ -17,11 +17,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DocumentFieldSchema } from "@/types/document-extraction";
 
 export default function Etapa2Acelerador5() {
-  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
+  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData, getDocumentosPostulacion } = useCNPIEProject('2A');
   const { getCriterioByName } = useCNPIERubric('2A');
   const { toast } = useToast();
 
   const rubricaSostenibilidad = getCriterioByName('Sostenibilidad');
+  const documentos = getDocumentosPostulacion();
 
   const [formData, setFormData] = useState({
     estrategiasSostenibilidad: '',
@@ -37,6 +38,24 @@ export default function Etapa2Acelerador5() {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
+
+  const documentFieldSchema: DocumentFieldSchema[] = [
+    { fieldName: 'estrategiasSostenibilidad', label: 'Estrategias de Sostenibilidad', type: 'textarea', description: 'Estrategias para sostener el proyecto' },
+    { fieldName: 'institucionalizacion', label: 'Institucionalización', type: 'textarea', description: 'Cómo se institucionaliza el proyecto' },
+    { fieldName: 'capacidadesDesarrolladas', label: 'Capacidades Desarrolladas', type: 'textarea', description: 'Capacidades desarrolladas en el equipo' },
+    { fieldName: 'recursosNecesarios', label: 'Recursos Necesarios', type: 'textarea', description: 'Recursos necesarios para sostener el proyecto' }
+  ];
+
+  const handleAutoFill = (extractedData: any) => {
+    setFormData(prev => ({
+      ...prev,
+      ...extractedData
+    }));
+    toast({
+      title: "Datos aplicados",
+      description: "La información extraída se ha aplicado al formulario"
+    });
+  };
 
   useEffect(() => {
     const savedData = getAcceleratorData(2, 5);
