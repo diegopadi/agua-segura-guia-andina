@@ -3,6 +3,7 @@ import { useCNPIEProject } from "@/hooks/useCNPIEProject";
 import { useCNPIERubric } from "@/hooks/useCNPIERubric";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
+import { DocumentosExtractionButton } from "@/components/DocumentosExtractionButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, Lightbulb } from "lucide-react";
+import { DocumentFieldSchema } from "@/types/document-extraction";
 
 export default function Etapa2Acelerador7() {
   const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
@@ -120,6 +122,14 @@ export default function Etapa2Acelerador7() {
     >
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
+          <DocumentosExtractionButton
+            documentos={documentos}
+            expectedFields={documentFieldSchema}
+            contextoProyecto={getAllData()}
+            onDataExtracted={handleAutoFill}
+            aceleradorKey="etapa2_acelerador7"
+          />
+
           {/* Desafíos Enfrentados */}
           <Card>
             <CardHeader>

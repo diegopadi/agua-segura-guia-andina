@@ -4,6 +4,7 @@ import { useCNPIERubric } from "@/hooks/useCNPIERubric";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
 import { CNPIERubricScoreButton } from "@/components/cnpie/CNPIERubricScoreButton";
+import { DocumentosExtractionButton } from "@/components/DocumentosExtractionButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,13 +15,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Lightbulb, Plus, X, BookOpen } from "lucide-react";
+import { DocumentFieldSchema } from "@/types/document-extraction";
 
 export default function Etapa1Acelerador1() {
-  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData } = useCNPIEProject('2A');
+  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData, getDocumentosPostulacion } = useCNPIEProject('2A');
   const { rubricas, getCriterioByName } = useCNPIERubric('2A');
   const { toast } = useToast();
 
   const rubricaIntencionalidad = getCriterioByName('Intencionalidad');
+  const documentos = getDocumentosPostulacion();
 
   const [formData, setFormData] = useState({
     problemaDescripcion: '',
@@ -35,6 +38,18 @@ export default function Etapa1Acelerador1() {
   const [nuevaConsecuencia, setNuevaConsecuencia] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
+
+  const documentFieldSchema: DocumentFieldSchema[] = [
+    { fieldName: "problemaDescripcion", label: "Problema Central", type: "textarea", description: "Descripción del problema educativo", maxLength: 3000 },
+    { fieldName: "objetivo", label: "Objetivo", type: "textarea", description: "Objetivo SMART del proyecto", maxLength: 1500 },
+    { fieldName: "contexto", label: "Contexto", type: "textarea", description: "Contexto institucional" },
+    { fieldName: "areaCurricular", label: "Área Curricular", type: "text", description: "Área curricular del CNEB" }
+  ];
+
+  const handleAutoFill = (extractedData: any) => {
+    setFormData(prev => ({ ...prev, ...extractedData }));
+    toast({ title: "Datos extraídos", description: "Revisa y completa la información" });
+  };
 
   useEffect(() => {
     const savedData = getAcceleratorData(1, 1);
@@ -157,6 +172,14 @@ export default function Etapa1Acelerador1() {
       <div className="grid md:grid-cols-3 gap-6">
         {/* Formulario principal */}
         <div className="md:col-span-2 space-y-6">
+          <DocumentosExtractionButton
+            documentos={documentos}
+            expectedFields={documentFieldSchema}
+            contextoProyecto={getAllData()}
+            onDataExtracted={handleAutoFill}
+            aceleradorKey="etapa1_acelerador1"
+          />
+
           {/* Área Curricular - NUEVO */}
           <Card>
             <CardHeader>

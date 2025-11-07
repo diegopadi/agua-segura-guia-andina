@@ -117,7 +117,7 @@ export default function RepositoryFilePicker({
                     <div className="flex items-center gap-3 flex-1">
                       <FileText className="w-5 h-5 text-muted-foreground" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{fileName}</p>
+                        <p className="font-medium truncate">{file.original_name || fileName}</p>
                         <div className="flex items-center gap-2 mt-1">
                           {file.file_type && (
                             <Badge variant="secondary" className="text-xs">

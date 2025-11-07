@@ -136,6 +136,7 @@ export type Database = {
           created_at: string | null
           datos_aceleradores: Json | null
           diagnostico_resumen: Json | null
+          documentos_postulacion: Json | null
           estado_aceleradores: Json | null
           etapa_actual: number | null
           experiencias_ids: string[] | null
@@ -151,6 +152,7 @@ export type Database = {
           created_at?: string | null
           datos_aceleradores?: Json | null
           diagnostico_resumen?: Json | null
+          documentos_postulacion?: Json | null
           estado_aceleradores?: Json | null
           etapa_actual?: number | null
           experiencias_ids?: string[] | null
@@ -166,6 +168,7 @@ export type Database = {
           created_at?: string | null
           datos_aceleradores?: Json | null
           diagnostico_resumen?: Json | null
+          documentos_postulacion?: Json | null
           estado_aceleradores?: Json | null
           etapa_actual?: number | null
           experiencias_ids?: string[] | null
@@ -266,6 +269,7 @@ export type Database = {
           created_at: string
           file_type: string
           id: string
+          original_name: string | null
           size_bytes: number
           url: string
           user_id: string
@@ -274,6 +278,7 @@ export type Database = {
           created_at?: string
           file_type: string
           id?: string
+          original_name?: string | null
           size_bytes: number
           url: string
           user_id: string
@@ -282,6 +287,7 @@ export type Database = {
           created_at?: string
           file_type?: string
           id?: string
+          original_name?: string | null
           size_bytes?: number
           url?: string
           user_id?: string

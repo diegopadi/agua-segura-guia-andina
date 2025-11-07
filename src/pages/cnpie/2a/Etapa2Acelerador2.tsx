@@ -3,7 +3,7 @@ import { useCNPIEProject } from "@/hooks/useCNPIEProject";
 import { useCNPIERubric } from "@/hooks/useCNPIERubric";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
-import { SmartDocumentLoader } from "@/components/cnpie/SmartDocumentLoader";
+import { DocumentosExtractionButton } from "@/components/DocumentosExtractionButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -17,13 +17,14 @@ import { DocumentFieldSchema } from "@/types/document-extraction";
 import CompetenciasMultiSelect from "@/components/CompetenciasMultiSelect";
 
 export default function Etapa2Acelerador2() {
-  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData } = useCNPIEProject('2A');
+  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData, getDocumentosPostulacion } = useCNPIEProject('2A');
   const { getCriterioByName } = useCNPIERubric('2A');
   const { toast } = useToast();
 
   const rubricaOriginalidad = getCriterioByName('Originalidad');
   const etapa1Data = getAcceleratorData(1, 1);
   const areaFaltante = !etapa1Data?.areaCurricular;
+  const documentos = getDocumentosPostulacion();
 
   const [formData, setFormData] = useState({
     metodologiaDescripcion: '',
@@ -214,14 +215,12 @@ export default function Etapa2Acelerador2() {
             </Alert>
           )}
 
-          {/* Smart Document Loader */}
-          <SmartDocumentLoader
-            aceleradorKey="etapa2_acelerador4"
+          <DocumentosExtractionButton
+            documentos={documentos}
             expectedFields={documentFieldSchema}
+            contextoProyecto={getAllData()}
             onDataExtracted={handleAutoFill}
-            contextoProyecto={etapa1Data}
-            title="¿Ya tienes un documento con tu metodología?"
-            description="Sube tu documento (PDF, Word) o selecciónalo del repositorio. La IA extraerá automáticamente la información."
+            aceleradorKey="etapa2_acelerador2"
           />
 
           {/* Nombre de la Metodología */}

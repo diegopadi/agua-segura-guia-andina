@@ -15,95 +15,114 @@ serve(async (req) => {
   }
 
   try {
-    const { documentUrl, documentName, aceleradorKey, expectedFields, contexto_proyecto } = await req.json();
+    const { documentos, aceleradorKey, expectedFields, contexto_proyecto } = await req.json();
 
-    console.log('Extracting data from document:', documentName, 'for:', aceleradorKey);
+    // Validar que haya documentos (puede ser array o objeto único para backward compatibility)
+    const docsArray = Array.isArray(documentos) ? documentos : 
+                      documentos ? [documentos] : 
+                      null;
 
-    // Descargar el documento
+    if (!docsArray || docsArray.length === 0) {
+      throw new Error('Se requiere al menos un documento');
+    }
+
+    console.log(`Procesando ${docsArray.length} documento(s) para ${aceleradorKey}`);
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Extraer path del storage desde la URL
-    const urlParts = documentUrl.split('/storage/v1/object/public/');
-    if (urlParts.length < 2) {
-      throw new Error('Invalid document URL format');
-    }
-    
-    const storagePath = urlParts[1];
-    const [bucket, ...pathParts] = storagePath.split('/');
-    const filePath = pathParts.join('/');
 
-    console.log('Downloading from bucket:', bucket, 'path:', filePath);
+    // Procesar todos los documentos
+    const documentosTexto: Array<{nombre: string, contenido: string}> = [];
 
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from(bucket)
-      .download(filePath);
-
-    if (downloadError) {
-      console.error('Download error:', downloadError);
-      throw new Error(`Error descargando documento: ${downloadError.message}`);
-    }
-
-    // Extraer texto según el tipo de archivo
-    let fileContent = '';
-    const fileExt = documentName.split('.').pop()?.toLowerCase();
-
-    if (fileExt === 'pdf') {
-      // Extraer texto de PDF
-      const arrayBuffer = await fileData.arrayBuffer();
-      const pdfData = await pdf(new Uint8Array(arrayBuffer));
-      fileContent = pdfData.text;
-      console.log('PDF extracted. Pages:', pdfData.numpages, 'Text length:', fileContent.length);
+    for (const doc of docsArray) {
+      const docUrl = doc.url || doc.documentUrl;
+      const docName = doc.nombre || doc.documentName;
       
-    } else if (fileExt === 'docx' || fileExt === 'doc') {
-      // Extraer texto de DOCX
-      const arrayBuffer = await fileData.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      fileContent = result.value;
-      console.log('DOCX extracted. Text length:', fileContent.length);
+      if (!docUrl || !docName) {
+        console.error('Documento sin URL o nombre, saltando...');
+        continue;
+      }
+
+      console.log(`Descargando documento: ${docName}`);
       
-    } else {
-      // Para otros formatos, intentar como texto plano
-      fileContent = await fileData.text();
-      console.log('Plain text extracted. Length:', fileContent.length);
+      try {
+        // Extraer path del storage desde la URL
+        let filePath: string;
+        let bucket: string;
+
+        if (docUrl.includes('/storage/v1/object/public/')) {
+          const urlParts = docUrl.split('/storage/v1/object/public/');
+          const storagePath = urlParts[1];
+          const pathComponents = storagePath.split('/');
+          bucket = pathComponents[0];
+          filePath = pathComponents.slice(1).join('/');
+        } else if (docUrl.includes('/user_uploads/')) {
+          bucket = 'user_uploads';
+          const urlParts = docUrl.split('/user_uploads/');
+          filePath = urlParts[1];
+        } else {
+          console.error(`URL format not recognized: ${docUrl}`);
+          continue;
+        }
+
+        console.log('Downloading from bucket:', bucket, 'path:', filePath);
+
+        const { data: fileData, error: downloadError } = await supabase.storage
+          .from(bucket)
+          .download(filePath);
+
+        if (downloadError) {
+          console.error(`Error descargando ${docName}:`, downloadError);
+          continue;
+        }
+
+        // Extraer texto según el tipo de archivo
+        let fileContent = '';
+        const fileExt = docName.split('.').pop()?.toLowerCase();
+
+        if (fileExt === 'pdf') {
+          const arrayBuffer = await fileData.arrayBuffer();
+          const pdfData = await pdf(new Uint8Array(arrayBuffer));
+          fileContent = pdfData.text;
+        } else if (fileExt === 'docx' || fileExt === 'doc') {
+          const arrayBuffer = await fileData.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          fileContent = result.value;
+        } else {
+          fileContent = await fileData.text();
+        }
+
+        if (fileContent.trim().length > 100) {
+          documentosTexto.push({
+            nombre: docName,
+            contenido: fileContent.substring(0, 15000) // Limitar por doc
+          });
+        }
+      } catch (error) {
+        console.error(`Error procesando ${docName}:`, error);
+        continue;
+      }
     }
 
-    console.log('File type:', fileExt, 'Content length:', fileContent.length);
+    console.log(`✅ ${documentosTexto.length} documento(s) procesado(s) exitosamente`);
 
-    // Validar que el contenido sea útil
-    const meaningfulContent = fileContent.trim().replace(/\s+/g, ' ');
-    if (meaningfulContent.length < 100) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'El documento parece estar vacío, es muy corto, o puede ser una imagen escaneada sin texto OCR. Por favor, verifica que el documento contenga texto seleccionable.'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (documentosTexto.length === 0) {
+      throw new Error('No se pudo extraer contenido de ningún documento');
     }
 
-    console.log('Document extraction summary:', {
-      fileName: documentName,
-      fileType: fileExt,
-      contentLength: fileContent.length,
-      wordCount: fileContent.split(/\s+/).length,
-      hasUsefulContent: fileContent.length > 100
-    });
-
-    // Construir el prompt para GPT
+    // Construir prompt para OpenAI
     const fieldDescriptions = expectedFields.map((f: any) => 
       `- ${f.fieldName}: ${f.description} (tipo: ${f.type}${f.maxLength ? `, máximo ${f.maxLength} caracteres` : ''})`
     ).join('\n');
 
-    const systemPrompt = `Eres un experto extractor de información de documentos educativos. Tu tarea es analizar documentos y extraer información estructurada de manera precisa.
+    const systemPrompt = `Eres un experto extractor de información de documentos educativos para el CNPIE 2025.
 
-REGLAS IMPORTANTES:
-1. Solo extrae información que esté EXPLÍCITAMENTE presente en el documento
-2. Si un campo no tiene información clara, devuelve null
-3. Respeta los límites de caracteres especificados
-4. Para listas, identifica elementos claros y separados
-5. Mantén el contexto y significado original del texto
-6. Si el documento no parece relacionado con los campos solicitados, indícalo`;
-
-    const userPrompt = `Analiza este documento educativo y extrae la siguiente información:
+DOCUMENTOS DISPONIBLES (${documentosTexto.length} documento(s)):
+${documentosTexto.map((doc, idx) => `
+═══════════════════════════════════════
+DOCUMENTO ${idx + 1}: "${doc.nombre}"
+═══════════════════════════════════════
+${doc.contenido}
+`).join('\n\n')}
 
 CAMPOS ESPERADOS:
 ${fieldDescriptions}
@@ -113,29 +132,34 @@ ${contexto_proyecto ? `CONTEXTO DEL PROYECTO:
 - Objetivo: ${contexto_proyecto.objetivo || 'N/A'}
 ` : ''}
 
-DOCUMENTO A ANALIZAR:
-${fileContent.substring(0, 15000)} ${fileContent.length > 15000 ? '...(documento truncado)' : ''}
+INSTRUCCIONES:
+1. Analiza TODOS los documentos disponibles
+2. Si un campo está en múltiples documentos, combina la información de forma coherente
+3. Prioriza información más reciente y detallada
+4. Si encuentras datos contradictorios, usa el documento más completo
+5. Para cada campo extraído, indica la fuente (nombre del documento) agregando un campo "_fuente"
+6. Solo extrae información que esté EXPLÍCITAMENTE presente
+7. Respeta los límites de caracteres especificados`;
 
-INSTRUCCIONES DE OUTPUT:
-Devuelve un JSON con esta estructura exacta:
+    const userPrompt = `Extrae la información de los ${documentosTexto.length} documento(s) según los campos solicitados.
+
+FORMATO DE RESPUESTA (JSON):
 {
   "extractedData": {
-    // Campos encontrados con sus valores
+    "campo1": "valor extraído",
+    "campo1_fuente": "nombre_documento.pdf",
+    "campo2": ["item1", "item2"]
   },
   "confidence": {
-    // Nivel de confianza para cada campo (0.0 a 1.0)
+    "campo1": 0.95,
+    "campo2": 0.80
   },
-  "missing_fields": [
-    // Array con nombres de campos no encontrados
-  ],
-  "warnings": [
-    // Array con advertencias sobre la calidad de extracción
-  ]
+  "missing_fields": ["campo3"],
+  "warnings": ["mensaje si algo falta"]
 }`;
 
     console.log('Calling OpenAI...');
 
-    // Llamar a OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -149,7 +173,7 @@ Devuelve un JSON con esta estructura exacta:
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.3,
-        max_tokens: 3000,
+        max_tokens: 4000,
         response_format: { type: "json_object" }
       }),
     });
@@ -166,7 +190,7 @@ Devuelve un JSON con esta estructura exacta:
     console.log('Extraction completed. Fields found:', Object.keys(aiOutput.extractedData || {}).length);
 
     // Construir respuesta final
-    const fieldsFound = Object.keys(aiOutput.extractedData || {});
+    const fieldsFound = Object.keys(aiOutput.extractedData || {}).filter(k => !k.endsWith('_fuente'));
     const allFieldNames = expectedFields.map((f: any) => f.fieldName);
     const fieldsMissing = allFieldNames.filter((name: string) => !fieldsFound.includes(name));
 
@@ -178,9 +202,12 @@ Devuelve un JSON con esta estructura exacta:
       fieldsMissing,
       warnings: aiOutput.warnings || [],
       documentAnalysis: {
-        wordCount: fileContent.split(/\s+/).length,
+        documentCount: documentosTexto.length,
+        documentNames: documentosTexto.map(d => d.nombre),
         language: 'es',
-        fileType: fileExt || 'unknown'
+        totalWordCount: documentosTexto.reduce((sum, d) => 
+          sum + d.contenido.split(/\s+/).length, 0
+        )
       }
     };
 

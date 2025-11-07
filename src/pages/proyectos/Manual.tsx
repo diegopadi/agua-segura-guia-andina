@@ -10,6 +10,7 @@ import { FileRecord } from "@/hooks/useFileManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import QuestionsForm from "@/components/QuestionsForm";
+import { DocumentosPostulacionUploader } from "@/components/DocumentosPostulacionUploader";
 
 interface PreguntaGenerada {
   categoria: string;
@@ -33,6 +34,7 @@ export default function Manual() {
   const [generatingQuestions, setGeneratingQuestions] = useState(false);
   const [recomendacion, setRecomendacion] = useState<Recomendacion | null>(null);
   const [generatingRecommendation, setGeneratingRecommendation] = useState(false);
+  const [documentosPostulacion, setDocumentosPostulacion] = useState<any[]>([]);
   const { hallazgos, loading, generating, generateSummary, hasData } = useAcceleratorsSummary();
 
   // Generar resumen automáticamente al cargar
@@ -282,6 +284,16 @@ export default function Manual() {
           </CardContent>
         </Card>
 
+        {/* Sección de Documentos de Postulación - OBLIGATORIO */}
+        <div id="documentos-postulacion" className="mb-6">
+          <DocumentosPostulacionUploader
+            documentos={documentosPostulacion}
+            onChange={setDocumentosPostulacion}
+            minDocuments={1}
+            maxDocuments={10}
+          />
+        </div>
+
         {/* Panel de preguntas IA */}
         <Card className="mb-6 border-0 shadow-md" style={{ backgroundColor: '#DDF4F2' }}>
           <CardHeader>
@@ -397,7 +409,18 @@ export default function Manual() {
                   Innovación Educativa Consolidado (2 años o más de ejecución).
                 </p>
                 <Button 
-                  onClick={() => navigate('/proyectos/2a')}
+                  onClick={() => {
+                    if (documentosPostulacion.length === 0) {
+                      toast({
+                        title: "Documentos requeridos",
+                        description: "Debes subir al menos 1 documento de postulación antes de continuar",
+                        variant: "destructive"
+                      });
+                      document.getElementById('documentos-postulacion')?.scrollIntoView({ behavior: 'smooth' });
+                      return;
+                    }
+                    navigate('/proyectos/2a');
+                  }}
                   className="w-full bg-white font-medium hover:bg-white/90"
                   style={{ color: '#005C6B' }}
                 >
@@ -429,7 +452,18 @@ export default function Manual() {
                   Innovación Educativa en Implementación (menos de 1 año de ejecución).
                 </p>
                 <Button 
-                  onClick={() => navigate('/proyectos/2b')}
+                  onClick={() => {
+                    if (documentosPostulacion.length === 0) {
+                      toast({
+                        title: "Documentos requeridos",
+                        description: "Debes subir al menos 1 documento de postulación antes de continuar",
+                        variant: "destructive"
+                      });
+                      document.getElementById('documentos-postulacion')?.scrollIntoView({ behavior: 'smooth' });
+                      return;
+                    }
+                    navigate('/proyectos/2b');
+                  }}
                   className="w-full bg-white font-medium hover:bg-white/90"
                   style={{ color: '#00A6A6' }}
                 >
@@ -461,7 +495,18 @@ export default function Manual() {
                   Proyecto de Investigación-Acción Participativa (fase exploratoria o de descubrimiento).
                 </p>
                 <Button 
-                  onClick={() => navigate('/proyectos/2c')}
+                  onClick={() => {
+                    if (documentosPostulacion.length === 0) {
+                      toast({
+                        title: "Documentos requeridos",
+                        description: "Debes subir al menos 1 documento de postulación antes de continuar",
+                        variant: "destructive"
+                      });
+                      document.getElementById('documentos-postulacion')?.scrollIntoView({ behavior: 'smooth' });
+                      return;
+                    }
+                    navigate('/proyectos/2c');
+                  }}
                   className="w-full bg-white font-medium hover:bg-white/90"
                   style={{ color: '#1BBEAE' }}
                 >

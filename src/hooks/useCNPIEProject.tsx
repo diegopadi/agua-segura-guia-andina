@@ -182,6 +182,36 @@ export function useCNPIEProject(tipoProyecto: '2A' | '2B' | '2C') {
     return proyecto.datos_aceleradores;
   };
 
+  const saveDocumentosPostulacion = async (documentos: any[]) => {
+    if (!proyecto?.id) {
+      console.error('No hay proyecto para guardar documentos');
+      return false;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('cnpie_proyectos')
+        .update({ documentos_postulacion: documentos })
+        .eq('id', proyecto.id);
+        
+      if (error) throw error;
+      
+      setProyecto(prev => prev ? { 
+        ...prev, 
+        documentos_postulacion: documentos 
+      } : null);
+      
+      return true;
+    } catch (error) {
+      console.error('Error guardando documentos:', error);
+      return false;
+    }
+  };
+
+  const getDocumentosPostulacion = (): any[] => {
+    return (proyecto as any)?.documentos_postulacion || [];
+  };
+
   const validateEvaluacionFinal = async () => {
     if (!proyecto) return false;
 
@@ -237,6 +267,8 @@ export function useCNPIEProject(tipoProyecto: '2A' | '2B' | '2C') {
     canProceedToNext,
     getAcceleratorData,
     getAllData,
+    saveDocumentosPostulacion,
+    getDocumentosPostulacion,
     refreshProject: fetchOrCreateProject
   };
 }

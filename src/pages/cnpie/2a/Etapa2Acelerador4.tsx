@@ -119,6 +119,14 @@ export default function Etapa2Acelerador4() {
     >
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
+          <DocumentosExtractionButton
+            documentos={documentos}
+            expectedFields={documentFieldSchema}
+            contextoProyecto={getAllData()}
+            onDataExtracted={handleAutoFill}
+            aceleradorKey="etapa2_acelerador4"
+          />
+
           {/* Participación de Estudiantes */}
           <Card>
             <CardHeader>

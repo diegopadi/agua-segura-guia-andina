@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useToast } from "./use-toast";
+import { sanitizeFileName } from "@/lib/utils";
 
 export interface FileRecord {
   id: string;
@@ -10,6 +11,7 @@ export interface FileRecord {
   file_type: string | null;
   size_bytes: number;
   created_at: string;
+  original_name?: string; // Nombre original del archivo
 }
 
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB por archivo
@@ -87,9 +89,9 @@ export function useFileManager() {
     setUploadProgress(0);
 
     try {
-      // Generate unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      // Generate unique filename preserving original name
+      const sanitizedName = sanitizeFileName(file.name);
+      const fileName = `${Date.now()}_${sanitizedName}`; // Timestamp + nombre limpio
       const filePath = `${user.id}/${fileName}`;
 
       // Upload to storage
@@ -115,6 +117,7 @@ export function useFileManager() {
           url: urlData.publicUrl,
           file_type: fileType || 'documento',
           size_bytes: file.size,
+          original_name: file.name, // Guardar nombre original
         });
 
       if (dbError) throw dbError;
