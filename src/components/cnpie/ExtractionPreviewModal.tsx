@@ -21,7 +21,13 @@ export function ExtractionPreviewModal({
   extractionResult,
   fieldSchemas
 }: ExtractionPreviewModalProps) {
-  const { extractedData, confidence, fieldsFound, fieldsMissing, warnings } = extractionResult;
+  const { 
+    extractedData = {}, 
+    confidence = {}, 
+    fieldsFound = [], 
+    fieldsMissing = [], 
+    warnings = [] 
+  } = extractionResult || {};
 
   const fieldLabels = fieldSchemas.reduce((acc, field) => {
     acc[field.fieldName] = field.label;
