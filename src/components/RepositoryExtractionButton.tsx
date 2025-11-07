@@ -95,65 +95,101 @@ export function RepositoryExtractionButton({
     setExtractionResult(null);
   };
 
-  if (files.length === 0) {
-    return null;
-  }
+  const hasFiles = files.length > 0;
 
   return (
     <>
-      <Card className="border-purple-200 bg-purple-50/30">
+      <Card className={hasFiles ? "border-purple-200 bg-purple-50/30" : "border-orange-200 bg-orange-50/30"}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="w-5 h-5 text-purple-600" />
-            Repositorio de Documentos ({files.length})
-          </CardTitle>
-          <CardDescription>
-            Tienes {files.length} documento(s) en tu repositorio personal
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Preview de primeros 3 documentos */}
-          <div className="space-y-2">
-            {files.slice(0, 3).map(file => (
-              <div key={file.id} className="flex items-center gap-2 text-sm p-2 bg-white rounded border">
-                <FileText className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                <span className="truncate flex-1">{file.original_name || 'Sin nombre'}</span>
-                <Badge variant="outline" className="text-xs">
-                  {(file.size_bytes / 1024).toFixed(0)} KB
-                </Badge>
-              </div>
-            ))}
-            {files.length > 3 && (
-              <p className="text-xs text-muted-foreground text-center">
-                Y {files.length - 3} documento(s) más...
-              </p>
-            )}
-          </div>
-
-          {/* Botón de extracción */}
-          <Button
-            onClick={handleExtract}
-            disabled={extracting}
-            className="w-full"
-            size="lg"
-            variant="secondary"
-          >
-            {extracting ? (
+            {hasFiles ? (
               <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Analizando {files.length} documento(s) del repositorio...
+                <FileText className="w-5 h-5 text-purple-600" />
+                Repositorio de Documentos ({files.length})
               </>
             ) : (
               <>
-                <Sparkles className="w-5 h-5 mr-2" />
-                Extraer información del repositorio con IA
+                <Sparkles className="w-5 h-5 text-orange-600" />
+                Autocompletar con IA desde tu Repositorio
               </>
             )}
-          </Button>
+          </CardTitle>
+          <CardDescription>
+            {hasFiles 
+              ? `Tienes ${files.length} documento(s) en tu repositorio personal`
+              : 'Sube documentos a tu repositorio para autocompletar este formulario con IA'
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {hasFiles ? (
+            <>
+              {/* Preview de primeros 3 documentos */}
+              <div className="space-y-2">
+                {files.slice(0, 3).map(file => (
+                  <div key={file.id} className="flex items-center gap-2 text-sm p-2 bg-white rounded border">
+                    <FileText className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                    <span className="truncate flex-1">{file.original_name || 'Sin nombre'}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {(file.size_bytes / 1024).toFixed(0)} KB
+                    </Badge>
+                  </div>
+                ))}
+                {files.length > 3 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Y {files.length - 3} documento(s) más...
+                  </p>
+                )}
+              </div>
 
-          <p className="text-xs text-center text-muted-foreground">
-            La IA analizará todos tus documentos del repositorio para autocompletar este formulario
-          </p>
+              {/* Botón de extracción */}
+              <Button
+                onClick={handleExtract}
+                disabled={extracting}
+                className="w-full bg-purple-600 hover:bg-purple-700"
+                size="lg"
+              >
+                {extracting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Analizando {files.length} documento(s)...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Autocompletar campos con IA
+                  </>
+                )}
+              </Button>
+
+              <p className="text-xs text-center text-muted-foreground">
+                La IA analizará todos tus documentos del repositorio para autocompletar este formulario
+              </p>
+            </>
+          ) : (
+            <>
+              {/* Sin archivos - mostrar call to action */}
+              <div className="text-center py-4 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  No hay documentos en tu repositorio todavía
+                </p>
+                <Button
+                  onClick={() => {
+                    toast({
+                      title: "Ve al Repositorio",
+                      description: "Sube tus documentos del proyecto en la sección Repositorio del menú lateral"
+                    });
+                  }}
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                >
+                  <FileText className="w-5 h-5 mr-2" />
+                  Ir al Repositorio para subir documentos
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
