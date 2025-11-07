@@ -22,44 +22,10 @@ export default function Proyectos() {
           </p>
         </div>
 
-        {/* Tarjetas de navegación */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Tarjeta 1 - Generación de Proyecto */}
-          <Card 
-            className="border-0 shadow-md hover:shadow-lg transition-shadow" 
-            style={{ backgroundColor: '#DDF4F2' }}
-          >
-            <CardHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <div 
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: '#00A6A6' }}
-                >
-                  <Settings className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-xl" style={{ color: '#005C6B' }}>
-                  Generación de Proyecto
-                </CardTitle>
-              </div>
-              <CardDescription className="text-sm" style={{ color: '#1A1A1A', opacity: 0.8 }}>
-                Recomendada
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm" style={{ color: '#1A1A1A' }}>
-                Importa tu diagnóstico (solo lectura), recibe una recomendación automática del tipo de proyecto (2A, 2B o 2C) y continúa.
-              </p>
-              <Button 
-                onClick={() => navigate('/proyectos/generacion')}
-                className="w-full bg-teal-800 hover:bg-teal-900 text-white font-medium"
-              >
-                Continuar
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Tarjeta 2 - Elegir tipo manualmente */}
-          <Card 
+        {/* Tarjeta de navegación */}
+        <div className="max-w-2xl mx-auto mb-8">
+          {/* Tarjeta - Elegir tipo manualmente */}
+          <Card
             className="border-0 shadow-md hover:shadow-lg transition-shadow"
             style={{ backgroundColor: '#DDF4F2' }}
           >

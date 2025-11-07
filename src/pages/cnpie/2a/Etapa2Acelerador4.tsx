@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Lightbulb, Users } from "lucide-react";
-import { DocumentosExtractionButton } from "@/components/DocumentosExtractionButton";
 import { RepositoryExtractionButton } from "@/components/RepositoryExtractionButton";
 import { DocumentFieldSchema } from "@/types/document-extraction";
 
@@ -22,7 +21,6 @@ export default function Etapa2Acelerador4() {
   const { toast } = useToast();
 
   const rubricaParticipacion = getCriterioByName('Participación');
-  const documentos = getDocumentosPostulacion();
 
   const [formData, setFormData] = useState({
     participacionEstudiantes: '',
@@ -144,14 +142,6 @@ export default function Etapa2Acelerador4() {
     >
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          <DocumentosExtractionButton
-            documentos={documentos}
-            expectedFields={documentFieldSchema}
-            contextoProyecto={getAllData()}
-            onDataExtracted={handleAutoFill}
-            aceleradorKey="etapa2_acelerador4"
-          />
-
           <RepositoryExtractionButton
             expectedFields={documentFieldSchema}
             contextoProyecto={getAllData()}

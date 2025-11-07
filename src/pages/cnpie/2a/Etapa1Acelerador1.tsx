@@ -4,7 +4,6 @@ import { useCNPIERubric } from "@/hooks/useCNPIERubric";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
 import { CNPIERubricScoreButton } from "@/components/cnpie/CNPIERubricScoreButton";
-import { DocumentosExtractionButton } from "@/components/DocumentosExtractionButton";
 import { RepositoryExtractionButton } from "@/components/RepositoryExtractionButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -19,12 +18,11 @@ import { Lightbulb, Plus, X, BookOpen } from "lucide-react";
 import { DocumentFieldSchema } from "@/types/document-extraction";
 
 export default function Etapa1Acelerador1() {
-  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData, getDocumentosPostulacion } = useCNPIEProject('2A');
+  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData } = useCNPIEProject('2A');
   const { rubricas, getCriterioByName } = useCNPIERubric('2A');
   const { toast } = useToast();
 
   const rubricaIntencionalidad = getCriterioByName('Intencionalidad');
-  const documentos = getDocumentosPostulacion();
 
   const [formData, setFormData] = useState({
     problemaDescripcion: '',
@@ -173,14 +171,6 @@ export default function Etapa1Acelerador1() {
       <div className="grid md:grid-cols-3 gap-6">
         {/* Formulario principal */}
         <div className="md:col-span-2 space-y-6">
-          <DocumentosExtractionButton
-            documentos={documentos}
-            expectedFields={documentFieldSchema}
-            contextoProyecto={getAllData()}
-            onDataExtracted={handleAutoFill}
-            aceleradorKey="etapa1_acelerador1"
-          />
-
           <RepositoryExtractionButton
             expectedFields={documentFieldSchema}
             contextoProyecto={getAllData()}

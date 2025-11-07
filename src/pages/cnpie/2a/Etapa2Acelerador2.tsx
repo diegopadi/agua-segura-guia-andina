@@ -3,7 +3,6 @@ import { useCNPIEProject } from "@/hooks/useCNPIEProject";
 import { useCNPIERubric } from "@/hooks/useCNPIERubric";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
-import { DocumentosExtractionButton } from "@/components/DocumentosExtractionButton";
 import { RepositoryExtractionButton } from "@/components/RepositoryExtractionButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +24,6 @@ export default function Etapa2Acelerador2() {
   const rubricaOriginalidad = getCriterioByName('Originalidad');
   const etapa1Data = getAcceleratorData(1, 1);
   const areaFaltante = !etapa1Data?.areaCurricular;
-  const documentos = getDocumentosPostulacion();
 
   const [formData, setFormData] = useState({
     metodologiaDescripcion: '',
@@ -215,14 +213,6 @@ export default function Etapa2Acelerador2() {
               </AlertDescription>
             </Alert>
           )}
-
-          <DocumentosExtractionButton
-            documentos={documentos}
-            expectedFields={documentFieldSchema}
-            contextoProyecto={getAllData()}
-            onDataExtracted={handleAutoFill}
-            aceleradorKey="etapa2_acelerador2"
-          />
 
           <RepositoryExtractionButton
             expectedFields={documentFieldSchema}
