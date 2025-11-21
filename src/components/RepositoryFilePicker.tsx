@@ -23,7 +23,7 @@ export default function RepositoryFilePicker({
   onSelect,
   multiple = false,
   triggerLabel = "Adjuntar desde Repositorio",
-  filterType
+  filterType,
 }: RepositoryFilePickerProps) {
   const { files, loading, fetchFiles } = useFileManager();
   const [open, setOpen] = useState(false);
@@ -35,16 +35,16 @@ export default function RepositoryFilePicker({
     }
   }, [open, fetchFiles]);
 
-  const filteredFiles = filterType 
-    ? files.filter(f => f.file_type === filterType)
+  const filteredFiles = filterType
+    ? files.filter((f) => f.file_type === filterType)
     : files;
 
   const toggleFileSelection = (file: FileRecord) => {
     if (multiple) {
-      setSelectedFiles(prev => {
-        const isSelected = prev.find(f => f.id === file.id);
+      setSelectedFiles((prev) => {
+        const isSelected = prev.find((f) => f.id === file.id);
         if (isSelected) {
-          return prev.filter(f => f.id !== file.id);
+          return prev.filter((f) => f.id !== file.id);
         } else {
           return [...prev, file];
         }
@@ -61,7 +61,7 @@ export default function RepositoryFilePicker({
   };
 
   const isSelected = (fileId: string) => {
-    return selectedFiles.find(f => f.id === fileId) !== undefined;
+    return selectedFiles.find((f) => f.id === fileId) !== undefined;
   };
 
   return (
@@ -76,7 +76,7 @@ export default function RepositoryFilePicker({
         <DialogHeader>
           <DialogTitle>Seleccionar desde Repositorio</DialogTitle>
           <DialogDescription>
-            {multiple 
+            {multiple
               ? "Selecciona uno o más archivos de tu repositorio"
               : "Selecciona un archivo de tu repositorio"}
           </DialogDescription>
@@ -100,9 +100,9 @@ export default function RepositoryFilePicker({
         {!loading && filteredFiles.length > 0 && (
           <div className="space-y-2">
             {filteredFiles.map((file) => {
-              const fileName = file.url.split('/').pop() || 'archivo';
+              const fileName = file.url.split("/").pop() || "archivo";
               const selected = isSelected(file.id);
-              
+
               return (
                 <div
                   key={file.id}
@@ -115,9 +115,17 @@ export default function RepositoryFilePicker({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1">
-                      <FileText className="w-5 h-5 text-muted-foreground" />
+                      <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{file.original_name || fileName}</p>
+                        <p
+                          className={`font-medium ${
+                            (file.original_name || fileName).length > 10
+                              ? "break-words"
+                              : "truncate"
+                          }`}
+                        >
+                          {file.original_name || fileName}
+                        </p>
                         <div className="flex items-center gap-2 mt-1">
                           {file.file_type && (
                             <Badge variant="secondary" className="text-xs">
@@ -128,7 +136,9 @@ export default function RepositoryFilePicker({
                             {(file.size_bytes / (1024 * 1024)).toFixed(2)} MB
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {new Date(file.created_at).toLocaleDateString('es-PE')}
+                            {new Date(file.created_at).toLocaleDateString(
+                              "es-PE"
+                            )}
                           </span>
                         </div>
                       </div>
@@ -144,16 +154,16 @@ export default function RepositoryFilePicker({
         )}
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={() => {
-            setSelectedFiles([]);
-            setOpen(false);
-          }}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSelectedFiles([]);
+              setOpen(false);
+            }}
+          >
             Cancelar
           </Button>
-          <Button 
-            onClick={handleConfirm}
-            disabled={selectedFiles.length === 0}
-          >
+          <Button onClick={handleConfirm} disabled={selectedFiles.length === 0}>
             Adjuntar {selectedFiles.length > 0 && `(${selectedFiles.length})`}
           </Button>
         </div>
