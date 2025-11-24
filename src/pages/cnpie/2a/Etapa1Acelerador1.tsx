@@ -5,49 +5,98 @@ import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayou
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
 import { CNPIERubricScoreButton } from "@/components/cnpie/CNPIERubricScoreButton";
 import { RepositoryExtractionButton } from "@/components/RepositoryExtractionButton";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Lightbulb, Plus, X, BookOpen } from "lucide-react";
 import { DocumentFieldSchema } from "@/types/document-extraction";
 
 export default function Etapa1Acelerador1() {
-  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData } = useCNPIEProject('2A');
-  const { rubricas, getCriterioByName } = useCNPIERubric('2A');
+  const {
+    proyecto,
+    saveAcceleratorData,
+    validateAccelerator,
+    getAcceleratorData,
+    getAllData,
+  } = useCNPIEProject("2A");
+  const { rubricas, getCriterioByName } = useCNPIERubric("2A");
   const { toast } = useToast();
 
-  const rubricaIntencionalidad = getCriterioByName('Intencionalidad');
+  const rubricaIntencionalidad = getCriterioByName("Intencionalidad");
 
   const [formData, setFormData] = useState({
-    problemaDescripcion: '',
+    problemaDescripcion: "",
     causas: [] as string[],
     consecuencias: [] as string[],
-    objetivo: '',
-    contexto: '',
-    areaCurricular: ''
+    objetivo: "",
+    contexto: "",
+    areaCurricular: "",
   });
 
-  const [nuevaCausa, setNuevaCausa] = useState('');
-  const [nuevaConsecuencia, setNuevaConsecuencia] = useState('');
+  const [nuevaCausa, setNuevaCausa] = useState("");
+  const [nuevaConsecuencia, setNuevaConsecuencia] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
 
   const documentFieldSchema: DocumentFieldSchema[] = [
-    { fieldName: "problemaDescripcion", label: "Problema Central", type: "textarea", description: "Descripción del problema educativo", maxLength: 3000 },
-    { fieldName: "objetivo", label: "Objetivo", type: "textarea", description: "Objetivo SMART del proyecto", maxLength: 1500 },
-    { fieldName: "contexto", label: "Contexto", type: "textarea", description: "Contexto institucional" },
-    { fieldName: "areaCurricular", label: "Área Curricular", type: "text", description: "Área curricular del CNEB" }
+    {
+      fieldName: "problemaDescripcion",
+      label: "Problema Central",
+      type: "textarea",
+      description: "Descripción del problema educativo",
+      maxLength: 3000,
+    },
+    {
+      fieldName: "objetivo",
+      label: "Objetivo",
+      type: "textarea",
+      description: "Objetivo SMART del proyecto",
+      maxLength: 1500,
+    },
+    {
+      fieldName: "contexto",
+      label: "Contexto",
+      type: "textarea",
+      description: "Contexto institucional",
+    },
+    {
+      fieldName: "areaCurricular",
+      label: "Área Curricular",
+      type: "text",
+      description: "Área curricular del CNEB",
+    },
   ];
 
   const handleAutoFill = (extractedData: any) => {
-    setFormData(prev => ({ ...prev, ...extractedData }));
-    toast({ title: "Datos extraídos", description: "Revisa y completa la información" });
+    setFormData((prev) => ({ ...prev, ...extractedData }));
+    toast({
+      title: "Datos extraídos",
+      description: "Revisa y completa la información",
+    });
   };
 
   useEffect(() => {
@@ -71,11 +120,16 @@ export default function Etapa1Acelerador1() {
   };
 
   const handleAnalyze = async () => {
-    if (!formData.problemaDescripcion || formData.causas.length === 0 || !formData.objetivo) {
+    if (
+      !formData.problemaDescripcion ||
+      formData.causas.length === 0 ||
+      !formData.objetivo
+    ) {
       toast({
         title: "Campos incompletos",
-        description: "Completa al menos el problema, causas y objetivo para analizar",
-        variant: "destructive"
+        description:
+          "Completa al menos el problema, causas y objetivo para analizar",
+        variant: "destructive",
       });
       return;
     }
@@ -83,9 +137,12 @@ export default function Etapa1Acelerador1() {
     try {
       setAnalyzing(true);
 
-      const { data, error } = await supabase.functions.invoke('analyze-cnpie-intencionalidad', {
-        body: formData
-      });
+      const { data, error } = await supabase.functions.invoke(
+        "analyze-cnpie-intencionalidad",
+        {
+          body: formData,
+        }
+      );
 
       if (error) throw error;
 
@@ -93,15 +150,15 @@ export default function Etapa1Acelerador1() {
         setAnalysis(data.analysis);
         toast({
           title: "Análisis completado",
-          description: "La IA ha analizado tu intencionalidad"
+          description: "La IA ha analizado tu intencionalidad",
         });
       }
     } catch (error: any) {
-      console.error('Error analyzing:', error);
+      console.error("Error analyzing:", error);
       toast({
         title: "Error",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setAnalyzing(false);
@@ -110,49 +167,57 @@ export default function Etapa1Acelerador1() {
 
   const addCausa = () => {
     if (nuevaCausa.trim()) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        causas: [...prev.causas, nuevaCausa.trim()]
+        causas: [...prev.causas, nuevaCausa.trim()],
       }));
-      setNuevaCausa('');
+      setNuevaCausa("");
     }
   };
 
   const removeCausa = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      causas: prev.causas.filter((_, i) => i !== index)
+      causas: prev.causas.filter((_, i) => i !== index),
     }));
   };
 
   const addConsecuencia = () => {
     if (nuevaConsecuencia.trim()) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        consecuencias: [...prev.consecuencias, nuevaConsecuencia.trim()]
+        consecuencias: [...prev.consecuencias, nuevaConsecuencia.trim()],
       }));
-      setNuevaConsecuencia('');
+      setNuevaConsecuencia("");
     }
   };
 
   const removeConsecuencia = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      consecuencias: prev.consecuencias.filter((_, i) => i !== index)
+      consecuencias: prev.consecuencias.filter((_, i) => i !== index),
     }));
   };
 
-  const canProceed = !!(formData.problemaDescripcion && formData.causas.length > 0 && formData.objetivo && formData.areaCurricular);
-  const progress = (
+  const canProceed = !!(
+    formData.problemaDescripcion &&
+    formData.causas.length > 0 &&
+    formData.objetivo &&
+    formData.areaCurricular
+  );
+  const progress =
     (formData.problemaDescripcion ? 20 : 0) +
     (formData.causas.length > 0 ? 20 : 0) +
     (formData.consecuencias.length > 0 ? 15 : 0) +
     (formData.objetivo ? 25 : 0) +
-    (formData.areaCurricular ? 20 : 0)
-  );
+    (formData.areaCurricular ? 20 : 0);
 
   if (!proyecto) {
-    return <div className="flex items-center justify-center h-screen">Cargando...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        Cargando...
+      </div>
+    );
   }
 
   return (
@@ -165,7 +230,7 @@ export default function Etapa1Acelerador1() {
       onValidate={handleValidate}
       canProceed={canProceed}
       currentProgress={progress}
-      titulo="Contexto e Intencionalidad"
+      titulo="Contexto e Intencionalidadsss"
       descripcion="Define el problema central, causas, consecuencias y objetivo de tu proyecto"
     >
       <div className="grid md:grid-cols-3 gap-6">
@@ -178,189 +243,190 @@ export default function Etapa1Acelerador1() {
             aceleradorKey="etapa1_acelerador1"
           />
 
-          {/* Área Curricular - NUEVO */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                Área Curricular
-              </CardTitle>
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100">
+              <CardTitle className="text-2xl">Ficha de postulación</CardTitle>
               <CardDescription>
-                Selecciona el área curricular en la que desarrollarás tu proyecto pedagógico (según CNEB Secundaria)
+                Completa cada sección para estructurar tu proyecto
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Select
-                value={formData.areaCurricular}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, areaCurricular: value }))}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecciona un área curricular..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Comunicación">Comunicación</SelectItem>
-                  <SelectItem value="Matemática">Matemática</SelectItem>
-                  <SelectItem value="Ciencia y Tecnología">Ciencia y Tecnología</SelectItem>
-                  <SelectItem value="Ciencias Sociales">Ciencias Sociales</SelectItem>
-                  <SelectItem value="Desarrollo Personal, Ciudadanía y Cívica">Desarrollo Personal, Ciudadanía y Cívica</SelectItem>
-                  <SelectItem value="Educación para el Trabajo">Educación para el Trabajo</SelectItem>
-                  <SelectItem value="Educación Física">Educación Física</SelectItem>
-                  <SelectItem value="Arte y Cultura">Arte y Cultura</SelectItem>
-                  <SelectItem value="Educación Religiosa">Educación Religiosa</SelectItem>
-                  <SelectItem value="Inglés como Lengua Extranjera">Inglés como Lengua Extranjera</SelectItem>
-                </SelectContent>
-              </Select>
-              {formData.areaCurricular && (
-                <div className="mt-3 p-3 bg-primary/5 rounded-md">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>Área seleccionada:</strong> {formData.areaCurricular}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Las competencias CNEB que podrás seleccionar en los siguientes aceleradores estarán filtradas según esta área.
-                  </p>
-                </div>
+            <CardContent className="pt-6">
+              <Accordion type="single" collapsible className="w-full">
+                {/* 1. IDENTIFICACIÓN DEL PROBLEMA */}
+                <AccordionItem
+                  value="item-1"
+                  className="border rounded-lg mb-4 px-4"
+                >
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-base">
+                        1. IDENTIFICACIÓN DEL PROBLEMA Y DESCRIPCIÓN DE
+                        OBJETIVOS
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 space-y-6">
+                    {/* Pregunta 1.1 */}
+                    <div className="space-y-4">
+                      <Card className="bg-amber-50 border-amber-200">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-medium text-amber-900">
+                            Pregunta 1.1
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-gray-700">
+                            ¿Cuál es el problema educativo que quieres abordar?
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Textarea
+                        value={formData.problemaDescripcion}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            problemaDescripcion: e.target.value,
+                          })
+                        }
+                        placeholder="Escribe tu respuesta aquí..."
+                        className="min-h-[120px]"
+                      />
+                    </div>
+
+                    {/* Pregunta 1.2 */}
+                    <div className="space-y-4">
+                      <Card className="bg-amber-50 border-amber-200">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-medium text-amber-900">
+                            Pregunta 1.2
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-gray-700">
+                            ¿Cuál es el objetivo principal de tu proyecto?
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Textarea
+                        value={formData.objetivo}
+                        onChange={(e) =>
+                          setFormData({ ...formData, objetivo: e.target.value })
+                        }
+                        placeholder="Escribe tu respuesta aquí..."
+                        className="min-h-[120px]"
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 2. SOLUCIÓN INNOVADORA */}
+                <AccordionItem
+                  value="item-2"
+                  className="border rounded-lg mb-4 px-4"
+                >
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-base">
+                        2. SOLUCIÓN INNOVADORA
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 space-y-4">
+                    <div>
+                      <Label className="text-base font-semibold mb-3 block">
+                        Contexto institucional
+                      </Label>
+                      <Textarea
+                        value={formData.contexto}
+                        onChange={(e) =>
+                          setFormData({ ...formData, contexto: e.target.value })
+                        }
+                        placeholder="Describe el contexto de tu institución educativa..."
+                        className="min-h-[120px]"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-base font-semibold mb-3 block">
+                        Área Curricular
+                      </Label>
+                      <Input
+                        value={formData.areaCurricular}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            areaCurricular: e.target.value,
+                          })
+                        }
+                        placeholder="Ej: Matemática, Comunicación, etc."
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 3. IMPACTO DE LA IMPLEMENTACIÓN */}
+                <AccordionItem
+                  value="item-3"
+                  className="border-2 border-blue-300 rounded-lg mb-4 px-4 bg-blue-50"
+                >
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-base text-blue-900">
+                        3. IMPACTO DE LA IMPLEMENTACIÓN
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4">
+                    <p className="text-sm text-gray-600 italic">
+                      Esta sección se completará en etapas posteriores
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 4. SOSTENIBILIDAD */}
+                <AccordionItem
+                  value="item-4"
+                  className="border rounded-lg mb-4 px-4"
+                >
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-base">
+                        4. SOSTENIBILIDAD
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4">
+                    <p className="text-sm text-gray-600 italic">
+                      Esta sección se completará en etapas posteriores
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+
+          {/* Botón de análisis */}
+          <div className="flex justify-center">
+            <Button
+              onClick={handleAnalyze}
+              disabled={analyzing}
+              size="lg"
+              className="gap-2"
+            >
+              {analyzing ? (
+                <>
+                  <Lightbulb className="w-5 h-5 animate-pulse" />
+                  Analizando...
+                </>
+              ) : (
+                <>
+                  <Lightbulb className="w-5 h-5" />
+                  Analizar con IA
+                </>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Problema Central */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Problema Central</CardTitle>
-              <CardDescription>
-                Describe claramente el problema educativo que motivó tu proyecto
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={formData.problemaDescripcion}
-                onChange={(e) => setFormData(prev => ({ ...prev, problemaDescripcion: e.target.value }))}
-                placeholder="Describe el problema central de manera específica, identificando qué está sucediendo, a quiénes afecta y en qué contexto..."
-                className="min-h-[150px]"
-                maxLength={rubricaIntencionalidad?.extension_maxima || 3000}
-              />
-              <div className="text-xs text-muted-foreground mt-2">
-                {formData.problemaDescripcion.length} / {rubricaIntencionalidad?.extension_maxima || 3000} caracteres
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Causas */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Causas del Problema</CardTitle>
-              <CardDescription>
-                Identifica las causas que originan este problema
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  value={nuevaCausa}
-                  onChange={(e) => setNuevaCausa(e.target.value)}
-                  placeholder="Escribe una causa..."
-                  onKeyPress={(e) => e.key === 'Enter' && addCausa()}
-                />
-                <Button onClick={addCausa} size="icon">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {formData.causas.map((causa, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-2 bg-muted rounded">
-                    <span className="flex-1 text-sm">{causa}</span>
-                    <Button variant="ghost" size="icon" onClick={() => removeCausa(idx)}>
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Consecuencias */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Consecuencias</CardTitle>
-              <CardDescription>
-                ¿Qué sucede como resultado de este problema?
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  value={nuevaConsecuencia}
-                  onChange={(e) => setNuevaConsecuencia(e.target.value)}
-                  placeholder="Escribe una consecuencia..."
-                  onKeyPress={(e) => e.key === 'Enter' && addConsecuencia()}
-                />
-                <Button onClick={addConsecuencia} size="icon">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {formData.consecuencias.map((cons, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-2 bg-muted rounded">
-                    <span className="flex-1 text-sm">{cons}</span>
-                    <Button variant="ghost" size="icon" onClick={() => removeConsecuencia(idx)}>
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Objetivo */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Objetivo del Proyecto</CardTitle>
-              <CardDescription>
-                Define un objetivo SMART (Específico, Medible, Alcanzable, Relevante, Temporal)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={formData.objetivo}
-                onChange={(e) => setFormData(prev => ({ ...prev, objetivo: e.target.value }))}
-                placeholder="Ej: Mejorar en un 30% el desarrollo de la competencia 'Resuelve problemas de cantidad' en estudiantes de 4to grado, mediante la metodología ABP, durante el año escolar 2025..."
-                className="min-h-[100px]"
-                maxLength={1500}
-              />
-              <div className="text-xs text-muted-foreground mt-2">
-                {formData.objetivo.length} / 1500 caracteres
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Contexto Adicional */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contexto Institucional</CardTitle>
-              <CardDescription>
-                Describe brevemente el contexto de tu institución educativa
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={formData.contexto}
-                onChange={(e) => setFormData(prev => ({ ...prev, contexto: e.target.value }))}
-                placeholder="Ubicación, nivel educativo, características de estudiantes, recursos disponibles, etc..."
-                className="min-h-[100px]"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Botón de Análisis */}
-          <Button
-            onClick={handleAnalyze}
-            disabled={analyzing || !canProceed}
-            className="w-full"
-            size="lg"
-          >
-            <Lightbulb className="w-5 h-5 mr-2" />
-            {analyzing ? "Analizando..." : "Analizar con IA"}
-          </Button>
+            </Button>
+          </div>
 
           {/* Resultados del Análisis */}
           {analysis && (
@@ -380,10 +446,15 @@ export default function Etapa1Acelerador1() {
               <CardContent className="space-y-4">
                 {analysis.fortalezas && analysis.fortalezas.length > 0 && (
                   <div>
-                    <h4 className="font-semibold text-green-600 mb-2">Fortalezas</h4>
+                    <h4 className="font-semibold text-green-600 mb-2">
+                      Fortalezas
+                    </h4>
                     <ul className="space-y-1">
                       {analysis.fortalezas.map((f: string, idx: number) => (
-                        <li key={idx} className="text-sm flex items-start gap-2">
+                        <li
+                          key={idx}
+                          className="text-sm flex items-start gap-2"
+                        >
                           <span className="text-green-600">•</span>
                           <span>{f}</span>
                         </li>
@@ -391,25 +462,36 @@ export default function Etapa1Acelerador1() {
                     </ul>
                   </div>
                 )}
-                {analysis.areas_mejorar && analysis.areas_mejorar.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-yellow-600 mb-2">Áreas a mejorar</h4>
-                    <ul className="space-y-1">
-                      {analysis.areas_mejorar.map((a: string, idx: number) => (
-                        <li key={idx} className="text-sm flex items-start gap-2">
-                          <span className="text-yellow-600">•</span>
-                          <span>{a}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                {analysis.areas_mejorar &&
+                  analysis.areas_mejorar.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-yellow-600 mb-2">
+                        Áreas a mejorar
+                      </h4>
+                      <ul className="space-y-1">
+                        {analysis.areas_mejorar.map(
+                          (a: string, idx: number) => (
+                            <li
+                              key={idx}
+                              className="text-sm flex items-start gap-2"
+                            >
+                              <span className="text-yellow-600">•</span>
+                              <span>{a}</span>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
                 {analysis.sugerencias && analysis.sugerencias.length > 0 && (
                   <div>
                     <h4 className="font-semibold mb-2">Sugerencias</h4>
                     <ul className="space-y-1">
                       {analysis.sugerencias.map((s: string, idx: number) => (
-                        <li key={idx} className="text-sm flex items-start gap-2">
+                        <li
+                          key={idx}
+                          className="text-sm flex items-start gap-2"
+                        >
                           <span>→</span>
                           <span>{s}</span>
                         </li>
@@ -427,7 +509,7 @@ export default function Etapa1Acelerador1() {
           <div className="sticky top-4">
             <CNPIERubricViewer
               rubricas={rubricaIntencionalidad ? [rubricaIntencionalidad] : []}
-              destacarCriterios={['Intencionalidad']}
+              destacarCriterios={["Intencionalidad"]}
             />
           </div>
         </div>

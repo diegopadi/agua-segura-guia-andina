@@ -21,6 +21,7 @@ import {
   BookMarked,
   Loader2,
   Trash2,
+  Lightbulb,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAcceleratorsSummary } from "@/hooks/useAcceleratorsSummary";
@@ -37,7 +38,7 @@ interface PreguntaGenerada {
 }
 
 interface Recomendacion {
-  recomendacion: "2A" | "2B" | "2C";
+  recomendacion: "2A" | "2B" | "2C" | "2D";
   confianza: number;
   justificacion: string;
   fortalezas: string[];
@@ -242,7 +243,7 @@ export default function Manual() {
             Selecciona tu tipo de proyecto
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Tarjeta 2A */}
             <Card
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
@@ -337,6 +338,39 @@ export default function Manual() {
                   style={{ color: "#1BBEAE" }}
                 >
                   Entrar a Proyecto 2C
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Tarjeta 2D */}
+            <Card
+              className="border-0 shadow-lg hover:shadow-xl transition-shadow"
+              style={{ backgroundColor: "#50C9BD" }}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/20">
+                    <Lightbulb className="w-8 h-8 text-white" />
+                  </div>
+                </div>
+                <CardTitle className="text-center text-white text-xl">
+                  Proyecto 2D
+                </CardTitle>
+                <CardDescription className="text-center text-white/90 text-sm">
+                  Experimental
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-white/90 text-center">
+                  Proyecto Experimental de Innovación Educativa (fase inicial o
+                  piloto).
+                </p>
+                <Button
+                  onClick={() => navigate("/proyectos/2d")}
+                  className="w-full bg-white font-medium hover:bg-white/90"
+                  style={{ color: "#50C9BD" }}
+                >
+                  Entrar a Proyecto 2D
                 </Button>
               </CardContent>
             </Card>
