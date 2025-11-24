@@ -18,7 +18,6 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MiniCambioProyecto } from "@/components/MiniCambioProyecto";
 import { useCNPIEProject } from "@/hooks/useCNPIEProject";
-import ResumenDiagnostico from "@/components/ResumenDiagnostico";
 
 export default function Proyecto2A() {
   const navigate = useNavigate();
@@ -52,16 +51,6 @@ export default function Proyecto2A() {
     },
     {
       numero: 2,
-      titulo: "Aceleración",
-      descripcion:
-        "Desarrollo de aceleradores específicos para fortalecer y sistematizar tu innovación educativa.",
-      icon: Zap,
-      color: "#00A6A6",
-      disponible: etapa1Completada,
-      ruta: "/cnpie/2a/etapa2/overview",
-    },
-    {
-      numero: 3,
       titulo: "Evaluación y cierre",
       descripcion:
         "Validación con rúbricas CNPIE, generación de documentación consolidada y cierre del proyecto.",
@@ -89,9 +78,6 @@ export default function Proyecto2A() {
             sistematización de tu proyecto consolidado.
           </p>
         </div>
-
-        {/* Resumen de diagnóstico */}
-        <ResumenDiagnostico />
 
         {/* Panel de etapas */}
         <div className="mb-8">
