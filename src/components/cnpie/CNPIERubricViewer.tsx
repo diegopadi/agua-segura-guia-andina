@@ -4,7 +4,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CNPIERubricCriteria } from "@/hooks/useCNPIERubric";
 import { Target, FileText, Lightbulb } from "lucide-react";
@@ -14,7 +20,10 @@ interface CNPIERubricViewerProps {
   destacarCriterios?: string[];
 }
 
-export function CNPIERubricViewer({ rubricas, destacarCriterios = [] }: CNPIERubricViewerProps) {
+export function CNPIERubricViewer({
+  rubricas,
+  destacarCriterios = [],
+}: CNPIERubricViewerProps) {
   const totalPuntaje = rubricas.reduce((sum, r) => sum + r.puntaje_maximo, 0);
 
   return (
@@ -41,7 +50,9 @@ export function CNPIERubricViewer({ rubricas, destacarCriterios = [] }: CNPIERub
             const isDestacado = destacarCriterios.includes(rubrica.criterio);
             return (
               <AccordionItem key={rubrica.id} value={rubrica.id}>
-                <AccordionTrigger className={isDestacado ? "text-primary font-semibold" : ""}>
+                <AccordionTrigger
+                  className={isDestacado ? "text-primary font-semibold" : ""}
+                >
                   <div className="flex items-center justify-between w-full pr-4">
                     <span>{rubrica.criterio}</span>
                     <Badge variant={isDestacado ? "default" : "secondary"}>
@@ -56,7 +67,9 @@ export function CNPIERubricViewer({ rubricas, destacarCriterios = [] }: CNPIERub
                       <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                       <div>
                         <p className="font-semibold text-sm mb-1">Indicador</p>
-                        <p className="text-sm text-muted-foreground">{rubrica.indicador}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {rubrica.indicador}
+                        </p>
                       </div>
                     </div>
 
@@ -72,8 +85,12 @@ export function CNPIERubricViewer({ rubricas, destacarCriterios = [] }: CNPIERub
                       <div className="flex items-start gap-3">
                         <Lightbulb className="w-4 h-4 text-yellow-600 mt-1" />
                         <div>
-                          <p className="font-semibold text-sm mb-1">Recomendaciones</p>
-                          <p className="text-sm text-muted-foreground">{rubrica.recomendaciones}</p>
+                          <p className="font-semibold text-sm mb-1">
+                            Recomendaciones
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {rubrica.recomendaciones}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -82,7 +99,8 @@ export function CNPIERubricViewer({ rubricas, destacarCriterios = [] }: CNPIERub
                     {rubrica.extension_maxima && (
                       <div className="flex items-center gap-2 text-sm">
                         <Badge variant="outline">
-                          Máximo: {rubrica.extension_maxima.toLocaleString()} caracteres
+                          Máximo: {rubrica.extension_maxima.toLocaleString()}{" "}
+                          caracteres
                         </Badge>
                       </div>
                     )}
