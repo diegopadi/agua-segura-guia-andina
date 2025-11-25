@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useCNPIEProject } from "@/hooks/useCNPIEProject";
 import { useCNPIERubric } from "@/hooks/useCNPIERubric";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
@@ -87,6 +87,7 @@ export default function Etapa1Acelerador1() {
     getAcceleratorData,
     getAllData,
   } = useCNPIEProject("2A");
+
   const { rubricas, getCriterioByName } = useCNPIERubric("2A");
   const { toast } = useToast();
 
@@ -98,20 +99,36 @@ export default function Etapa1Acelerador1() {
 
   // Estados para cada paso
   const [step1Data, setStep1Data] = useState<FormDataStep1>({
-    problema_descripcion: "",
-    objetivo_general: "",
-    objetivos_especificos: [],
-    metodologia_descripcion: "",
-    procedimiento_metodologico: "",
-    video_url: "",
-    impacto_evidencias: "",
-    impacto_cambios: "",
-    sostenibilidad_estrategias: "",
-    sostenibilidad_viabilidad: "",
-    sostenibilidad_bienes_servicios: "",
-    bienes_servicios: [],
-    area_curricular: "",
-    competencias_cneb: [],
+    // CRITERIO 1: INTENCIONALIDAD (25 puntos)
+    intencionalidad: {
+      problema_descripcion: "",
+      objetivo_general: "",
+      objetivos_especificos: [],
+      competencias_cneb: [],
+      area_curricular: "",
+    },
+
+    // CRITERIO 2: ORIGINALIDAD (15 puntos)
+    originalidad: {
+      metodologia_descripcion: "",
+      procedimiento_metodologico: "",
+      video_url: "",
+    },
+
+    // CRITERIO 3: IMPACTO (15 puntos)
+    impacto: {
+      evidencias_descripcion: "",
+      cambios_practica_docente: "",
+      cambios_gestion_escolar: "",
+      cambios_comunidad: "",
+    },
+
+    // CRITERIO 4: SOSTENIBILIDAD (15 puntos)
+    sostenibilidad: {
+      estrategias_continuidad: "",
+      estrategias_viabilidad: "",
+      bienes_servicios: [],
+    },
   });
 
   const [step2Data, setStep2Data] = useState<AnalysisStep2 | null>(null);
@@ -120,48 +137,120 @@ export default function Etapa1Acelerador1() {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
+  const [generatedQuestions, setGeneratedQuestions] = useState<{
+    intencionalidad?: {
+      titulo: string;
+      introduccion: string;
+      preguntas: string[];
+    };
+    originalidad?: {
+      titulo: string;
+      introduccion: string;
+      preguntas: string[];
+    };
+    impacto?: { titulo: string; introduccion: string; preguntas: string[] };
+    sostenibilidad?: {
+      titulo: string;
+      introduccion: string;
+      preguntas: string[];
+    };
+    puntaje_actual: number;
+    puntaje_maximo: number;
+  } | null>(null);
+  const [step3Answers, setStep3Answers] = useState<
+    Record<string, Record<string, string>>
+  >({});
 
-  const documentFieldSchema: DocumentFieldSchema[] = [
-    {
-      fieldName: "problemaDescripcion",
-      label: "Problema Central",
-      type: "textarea",
-      description: "Descripción del problema educativo",
-      maxLength: 3000,
-    },
-    {
-      fieldName: "objetivo",
-      label: "Objetivo",
-      type: "textarea",
-      description: "Objetivo SMART del proyecto",
-      maxLength: 1500,
-    },
-    {
-      fieldName: "contexto",
-      label: "Contexto",
-      type: "textarea",
-      description: "Contexto institucional",
-    },
-    {
-      fieldName: "areaCurricular",
-      label: "Área Curricular",
-      type: "text",
-      description: "Área curricular del CNEB",
-    },
-  ];
+  // Función para migrar datos antiguos a la nueva estructura
+  const migrateOldDataStructure = (
+    oldData: Partial<FormDataStep1> & Record<string, unknown>
+  ): FormDataStep1 => {
+    // Si ya tiene la estructura nueva (con intencionalidad, originalidad, etc.), retornar tal cual
+    if (
+      oldData.intencionalidad &&
+      oldData.originalidad &&
+      oldData.impacto &&
+      oldData.sostenibilidad
+    ) {
+      return oldData as FormDataStep1;
+    }
 
-  // Cargar datos guardados al montar el componente
+    // Si tiene la estructura antigua (plana), migrar a la nueva estructura
+    return {
+      intencionalidad: {
+        problema_descripcion: (oldData.problema_descripcion as string) || "",
+        objetivo_general: (oldData.objetivo_general as string) || "",
+        objetivos_especificos:
+          (oldData.objetivos_especificos as string[]) || [],
+        competencias_cneb: (oldData.competencias_cneb as string[]) || [],
+        area_curricular: (oldData.area_curricular as string) || "",
+      },
+      originalidad: {
+        metodologia_descripcion:
+          (oldData.metodologia_descripcion as string) || "",
+        procedimiento_metodologico:
+          (oldData.procedimiento_metodologico as string) || "",
+        video_url: (oldData.video_url as string) || "",
+      },
+      impacto: {
+        evidencias_descripcion:
+          (oldData.impacto_evidencias as string) ||
+          (oldData.evidencias_descripcion as string) ||
+          "",
+        cambios_practica_docente:
+          (oldData.impacto_cambios as string) ||
+          (oldData.cambios_practica_docente as string) ||
+          "",
+        cambios_gestion_escolar:
+          (oldData.cambios_gestion_escolar as string) || "",
+        cambios_comunidad: (oldData.cambios_comunidad as string) || "",
+      },
+      sostenibilidad: {
+        estrategias_continuidad:
+          (oldData.sostenibilidad_estrategias as string) ||
+          (oldData.estrategias_continuidad as string) ||
+          "",
+        estrategias_viabilidad:
+          (oldData.sostenibilidad_viabilidad as string) ||
+          (oldData.estrategias_viabilidad as string) ||
+          "",
+        bienes_servicios: (oldData.bienes_servicios as BienServicio[]) || [],
+      },
+    };
+  };
+
   useEffect(() => {
+    // ⚠️ IMPORTANTE: Solo ejecutar cuando proyecto cambia, NO cuando getAcceleratorData cambia
+    // para evitar loop infinito
+    if (!proyecto?.id) {
+      return;
+    }
+
     const savedData = getAcceleratorData(1, 1);
+
     if (savedData) {
       setCurrentStep(savedData.current_step || 1);
       setCompletedSteps(savedData.completed_steps || []);
-      if (savedData.step1_data) setStep1Data(savedData.step1_data);
-      if (savedData.step2_data) setStep2Data(savedData.step2_data);
-      if (savedData.step3_data) setStep3Data(savedData.step3_data);
-      if (savedData.step4_data) setStep4Data(savedData.step4_data);
+
+      if (savedData.step1_data) {
+        // Migrar datos antiguos a nueva estructura si es necesario
+        const migratedData = migrateOldDataStructure(savedData.step1_data);
+        setStep1Data(migratedData);
+      }
+      if (savedData.step2_data) {
+        setStep2Data(savedData.step2_data);
+      }
+      if (savedData.step3_data) {
+        setStep3Data(savedData.step3_data);
+      }
+      if (savedData.step4_data) {
+        setStep4Data(savedData.step4_data);
+      }
     }
-  }, [proyecto, getAcceleratorData]);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proyecto?.id]);
 
   // Guardar datos
   const handleSave = async () => {
@@ -178,6 +267,9 @@ export default function Etapa1Acelerador1() {
       };
 
       return await saveAcceleratorData(1, 1, dataToSave);
+    } catch (error) {
+      console.error("🔴 Error en handleSave:", error);
+      throw error;
     } finally {
       setSaving(false);
     }
@@ -191,9 +283,9 @@ export default function Etapa1Acelerador1() {
   // Validar si se puede avanzar
   const canProceedToStep2 = () => {
     return (
-      step1Data.problema_descripcion.trim().length > 0 &&
-      step1Data.objetivo_general.trim().length > 0 &&
-      step1Data.metodologia_descripcion.trim().length > 0
+      step1Data.intencionalidad?.problema_descripcion.trim().length > 0 &&
+      step1Data.intencionalidad?.objetivo_general.trim().length > 0 &&
+      step1Data.originalidad.metodologia_descripcion.trim().length > 0
     );
   };
 
@@ -211,36 +303,409 @@ export default function Etapa1Acelerador1() {
     try {
       setAnalyzing(true);
 
-      const { data, error } = await supabase.functions.invoke(
-        "analyze-cnpie-intencionalidad",
+      // Crear un timeout de 120 segundos (2 minutos)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("Timeout: La solicitud tardó más de 2 minutos"));
+        }, 120000);
+      });
+
+      // Ejecutar la llamada a la API con timeout
+      const apiPromise = supabase.functions.invoke("analyze-cnpie-general", {
+        body: { step1Data },
+      });
+
+      const response = (await Promise.race([
+        apiPromise,
+        timeoutPromise,
+      ])) as Awaited<typeof apiPromise>;
+      const { data, error } = response;
+      console.log("🔵 Data:", data);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log("🔵 Datos recibidos del análisis:", data);
+
+      if (data.success) {
+        console.log("🔵 Analysis data completo:", data.analysis);
+
+        // Transformar la estructura con emojis a estructura plana
+        const dictamenInt =
+          data.analysis.intencionalidad?.[
+            "📋 DICTAMEN TÉCNICO: INTENCIONALIDAD (CONSOLIDADOS)"
+          ];
+
+        const indicador11 =
+          dictamenInt?.["🔹 INDICADOR 1.1: Caracterización del Problema"];
+
+        const indicador12 = dictamenInt?.["🔹 INDICADOR 1.2: Objetivos"];
+
+        // Extraer datos de Originalidad
+        const dictamenOrig =
+          data.analysis.originalidad?.[
+            "📋 DICTAMEN TÉCNICO: ORIGINALIDAD (CONSOLIDADOS)"
+          ];
+
+        const indicador21 =
+          dictamenOrig?.["🔹 INDICADOR 2.1: Metodología/Estrategia"];
+
+        const indicador22 =
+          dictamenOrig?.["🔹 INDICADOR 2.2: Procedimiento y Video"];
+
+        // Extraer datos de Impacto
+        const dictamenImp =
+          data.analysis.impacto?.[
+            "📋 DICTAMEN TÉCNICO: IMPACTO (CONSOLIDADOS)"
+          ];
+
+        const indicador31 =
+          dictamenImp?.["🔹 INDICADOR 3.1: Resultados de Aprendizaje"];
+
+        const indicador32 =
+          dictamenImp?.["🔹 INDICADOR 3.2: Cambios Sistémicos"];
+
+        // Extraer datos de Sostenibilidad
+        const dictamenSost =
+          data.analysis.sostenibilidad?.[
+            "📋 DICTAMEN TÉCNICO: SOSTENIBILIDAD (CONSOLIDADOS)"
+          ];
+
+        const indicador41 =
+          dictamenSost?.["🔹 INDICADOR 4.1: Estrategias de Continuidad"];
+
+        const indicador42 =
+          dictamenSost?.["🔹 INDICADOR 4.2: Viabilidad y Aliados"];
+
+        const indicador43 =
+          dictamenSost?.["🔹 INDICADOR 4.3: Bienes y Servicios"];
+
+        // Calcular puntaje total
+        const puntajeTotal =
+          (indicador11?.PUNTAJE || 0) +
+          (indicador12?.PUNTAJE || 0) +
+          (indicador21?.PUNTAJE || 0) +
+          (indicador22?.PUNTAJE || 0) +
+          (indicador31?.PUNTAJE || 0) +
+          (indicador32?.PUNTAJE || 0) +
+          (indicador41?.PUNTAJE || 0) +
+          (indicador42?.PUNTAJE || 0) +
+          (indicador43?.PUNTAJE || 0);
+
+        // Transformar todos los criterios a estructura plana
+        const transformedData = {
+          intencionalidad: {
+            indicador_1_1: {
+              puntaje: indicador11?.PUNTAJE || 0,
+              nivel: indicador11?.NIVEL || "N/A",
+              vinculacion_cneb:
+                indicador11?.["Análisis de Criterios"]?.["Vinculación CNEB"] ||
+                "",
+              evidencia:
+                indicador11?.["Análisis de Criterios"]?.[
+                  "Evidencia (Consolidados)"
+                ] || "",
+              justificacion:
+                indicador11?.["Análisis de Criterios"]?.[
+                  "Justificación del Puntaje"
+                ] || "",
+            },
+            indicador_1_2: {
+              puntaje: indicador12?.PUNTAJE || 0,
+              nivel: indicador12?.NIVEL || "N/A",
+              checklist_smart: {
+                especifico:
+                  indicador12?.["Checklist SMART"]?.["S (Específico)"] === "✅",
+                medible:
+                  indicador12?.["Checklist SMART"]?.["M (Medible)"] === "✅",
+                alcanzable:
+                  indicador12?.["Checklist SMART"]?.["A (Alcanzable)"] === "✅",
+                relevante:
+                  indicador12?.["Checklist SMART"]?.["R (Relevante)"] === "✅",
+                temporal:
+                  indicador12?.["Checklist SMART"]?.["T (Temporal)"] === "✅",
+              },
+              justificacion: indicador12?.["Justificación del Puntaje"] || "",
+            },
+          },
+          originalidad: {
+            indicador_2_1: {
+              puntaje: indicador21?.PUNTAJE || 0,
+              nivel: indicador21?.NIVEL || "N/A",
+              analisis: indicador21?.["Análisis"] || "",
+            },
+            indicador_2_2: {
+              puntaje: indicador22?.PUNTAJE || 0,
+              nivel: indicador22?.NIVEL || "N/A",
+              desglose: indicador22?.["Desglose de Evaluación"] || {},
+              observacion: indicador22?.["Observación Final"] || "",
+            },
+          },
+          impacto: {
+            indicador_3_1: {
+              puntaje: indicador31?.PUNTAJE || 0,
+              nivel: indicador31?.NIVEL || "N/A",
+              analisis_evidencias:
+                indicador31?.["Análisis de Evidencias"] || {},
+            },
+            indicador_3_2: {
+              puntaje: indicador32?.PUNTAJE || 0,
+              nivel: indicador32?.NIVEL || "N/A",
+              analisis_transformacion:
+                indicador32?.["Análisis de Transformación"] || {},
+            },
+            observacion_final: dictamenImp?.["Observación Final"] || "",
+          },
+          sostenibilidad: {
+            indicador_4_1: {
+              puntaje: indicador41?.PUNTAJE || 0,
+              nivel: indicador41?.NIVEL || "N/A",
+              analisis: indicador41?.["Análisis"] || {},
+            },
+            indicador_4_2: {
+              puntaje: indicador42?.PUNTAJE || 0,
+              nivel: indicador42?.NIVEL || "N/A",
+              analisis: indicador42?.["Análisis"] || {},
+            },
+            indicador_4_3: {
+              puntaje: indicador43?.PUNTAJE || 0,
+              nivel: indicador43?.NIVEL || "N/A",
+              analisis: indicador43?.["Análisis"] || {},
+            },
+            observacion_final: dictamenSost?.["Observación Final"] || "",
+          },
+          puntaje_total: puntajeTotal,
+          puntaje_maximo: 80,
+          timestamp: new Date().toISOString(),
+        };
+
+        console.log("🔵 Puntaje total calculado:", puntajeTotal);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setStep2Data(transformedData as any);
+
+        // Marcar paso 1 como completado y avanzar al paso 2
+        if (!completedSteps.includes(1)) {
+          setCompletedSteps([...completedSteps, 1]);
+        }
+
+        setCurrentStep(2);
+
+        // Cerrar modal inmediatamente
+        setAnalyzing(false);
+
+        // Guardar en segundo plano
+        handleSave();
+
+        // Scroll suave al inicio después de un breve delay
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }, 100);
+
+        toast({
+          title: "✅ Análisis completado exitosamente",
+          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 80 posibles. Revisa los detalles por criterio.`,
+          duration: 5000,
+        });
+      } else {
+        throw new Error(data.error || "Error en el análisis");
+      }
+    } catch (error: unknown) {
+      console.error("🔴 Error en handleAnalyze:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Error desconocido";
+      setAnalyzing(false);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGenerateQuestions = async () => {
+    if (!step2Data) {
+      toast({
+        title: "Error",
+        description: "No hay análisis disponible para generar preguntas",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingQuestions(true);
+
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                "Timeout: La generación de preguntas tardó más de 120 segundos"
+              )
+            ),
+          120000
+        )
+      );
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("No hay sesión activa");
+      }
+
+      const requestPromise = fetch(
+        `https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/generate-survey-questions-A2`,
         {
-          body: step1Data,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            "x-client-info": "agua-segura-guia-andina",
+          },
+          body: JSON.stringify({
+            analysisData: step2Data,
+          }),
         }
       );
 
-      if (error) throw error;
+      const response = (await Promise.race([
+        requestPromise,
+        timeoutPromise,
+      ])) as Response;
 
-      if (data.success) {
-        setStep2Data(data.analysis);
-        setCompletedSteps([...completedSteps, 1]);
-        setCurrentStep(2);
-        await handleSave();
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log("🟢 Respuesta de generate-survey-questions-A2:", result);
+
+      if (result.success && result.questions) {
+        console.log("🟢 Preguntas recibidas:", result.questions);
+        setGeneratedQuestions(result.questions);
+        console.log("🟢 Cambiando a paso 3...");
+        setCurrentStep(3);
         toast({
-          title: "Análisis completado",
-          description: "La IA ha analizado tu proyecto",
+          title: "✅ Preguntas generadas",
+          description: "Se han generado las preguntas complementarias",
         });
+      } else {
+        console.error("❌ Error en resultado:", result);
+        throw new Error(result.error || "Error al generar preguntas");
       }
     } catch (error: unknown) {
-      console.error("Error analyzing:", error);
+      console.error("❌ Error generando preguntas:", error);
       const errorMessage =
-        error instanceof Error ? error.message : "Error desconocido";
+        error instanceof Error
+          ? error.message
+          : "No se pudieron generar las preguntas";
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
     } finally {
+      setGeneratingQuestions(false);
+    }
+  };
+
+  const handleEvaluateStep3Answers = async () => {
+    if (!step2Data || !step3Answers) {
+      toast({
+        title: "Error",
+        description: "No hay datos suficientes para evaluar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAnalyzing(true);
+
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new Error("Timeout: La evaluación tardó más de 120 segundos")
+            ),
+          120000
+        )
+      );
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("No hay sesión activa");
+      }
+
+      console.log("📦 Enviando datos para evaluación final...");
+      console.log("📋 Step 1 - Respuestas iniciales:", step1Data);
+      console.log("💬 Step 3 - Respuestas complementarias:", step3Answers);
+
+      const requestPromise = fetch(
+        `https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/evaluar-cnpie-2A`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            "x-client-info": "agua-segura-guia-andina",
+          },
+          body: JSON.stringify({
+            step1Data: step1Data,
+            step3Answers: step3Answers,
+          }),
+        }
+      );
+
+      const response = (await Promise.race([
+        requestPromise,
+        timeoutPromise,
+      ])) as Response;
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log("🟢 Respuesta de evaluate-final-cnpie-2a:", result);
+
+      if (result.success && result.evaluation) {
+        console.log("🟢 Evaluación recibida:", result.evaluation);
+
+        // Guardar la evaluación final en step4Data o step2Data actualizado
+        setStep2Data(result.evaluation);
+
+        setCurrentStep(4);
+        setAnalyzing(false);
+
+        toast({
+          title: "✅ Evaluación completada",
+          description: `Puntaje final: ${result.evaluation.resumen.puntaje_total}/${result.evaluation.resumen.puntaje_maximo} - Nivel: ${result.evaluation.resumen.nivel_final}`,
+          duration: 5000,
+        });
+      } else {
+        console.error("❌ Error en resultado:", result);
+        throw new Error(result.error || "Error al evaluar respuestas");
+      }
+    } catch (error: unknown) {
+      console.error("❌ Error evaluando respuestas:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "No se pudieron evaluar las respuestas";
       setAnalyzing(false);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
   };
 
@@ -269,6 +734,35 @@ export default function Etapa1Acelerador1() {
   const renderStep1 = () => {
     return (
       <div className="space-y-6">
+        {/* Overlay de análisis */}
+        {analyzing && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <Card className="w-96">
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <div className="text-center">
+                    <h3 className="font-semibold text-lg mb-2">
+                      Analizando tu proyecto con IA
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Evaluando los 4 criterios: Intencionalidad, Originalidad,
+                      Impacto y Sostenibilidad...
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2 italic">
+                      Esto puede tomar hasta 2 minutos
+                    </p>
+                  </div>
+                  <Progress value={undefined} className="w-full" />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Por favor no cierres esta ventana ni recargues la página
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <Card className="border-0 shadow-sm">
           <CardContent className="pt-6 pb-2">
             <Accordion type="single" collapsible className="w-full space-y-3">
@@ -297,11 +791,14 @@ export default function Etapa1Acelerador1() {
                       </CardContent>
                     </Card>
                     <Textarea
-                      value={step1Data.problema_descripcion}
+                      value={step1Data.intencionalidad?.problema_descripcion}
                       onChange={(e) =>
                         setStep1Data({
                           ...step1Data,
-                          problema_descripcion: e.target.value,
+                          intencionalidad: {
+                            ...step1Data.intencionalidad,
+                            problema_descripcion: e.target.value,
+                          },
                         })
                       }
                       placeholder="Describe el problema educativo identificado en tu IE..."
@@ -310,8 +807,8 @@ export default function Etapa1Acelerador1() {
                     />
                     <div className="flex justify-end">
                       <span className="text-xs text-muted-foreground">
-                        {step1Data.problema_descripcion.length} /{" "}
-                        {ANEXO_2A_LIMITS.PROBLEMA_CARACTERIZACION} caracteres
+                        {step1Data.intencionalidad?.problema_descripcion.length}{" "}
+                        / {ANEXO_2A_LIMITS.PROBLEMA_CARACTERIZACION} caracteres
                       </span>
                     </div>
                   </div>
@@ -331,11 +828,14 @@ export default function Etapa1Acelerador1() {
                       </CardContent>
                     </Card>
                     <Textarea
-                      value={step1Data.objetivo_general}
+                      value={step1Data.intencionalidad?.objetivo_general}
                       onChange={(e) =>
                         setStep1Data({
                           ...step1Data,
-                          objetivo_general: e.target.value,
+                          intencionalidad: {
+                            ...step1Data.intencionalidad,
+                            objetivo_general: e.target.value,
+                          },
                         })
                       }
                       placeholder="Redacta el objetivo general del PIE..."
@@ -344,7 +844,7 @@ export default function Etapa1Acelerador1() {
                     />
                     <div className="flex justify-end">
                       <span className="text-xs text-muted-foreground">
-                        {step1Data.objetivo_general.length} /{" "}
+                        {step1Data.intencionalidad?.objetivo_general.length} /{" "}
                         {ANEXO_2A_LIMITS.OBJETIVOS} caracteres
                       </span>
                     </div>
@@ -377,11 +877,14 @@ export default function Etapa1Acelerador1() {
                       </CardContent>
                     </Card>
                     <Textarea
-                      value={step1Data.metodologia_descripcion}
+                      value={step1Data.originalidad?.metodologia_descripcion}
                       onChange={(e) =>
                         setStep1Data({
                           ...step1Data,
-                          metodologia_descripcion: e.target.value,
+                          originalidad: {
+                            ...step1Data.originalidad,
+                            metodologia_descripcion: e.target.value,
+                          },
                         })
                       }
                       placeholder="Describe la metodología pedagógica..."
@@ -390,8 +893,8 @@ export default function Etapa1Acelerador1() {
                     />
                     <div className="flex justify-end">
                       <span className="text-xs text-muted-foreground">
-                        {step1Data.metodologia_descripcion.length} /{" "}
-                        {ANEXO_2A_LIMITS.METODOLOGIA_DESCRIPCION} caracteres
+                        {step1Data.originalidad.metodologia_descripcion.length}{" "}
+                        / {ANEXO_2A_LIMITS.METODOLOGIA_DESCRIPCION} caracteres
                       </span>
                     </div>
                   </div>
@@ -411,11 +914,14 @@ export default function Etapa1Acelerador1() {
                       </CardContent>
                     </Card>
                     <Textarea
-                      value={step1Data.procedimiento_metodologico}
+                      value={step1Data.originalidad.procedimiento_metodologico}
                       onChange={(e) =>
                         setStep1Data({
                           ...step1Data,
-                          procedimiento_metodologico: e.target.value,
+                          originalidad: {
+                            ...step1Data.originalidad,
+                            procedimiento_metodologico: e.target.value,
+                          },
                         })
                       }
                       placeholder="Describe el procedimiento paso a paso..."
@@ -424,8 +930,12 @@ export default function Etapa1Acelerador1() {
                     />
                     <div className="flex justify-end">
                       <span className="text-xs text-muted-foreground">
-                        {step1Data.procedimiento_metodologico.length} /{" "}
-                        {ANEXO_2A_LIMITS.PROCEDIMIENTO_METODOLOGICO} caracteres
+                        {
+                          step1Data.originalidad.procedimiento_metodologico
+                            .length
+                        }{" "}
+                        / {ANEXO_2A_LIMITS.PROCEDIMIENTO_METODOLOGICO}{" "}
+                        caracteres
                       </span>
                     </div>
 
@@ -436,11 +946,14 @@ export default function Etapa1Acelerador1() {
                       </Label>
                       <Input
                         type="url"
-                        value={step1Data.video_url || ""}
+                        value={step1Data.originalidad.video_url || ""}
                         onChange={(e) =>
                           setStep1Data({
                             ...step1Data,
-                            video_url: e.target.value,
+                            originalidad: {
+                              ...step1Data.originalidad,
+                              video_url: e.target.value,
+                            },
                           })
                         }
                         placeholder="https://youtube.com/watch?v=..."
@@ -475,11 +988,14 @@ export default function Etapa1Acelerador1() {
                       </CardContent>
                     </Card>
                     <Textarea
-                      value={step1Data.impacto_evidencias || ""}
+                      value={step1Data.impacto.evidencias_descripcion || ""}
                       onChange={(e) =>
                         setStep1Data({
                           ...step1Data,
-                          impacto_evidencias: e.target.value,
+                          impacto: {
+                            ...step1Data.impacto,
+                            evidencias_descripcion: e.target.value,
+                          },
                         })
                       }
                       placeholder="Sustenta con evidencias los resultados obtenidos..."
@@ -488,8 +1004,11 @@ export default function Etapa1Acelerador1() {
                     />
                     <div className="flex justify-end">
                       <span className="text-xs text-muted-foreground">
-                        {(step1Data.impacto_evidencias || "").length} /{" "}
-                        {ANEXO_2A_LIMITS.IMPACTO_EVIDENCIAS} caracteres
+                        {
+                          (step1Data.impacto.evidencias_descripcion || "")
+                            .length
+                        }{" "}
+                        / {ANEXO_2A_LIMITS.IMPACTO_EVIDENCIAS} caracteres
                       </span>
                     </div>
                   </div>
@@ -509,11 +1028,14 @@ export default function Etapa1Acelerador1() {
                       </CardContent>
                     </Card>
                     <Textarea
-                      value={step1Data.impacto_cambios || ""}
+                      value={step1Data.impacto.cambios_practica_docente || ""}
                       onChange={(e) =>
                         setStep1Data({
                           ...step1Data,
-                          impacto_cambios: e.target.value,
+                          impacto: {
+                            ...step1Data.impacto,
+                            cambios_practica_docente: e.target.value,
+                          },
                         })
                       }
                       placeholder="Explica los cambios o efectos logrados..."
@@ -522,8 +1044,11 @@ export default function Etapa1Acelerador1() {
                     />
                     <div className="flex justify-end">
                       <span className="text-xs text-muted-foreground">
-                        {(step1Data.impacto_cambios || "").length} /{" "}
-                        {ANEXO_2A_LIMITS.IMPACTO_CAMBIOS} caracteres
+                        {
+                          (step1Data.impacto.cambios_practica_docente || "")
+                            .length
+                        }{" "}
+                        / {ANEXO_2A_LIMITS.IMPACTO_CAMBIOS} caracteres
                       </span>
                     </div>
                   </div>
@@ -555,11 +1080,16 @@ export default function Etapa1Acelerador1() {
                       </CardContent>
                     </Card>
                     <Textarea
-                      value={step1Data.sostenibilidad_estrategias || ""}
+                      value={
+                        step1Data.sostenibilidad.estrategias_continuidad || ""
+                      }
                       onChange={(e) =>
                         setStep1Data({
                           ...step1Data,
-                          sostenibilidad_estrategias: e.target.value,
+                          sostenibilidad: {
+                            ...step1Data.sostenibilidad,
+                            estrategias_continuidad: e.target.value,
+                          },
                         })
                       }
                       placeholder="Describe las estrategias para fomentar la continuidad..."
@@ -568,8 +1098,14 @@ export default function Etapa1Acelerador1() {
                     />
                     <div className="flex justify-end">
                       <span className="text-xs text-muted-foreground">
-                        {(step1Data.sostenibilidad_estrategias || "").length} /{" "}
-                        {ANEXO_2A_LIMITS.SOSTENIBILIDAD_ESTRATEGIAS} caracteres
+                        {
+                          (
+                            step1Data.sostenibilidad.estrategias_continuidad ||
+                            ""
+                          ).length
+                        }{" "}
+                        / {ANEXO_2A_LIMITS.SOSTENIBILIDAD_ESTRATEGIAS}{" "}
+                        caracteres
                       </span>
                     </div>
                   </div>
@@ -589,11 +1125,16 @@ export default function Etapa1Acelerador1() {
                       </CardContent>
                     </Card>
                     <Textarea
-                      value={step1Data.sostenibilidad_viabilidad || ""}
+                      value={
+                        step1Data.sostenibilidad.estrategias_viabilidad || ""
+                      }
                       onChange={(e) =>
                         setStep1Data({
                           ...step1Data,
-                          sostenibilidad_viabilidad: e.target.value,
+                          sostenibilidad: {
+                            ...step1Data.sostenibilidad,
+                            estrategias_viabilidad: e.target.value,
+                          },
                         })
                       }
                       placeholder="Describe las estrategias para asegurar la viabilidad..."
@@ -602,8 +1143,13 @@ export default function Etapa1Acelerador1() {
                     />
                     <div className="flex justify-end">
                       <span className="text-xs text-muted-foreground">
-                        {(step1Data.sostenibilidad_viabilidad || "").length} /{" "}
-                        {ANEXO_2A_LIMITS.SOSTENIBILIDAD_VIABILIDAD} caracteres
+                        {
+                          (
+                            step1Data.sostenibilidad.estrategias_viabilidad ||
+                            ""
+                          ).length
+                        }{" "}
+                        / {ANEXO_2A_LIMITS.SOSTENIBILIDAD_VIABILIDAD} caracteres
                       </span>
                     </div>
                   </div>
@@ -651,147 +1197,166 @@ export default function Etapa1Acelerador1() {
                             </tr>
                           </thead>
                           <tbody>
-                            {(step1Data.bienes_servicios || []).map(
-                              (bien, index) => (
-                                <tr
-                                  key={index}
-                                  className="border-b hover:bg-gray-50"
-                                >
-                                  <td className="p-1 border-r">
-                                    <Input
-                                      value={bien.componente}
-                                      onChange={(e) => {
-                                        const newBienes = [
-                                          ...(step1Data.bienes_servicios || []),
-                                        ];
-                                        newBienes[index].componente =
-                                          e.target.value;
-                                        setStep1Data({
-                                          ...step1Data,
+                            {(
+                              step1Data.sostenibilidad.bienes_servicios || []
+                            ).map((bien, index) => (
+                              <tr
+                                key={index}
+                                className="border-b hover:bg-gray-50"
+                              >
+                                <td className="p-1 border-r">
+                                  <Input
+                                    value={bien.componente}
+                                    onChange={(e) => {
+                                      const newBienes = [
+                                        ...(step1Data.sostenibilidad
+                                          .bienes_servicios || []),
+                                      ];
+                                      newBienes[index].componente =
+                                        e.target.value;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        sostenibilidad: {
+                                          ...step1Data.sostenibilidad,
                                           bienes_servicios: newBienes,
-                                        });
-                                      }}
-                                      placeholder="Equipamiento"
-                                      className="text-xs h-8 border-0 focus-visible:ring-1"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Input
-                                      value={bien.denominacion}
-                                      onChange={(e) => {
-                                        const newBienes = [
-                                          ...(step1Data.bienes_servicios || []),
-                                        ];
-                                        newBienes[index].denominacion =
-                                          e.target.value;
-                                        setStep1Data({
-                                          ...step1Data,
+                                        },
+                                      });
+                                    }}
+                                    placeholder="Equipamiento"
+                                    className="text-xs h-8 border-0 focus-visible:ring-1"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Input
+                                    value={bien.denominacion}
+                                    onChange={(e) => {
+                                      const newBienes = [
+                                        ...(step1Data.sostenibilidad
+                                          .bienes_servicios || []),
+                                      ];
+                                      newBienes[index].denominacion =
+                                        e.target.value;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        sostenibilidad: {
+                                          ...step1Data.sostenibilidad,
                                           bienes_servicios: newBienes,
-                                        });
-                                      }}
-                                      placeholder="Nombre"
-                                      className="text-xs h-8 border-0 focus-visible:ring-1"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Input
-                                      type="number"
-                                      value={bien.cantidad}
-                                      onChange={(e) => {
-                                        const newBienes = [
-                                          ...(step1Data.bienes_servicios || []),
-                                        ];
-                                        const cantidad = parseInt(
-                                          e.target.value
-                                        );
-                                        newBienes[index].cantidad = cantidad;
-                                        newBienes[index].subtotal =
-                                          cantidad *
-                                          newBienes[index].precio_unitario;
-                                        setStep1Data({
-                                          ...step1Data,
+                                        },
+                                      });
+                                    }}
+                                    placeholder="Nombre"
+                                    className="text-xs h-8 border-0 focus-visible:ring-1"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Input
+                                    type="number"
+                                    value={bien.cantidad}
+                                    onChange={(e) => {
+                                      const newBienes = [
+                                        ...(step1Data.sostenibilidad
+                                          .bienes_servicios || []),
+                                      ];
+                                      const cantidad = parseInt(e.target.value);
+                                      newBienes[index].cantidad = cantidad;
+                                      newBienes[index].subtotal =
+                                        cantidad *
+                                        newBienes[index].precio_unitario;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        sostenibilidad: {
+                                          ...step1Data.sostenibilidad,
                                           bienes_servicios: newBienes,
-                                        });
-                                      }}
-                                      placeholder="0"
-                                      className="text-xs h-8 border-0 focus-visible:ring-1 text-center"
-                                      min="0"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Input
-                                      type="number"
-                                      value={bien.precio_unitario}
-                                      onChange={(e) => {
-                                        const newBienes = [
-                                          ...(step1Data.bienes_servicios || []),
-                                        ];
-                                        const precio = parseFloat(
-                                          e.target.value
-                                        );
-                                        newBienes[index].precio_unitario =
-                                          precio;
-                                        newBienes[index].subtotal =
-                                          newBienes[index].cantidad * precio;
-                                        setStep1Data({
-                                          ...step1Data,
+                                        },
+                                      });
+                                    }}
+                                    placeholder="0"
+                                    className="text-xs h-8 border-0 focus-visible:ring-1 text-center"
+                                    min="0"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Input
+                                    type="number"
+                                    value={bien.precio_unitario}
+                                    onChange={(e) => {
+                                      const newBienes = [
+                                        ...(step1Data.sostenibilidad
+                                          .bienes_servicios || []),
+                                      ];
+                                      const precio = parseFloat(e.target.value);
+                                      newBienes[index].precio_unitario = precio;
+                                      newBienes[index].subtotal =
+                                        newBienes[index].cantidad * precio;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        sostenibilidad: {
+                                          ...step1Data.sostenibilidad,
                                           bienes_servicios: newBienes,
-                                        });
-                                      }}
-                                      placeholder="0.00"
-                                      className="text-xs h-8 border-0 focus-visible:ring-1 text-right"
-                                      step="0.01"
-                                      min="0"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r bg-gray-50">
-                                    <Input
-                                      type="number"
-                                      value={bien.subtotal.toFixed(2)}
-                                      readOnly
-                                      className="text-xs h-8 border-0 bg-transparent text-right font-medium"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Textarea
-                                      value={bien.descripcion_utilidad}
-                                      onChange={(e) => {
-                                        const newBienes = [
-                                          ...(step1Data.bienes_servicios || []),
-                                        ];
-                                        newBienes[index].descripcion_utilidad =
-                                          e.target.value;
-                                        setStep1Data({
-                                          ...step1Data,
+                                        },
+                                      });
+                                    }}
+                                    placeholder="0.00"
+                                    className="text-xs h-8 border-0 focus-visible:ring-1 text-right"
+                                    step="0.01"
+                                    min="0"
+                                  />
+                                </td>
+                                <td className="p-1 border-r bg-gray-50">
+                                  <Input
+                                    type="number"
+                                    value={bien.subtotal.toFixed(2)}
+                                    readOnly
+                                    className="text-xs h-8 border-0 bg-transparent text-right font-medium"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Textarea
+                                    value={bien.descripcion_utilidad}
+                                    onChange={(e) => {
+                                      const newBienes = [
+                                        ...(step1Data.sostenibilidad
+                                          .bienes_servicios || []),
+                                      ];
+                                      newBienes[index].descripcion_utilidad =
+                                        e.target.value;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        sostenibilidad: {
+                                          ...step1Data.sostenibilidad,
                                           bienes_servicios: newBienes,
-                                        });
-                                      }}
-                                      placeholder="Utilidad..."
-                                      className="text-xs min-h-[50px] resize-none border-0 focus-visible:ring-1"
-                                    />
-                                  </td>
-                                  <td className="p-1 text-center">
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        const newBienes = (
-                                          step1Data.bienes_servicios || []
-                                        ).filter((_, i) => i !== index);
-                                        setStep1Data({
-                                          ...step1Data,
+                                        },
+                                      });
+                                    }}
+                                    placeholder="Utilidad..."
+                                    className="text-xs min-h-[50px] resize-none border-0 focus-visible:ring-1"
+                                  />
+                                </td>
+                                <td className="p-1 text-center">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newBienes = (
+                                        step1Data.sostenibilidad
+                                          .bienes_servicios || []
+                                      ).filter((_, i) => i !== index);
+                                      setStep1Data({
+                                        ...step1Data,
+                                        sostenibilidad: {
+                                          ...step1Data.sostenibilidad,
                                           bienes_servicios: newBienes,
-                                        });
-                                      }}
-                                      className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    >
-                                      ×
-                                    </Button>
-                                  </td>
-                                </tr>
-                              )
-                            )}
+                                        },
+                                      });
+                                    }}
+                                    className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    ×
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
                       </div>
@@ -812,10 +1377,14 @@ export default function Etapa1Acelerador1() {
                           };
                           setStep1Data({
                             ...step1Data,
-                            bienes_servicios: [
-                              ...(step1Data.bienes_servicios || []),
-                              newBien,
-                            ],
+                            sostenibilidad: {
+                              ...step1Data.sostenibilidad,
+                              bienes_servicios: [
+                                ...(step1Data.sostenibilidad.bienes_servicios ||
+                                  []),
+                                newBien,
+                              ],
+                            },
                           });
                         }}
                         className="w-full h-8"
@@ -824,12 +1393,13 @@ export default function Etapa1Acelerador1() {
                       </Button>
 
                       {/* Total general */}
-                      {(step1Data.bienes_servicios || []).length > 0 && (
+                      {(step1Data.sostenibilidad.bienes_servicios || [])
+                        .length > 0 && (
                         <div className="flex justify-end">
                           <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
                             <span className="text-sm font-semibold">
                               Total General: S/{" "}
-                              {(step1Data.bienes_servicios || [])
+                              {(step1Data.sostenibilidad.bienes_servicios || [])
                                 .reduce(
                                   (acc, bien) => acc + (bien.subtotal || 0),
                                   0
@@ -839,31 +1409,6 @@ export default function Etapa1Acelerador1() {
                           </div>
                         </div>
                       )}
-                    </div>
-
-                    <Textarea
-                      value={step1Data.sostenibilidad_bienes_servicios || ""}
-                      onChange={(e) =>
-                        setStep1Data({
-                          ...step1Data,
-                          sostenibilidad_bienes_servicios: e.target.value,
-                        })
-                      }
-                      placeholder="Descripción adicional de los bienes y servicios (opcional)..."
-                      className="min-h-[80px]"
-                      maxLength={
-                        ANEXO_2A_LIMITS.SOSTENIBILIDAD_BIENES_SERVICIOS
-                      }
-                    />
-                    <div className="flex justify-end">
-                      <span className="text-xs text-muted-foreground">
-                        {
-                          (step1Data.sostenibilidad_bienes_servicios || "")
-                            .length
-                        }{" "}
-                        / {ANEXO_2A_LIMITS.SOSTENIBILIDAD_BIENES_SERVICIOS}{" "}
-                        caracteres
-                      </span>
                     </div>
                   </div>
                 </AccordionContent>
@@ -932,792 +1477,1218 @@ export default function Etapa1Acelerador1() {
 
     return (
       <div className="space-y-6">
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <Sparkles className="w-6 h-6" />
-              Análisis de IA por Criterio
-            </CardTitle>
-            <CardDescription>
-              Revisión inteligente de los 4 criterios de evaluación
+        {/* Sección de Análisis de Consistencia */}
+        <Card className="border-2 border-primary shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
+            <CardDescription className="text-base">
+              La IA ha analizado la consistencia de tu propuesta y especifica un
+              resumen preliminar de todas las oportunidades de mejora en función
+              a la rúbrica de evaluación.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             {/* Puntaje Total */}
-            <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-semibold">
-                  Puntaje Total Estimado:
-                </span>
-                <Badge className="text-2xl px-4 py-2">
-                  {step2Data.puntaje_total} / 80 pts
-                </Badge>
+            <div className="my-6">
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-xl p-6">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-2">Puntaje Total</p>
+                  <p className="text-5xl font-bold text-purple-600">
+                    {step2Data.puntaje_total || 0}
+                    <span className="text-2xl text-gray-500">/80</span>
+                  </p>
+                  <p className="text-sm text-gray-600 mt-2">Puntos obtenidos</p>
+                </div>
               </div>
             </div>
 
-            <Accordion type="single" collapsible className="w-full">
-              {/* Criterio 1: Intencionalidad */}
+            {/* Accordion con todos los criterios */}
+            <Accordion type="multiple" className="w-full space-y-4">
+              {/* INTENCIONALIDAD */}
               <AccordionItem
-                value="criterio-1"
-                className="border rounded-lg mb-4 px-4"
+                value="intencionalidad"
+                className="border rounded-lg"
               >
-                <AccordionTrigger className="hover:no-underline">
+                <AccordionTrigger className="px-4 hover:no-underline">
                   <div className="flex items-center justify-between w-full pr-4">
-                    <span className="font-semibold text-base">
-                      1. INTENCIONALIDAD
-                    </span>
-                    <Badge variant="outline" className="ml-auto mr-2">
-                      {step2Data.intencionalidad.puntaje_total} / 25 pts
-                    </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
-                  {/* Indicador 1.1 */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">
-                      Indicador 1.1: Caracterización del Problema
-                    </h4>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge>
-                        {step2Data.intencionalidad.indicador_1_1.puntaje} / 15
-                        pts
-                      </Badge>
-                      <Badge variant="secondary">
-                        {step2Data.intencionalidad.indicador_1_1.nivel}
+                    <div className="flex items-center gap-3">
+                      <div className="bg-blue-500 text-white rounded-lg p-2">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold">1. Intencionalidad</p>
+                        <p className="text-sm text-gray-500">
+                          Caracterización del problema y objetivos
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-base">
+                        {(step2Data.intencionalidad?.indicador_1_1?.puntaje ||
+                          0) +
+                          (step2Data.intencionalidad?.indicador_1_2?.puntaje ||
+                            0)}{" "}
+                        / 25 pts
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-700">
-                      {step2Data.intencionalidad.indicador_1_1.justificacion}
-                    </p>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  {/* Indicador 1.1 */}
+                  <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-blue-900">
+                        1.1 Caracterización del Problema
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.intencionalidad?.indicador_1_1?.puntaje ||
+                            0}{" "}
+                          / 15 pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.intencionalidad?.indicador_1_1?.nivel}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="bg-white p-3 rounded">
+                        <p className="font-semibold mb-1">Vinculación CNEB:</p>
+                        <p className="text-gray-700">
+                          {
+                            step2Data.intencionalidad?.indicador_1_1
+                              ?.vinculacion_cneb
+                          }
+                        </p>
+                      </div>
+                      {step2Data.intencionalidad?.indicador_1_1
+                        ?.evidencia_consolidados && (
+                        <div className="bg-white p-3 rounded">
+                          <p className="font-semibold mb-1">Evidencia:</p>
+                          <p className="text-gray-700">
+                            {
+                              step2Data.intencionalidad?.indicador_1_1
+                                ?.evidencia_consolidados
+                            }
+                          </p>
+                        </div>
+                      )}
+                      <div className="bg-white p-3 rounded">
+                        <p className="font-semibold mb-1">Justificación:</p>
+                        <p className="text-gray-700">
+                          {
+                            step2Data.intencionalidad?.indicador_1_1
+                              ?.justificacion
+                          }
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Indicador 1.2 */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">
-                      Indicador 1.2: Objetivos del Proyecto
-                    </h4>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge>
-                        {step2Data.intencionalidad.indicador_1_2.puntaje} / 10
-                        pts
-                      </Badge>
-                      <Badge variant="secondary">
-                        {step2Data.intencionalidad.indicador_1_2.nivel}
-                      </Badge>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded text-sm space-y-1">
-                      <p className="font-medium">Checklist SMART:</p>
-                      <div className="grid grid-cols-2 gap-1">
-                        <span>
-                          {step2Data.intencionalidad.indicador_1_2
-                            .checklist_smart.especifico
-                            ? "✅"
-                            : "❌"}{" "}
-                          Específico
-                        </span>
-                        <span>
-                          {step2Data.intencionalidad.indicador_1_2
-                            .checklist_smart.medible
-                            ? "✅"
-                            : "❌"}{" "}
-                          Medible
-                        </span>
-                        <span>
-                          {step2Data.intencionalidad.indicador_1_2
-                            .checklist_smart.alcanzable
-                            ? "✅"
-                            : "❌"}{" "}
-                          Alcanzable
-                        </span>
-                        <span>
-                          {step2Data.intencionalidad.indicador_1_2
-                            .checklist_smart.relevante
-                            ? "✅"
-                            : "❌"}{" "}
-                          Relevante
-                        </span>
-                        <span>
-                          {step2Data.intencionalidad.indicador_1_2
-                            .checklist_smart.temporal
-                            ? "✅"
-                            : "❌"}{" "}
-                          Temporal
-                        </span>
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-blue-900">
+                        1.2 Objetivos (SMART)
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.intencionalidad?.indicador_1_2?.puntaje ||
+                            0}{" "}
+                          / 10 pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.intencionalidad?.indicador_1_2?.nivel}
+                        </Badge>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-700">
-                      {step2Data.intencionalidad.indicador_1_2.justificacion}
-                    </p>
-                  </div>
-
-                  {/* Fortalezas y Áreas de Mejora */}
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4" />
-                      Fortalezas
-                    </h4>
-                    <ul className="space-y-1 text-sm">
-                      {step2Data.intencionalidad.fortalezas.map((f, i) => (
-                        <li key={i}>• {f}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-yellow-700 mb-2">
-                      Áreas a Mejorar
-                    </h4>
-                    <ul className="space-y-1 text-sm">
-                      {step2Data.intencionalidad.areas_mejora.map((a, i) => (
-                        <li key={i}>• {a}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {step2Data.intencionalidad.recomendaciones && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-blue-700 mb-2">
-                        Recomendaciones
-                      </h4>
-                      <ul className="space-y-1 text-sm">
-                        {step2Data.intencionalidad.recomendaciones.map(
-                          (r, i) => (
-                            <li key={i}>→ {r}</li>
-                          )
-                        )}
-                      </ul>
+                    <div className="space-y-2 text-sm">
+                      <div className="bg-white p-3 rounded">
+                        <p className="font-semibold mb-2">Checklist SMART:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.entries(
+                            step2Data.intencionalidad?.indicador_1_2
+                              ?.checklist_smart || {}
+                          ).map(([key, value]) => (
+                            <div key={key} className="flex items-center gap-2">
+                              <span>{value ? "✅" : "❌"}</span>
+                              <span className="capitalize">{key}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-white p-3 rounded">
+                        <p className="font-semibold mb-1">Justificación:</p>
+                        <p className="text-gray-700">
+                          {
+                            step2Data.intencionalidad?.indicador_1_2
+                              ?.justificacion
+                          }
+                        </p>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Criterio 2: Originalidad */}
-              <AccordionItem
-                value="criterio-2"
-                className="border rounded-lg mb-4 px-4"
-              >
-                <AccordionTrigger className="hover:no-underline">
+              {/* ORIGINALIDAD */}
+              <AccordionItem value="originalidad" className="border rounded-lg">
+                <AccordionTrigger className="px-4 hover:no-underline">
                   <div className="flex items-center justify-between w-full pr-4">
-                    <span className="font-semibold text-base">
-                      2. ORIGINALIDAD
-                    </span>
-                    <Badge variant="outline" className="ml-auto mr-2">
-                      {step2Data.originalidad.puntaje_total} / 30 pts
-                    </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
-                  {/* Indicador 2.1 */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">
-                      Indicador 2.1: Metodología o Estrategia
-                    </h4>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge>
-                        {step2Data.originalidad.indicador_2_1.puntaje} / 10 pts
-                      </Badge>
-                      <Badge variant="secondary">
-                        {step2Data.originalidad.indicador_2_1.nivel}
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-500 text-white rounded-lg p-2">
+                        <Lightbulb className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold">2. Originalidad</p>
+                        <p className="text-sm text-gray-500">
+                          Metodología y procedimiento
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-base">
+                        {(step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
+                          (step2Data.originalidad?.indicador_2_2?.puntaje ||
+                            0)}{" "}
+                        / 25 pts
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-700">
-                      {step2Data.originalidad.indicador_2_1.analisis}
-                    </p>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  {/* Indicador 2.1 */}
+                  <div className="mb-4 p-4 bg-green-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-green-900">
+                        2.1 Metodología/Estrategia
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.originalidad?.indicador_2_1?.puntaje || 0}{" "}
+                          / 15 pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.originalidad?.indicador_2_1?.nivel}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="bg-white p-3 rounded text-sm">
+                      <p className="text-gray-700">
+                        {step2Data.originalidad?.indicador_2_1?.analisis}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Indicador 2.2 */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">
-                      Indicador 2.2: Procedimiento y Video
-                    </h4>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge>
-                        {step2Data.originalidad.indicador_2_2.puntaje} / 20 pts
-                      </Badge>
-                      <Badge variant="secondary">
-                        {step2Data.originalidad.indicador_2_2.nivel}
-                      </Badge>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-green-900">
+                        2.2 Procedimiento y Video
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.originalidad?.indicador_2_2?.puntaje || 0}{" "}
+                          / 10 pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.originalidad?.indicador_2_2?.nivel}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded text-sm space-y-2">
-                      <p>
-                        <strong>Video:</strong>{" "}
-                        {step2Data.originalidad.indicador_2_2.video_detectado
-                          ? "✅ Detectado"
-                          : "❌ No detectado"}{" "}
-                        ({step2Data.originalidad.indicador_2_2.puntaje_video}{" "}
-                        pts)
-                      </p>
-                      <p>
-                        <strong>Procedimiento:</strong>{" "}
-                        {
-                          step2Data.originalidad.indicador_2_2
-                            .calidad_procedimiento
-                        }
-                      </p>
+                    <div className="space-y-2 text-sm">
+                      <div className="bg-white p-3 rounded">
+                        <p className="font-semibold mb-2">
+                          Calidad del Procedimiento:
+                        </p>
+                        <p className="text-gray-700">
+                          {
+                            step2Data.originalidad?.indicador_2_2
+                              ?.calidad_procedimiento
+                          }
+                        </p>
+                      </div>
+                      <div className="bg-white p-3 rounded">
+                        <p className="font-semibold mb-2">Video Detectado:</p>
+                        <p className="text-gray-700">
+                          {step2Data.originalidad?.indicador_2_2
+                            ?.video_detectado
+                            ? "✅ Sí"
+                            : "❌ No"}{" "}
+                          - Puntaje:{" "}
+                          {step2Data.originalidad?.indicador_2_2?.puntaje_video}{" "}
+                          pts
+                        </p>
+                      </div>
+                      {step2Data.originalidad?.indicador_2_2?.observacion && (
+                        <div className="bg-white p-3 rounded">
+                          <p className="font-semibold mb-1">Observación:</p>
+                          <p className="text-gray-700">
+                            {step2Data.originalidad?.indicador_2_2?.observacion}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-700">
-                      {step2Data.originalidad.indicador_2_2.observacion}
-                    </p>
-                  </div>
-
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4" />
-                      Fortalezas
-                    </h4>
-                    <ul className="space-y-1 text-sm">
-                      {step2Data.originalidad.fortalezas.map((f, i) => (
-                        <li key={i}>• {f}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-yellow-700 mb-2">
-                      Áreas a Mejorar
-                    </h4>
-                    <ul className="space-y-1 text-sm">
-                      {step2Data.originalidad.areas_mejora.map((a, i) => (
-                        <li key={i}>• {a}</li>
-                      ))}
-                    </ul>
                   </div>
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Criterio 3: Impacto */}
-              <AccordionItem
-                value="criterio-3"
-                className="border rounded-lg mb-4 px-4"
-              >
-                <AccordionTrigger className="hover:no-underline">
+              {/* IMPACTO */}
+              <AccordionItem value="impacto" className="border rounded-lg">
+                <AccordionTrigger className="px-4 hover:no-underline">
                   <div className="flex items-center justify-between w-full pr-4">
-                    <span className="font-semibold text-base">3. IMPACTO</span>
-                    <Badge variant="outline" className="ml-auto mr-2">
-                      {step2Data.impacto.puntaje_total} / 15 pts
-                    </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
-                  {/* Indicador 3.1 */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">
-                      Indicador 3.1: Resultados de Aprendizaje
-                    </h4>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge>
-                        {step2Data.impacto.indicador_3_1.puntaje} / 10 pts
-                      </Badge>
-                      <Badge variant="secondary">
-                        {step2Data.impacto.indicador_3_1.nivel}
+                    <div className="flex items-center gap-3">
+                      <div className="bg-orange-500 text-white rounded-lg p-2">
+                        <Sparkles className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold">3. Impacto</p>
+                        <p className="text-sm text-gray-500">
+                          Resultados y cambios sistémicos
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-base">
+                        {(step2Data.impacto?.indicador_3_1?.puntaje || 0) +
+                          (step2Data.impacto?.indicador_3_2?.puntaje || 0)}{" "}
+                        / 15 pts
                       </Badge>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded text-sm space-y-1">
-                      <p>
-                        <strong>Evidencias:</strong>{" "}
-                        {
-                          step2Data.impacto.indicador_3_1.analisis_evidencias
-                            .listado_archivos
-                        }
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  {/* Indicador 3.1 */}
+                  <div className="mb-4 p-4 bg-orange-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-orange-900">
+                        3.1 Resultados de Aprendizaje
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.impacto?.indicador_3_1?.puntaje || 0} / 10
+                          pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.impacto?.indicador_3_1?.nivel}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="bg-white p-3 rounded text-sm">
+                      <p className="font-semibold mb-2">
+                        Análisis de Evidencias:
                       </p>
-                      <p>
-                        <strong>Uso en texto:</strong>{" "}
-                        {
-                          step2Data.impacto.indicador_3_1.analisis_evidencias
-                            .uso_en_texto
-                        }
-                      </p>
-                      <p>
-                        <strong>Vinculación:</strong>{" "}
-                        {
-                          step2Data.impacto.indicador_3_1.analisis_evidencias
-                            .vinculacion_competencia
-                        }
-                      </p>
+                      <pre className="whitespace-pre-wrap text-gray-700">
+                        {JSON.stringify(
+                          step2Data.impacto?.indicador_3_1?.analisis_evidencias,
+                          null,
+                          2
+                        )}
+                      </pre>
                     </div>
                   </div>
 
                   {/* Indicador 3.2 */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">
-                      Indicador 3.2: Cambios Sistémicos
-                    </h4>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge>
-                        {step2Data.impacto.indicador_3_2.puntaje} / 5 pts
-                      </Badge>
-                      <Badge variant="secondary">
-                        {step2Data.impacto.indicador_3_2.nivel}
-                      </Badge>
+                  <div className="mb-4 p-4 bg-orange-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-orange-900">
+                        3.2 Cambios Sistémicos
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.impacto?.indicador_3_2?.puntaje || 0} / 5
+                          pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.impacto?.indicador_3_2?.nivel}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded text-sm space-y-1">
-                      <p>
-                        <strong>Práctica/Gestión:</strong>{" "}
-                        {
-                          step2Data.impacto.indicador_3_2
-                            .analisis_transformacion.practica_docente_gestion
-                        }
+                    <div className="bg-white p-3 rounded text-sm">
+                      <p className="font-semibold mb-2">
+                        Análisis de Transformación:
                       </p>
-                      <p>
-                        <strong>Comunidad:</strong>{" "}
-                        {
-                          step2Data.impacto.indicador_3_2
-                            .analisis_transformacion.comunidad
-                        }
-                      </p>
+                      <pre className="whitespace-pre-wrap text-gray-700">
+                        {JSON.stringify(
+                          step2Data.impacto?.indicador_3_2
+                            ?.analisis_transformacion,
+                          null,
+                          2
+                        )}
+                      </pre>
                     </div>
-                  </div>
-
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4" />
-                      Fortalezas
-                    </h4>
-                    <ul className="space-y-1 text-sm">
-                      {step2Data.impacto.fortalezas.map((f, i) => (
-                        <li key={i}>• {f}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-yellow-700 mb-2">
-                      Áreas a Mejorar
-                    </h4>
-                    <ul className="space-y-1 text-sm">
-                      {step2Data.impacto.areas_mejora.map((a, i) => (
-                        <li key={i}>• {a}</li>
-                      ))}
-                    </ul>
                   </div>
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Criterio 4: Sostenibilidad */}
+              {/* SOSTENIBILIDAD */}
               <AccordionItem
-                value="criterio-4"
-                className="border rounded-lg mb-4 px-4"
+                value="sostenibilidad"
+                className="border rounded-lg"
               >
-                <AccordionTrigger className="hover:no-underline">
+                <AccordionTrigger className="px-4 hover:no-underline">
                   <div className="flex items-center justify-between w-full pr-4">
-                    <span className="font-semibold text-base">
-                      4. SOSTENIBILIDAD
-                    </span>
-                    <Badge variant="outline" className="ml-auto mr-2">
-                      {step2Data.sostenibilidad.puntaje_total} / 30 pts
-                    </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
-                  {/* Indicador 4.1 */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">
-                      Indicador 4.1: Estrategias de Continuidad
-                    </h4>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge>
-                        {step2Data.sostenibilidad.indicador_4_1.puntaje} / 15
-                        pts
-                      </Badge>
-                      <Badge variant="secondary">
-                        {step2Data.sostenibilidad.indicador_4_1.nivel}
+                    <div className="flex items-center gap-3">
+                      <div className="bg-teal-500 text-white rounded-lg p-2">
+                        <CheckCircle className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold">4. Sostenibilidad</p>
+                        <p className="text-sm text-gray-500">
+                          Continuidad, viabilidad y recursos
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-base">
+                        {(step2Data.sostenibilidad?.indicador_4_1?.puntaje ||
+                          0) +
+                          (step2Data.sostenibilidad?.indicador_4_2?.puntaje ||
+                            0) +
+                          (step2Data.sostenibilidad?.indicador_4_3?.puntaje ||
+                            0)}{" "}
+                        / 15 pts
                       </Badge>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded text-sm space-y-1">
-                      <p>
-                        <strong>Institucionalización:</strong>{" "}
-                        {
-                          step2Data.sostenibilidad.indicador_4_1.analisis
-                            .institucionalizacion
-                        }
-                      </p>
-                      <p>
-                        <strong>Evidencias:</strong>{" "}
-                        {
-                          step2Data.sostenibilidad.indicador_4_1.analisis
-                            .evidencias
-                        }
-                      </p>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  {/* Indicador 4.1 */}
+                  <div className="mb-4 p-4 bg-teal-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-teal-900">
+                        4.1 Estrategias de Continuidad
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.sostenibilidad?.indicador_4_1?.puntaje ||
+                            0}{" "}
+                          / 15 pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.sostenibilidad?.indicador_4_1?.nivel}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="bg-white p-3 rounded text-sm">
+                      <p className="font-semibold mb-2">Análisis:</p>
+                      <pre className="whitespace-pre-wrap text-gray-700">
+                        {JSON.stringify(
+                          step2Data.sostenibilidad?.indicador_4_1?.analisis,
+                          null,
+                          2
+                        )}
+                      </pre>
                     </div>
                   </div>
 
                   {/* Indicador 4.2 */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">
-                      Indicador 4.2: Viabilidad y Aliados
-                    </h4>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge>
-                        {step2Data.sostenibilidad.indicador_4_2.puntaje} / 5 pts
-                      </Badge>
-                      <Badge variant="secondary">
-                        {step2Data.sostenibilidad.indicador_4_2.nivel}
-                      </Badge>
+                  <div className="mb-4 p-4 bg-teal-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-teal-900">
+                        4.2 Viabilidad y Aliados
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.sostenibilidad?.indicador_4_2?.puntaje ||
+                            0}{" "}
+                          / 5 pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.sostenibilidad?.indicador_4_2?.nivel}
+                        </Badge>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-700">
-                      {
-                        step2Data.sostenibilidad.indicador_4_2.analisis
-                          .aliados_estrategicos
-                      }
-                    </p>
+                    <div className="bg-white p-3 rounded text-sm">
+                      <p className="font-semibold mb-2">Análisis:</p>
+                      <pre className="whitespace-pre-wrap text-gray-700">
+                        {JSON.stringify(
+                          step2Data.sostenibilidad?.indicador_4_2?.analisis,
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
                   </div>
 
                   {/* Indicador 4.3 */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">
-                      Indicador 4.3: Bienes y Servicios
-                    </h4>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge>
-                        {step2Data.sostenibilidad.indicador_4_3.puntaje} / 10
-                        pts
-                      </Badge>
-                      <Badge variant="secondary">
-                        {step2Data.sostenibilidad.indicador_4_3.nivel}
-                      </Badge>
+                  <div className="mb-4 p-4 bg-teal-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-teal-900">
+                        4.3 Bienes y Servicios
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.sostenibilidad?.indicador_4_3?.puntaje ||
+                            0}{" "}
+                          / 10 pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.sostenibilidad?.indicador_4_3?.nivel}
+                        </Badge>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-700">
-                      {
-                        step2Data.sostenibilidad.indicador_4_3.analisis
-                          .pertinencia
-                      }
-                    </p>
-                  </div>
-
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4" />
-                      Fortalezas
-                    </h4>
-                    <ul className="space-y-1 text-sm">
-                      {step2Data.sostenibilidad.fortalezas.map((f, i) => (
-                        <li key={i}>• {f}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-yellow-700 mb-2">
-                      Áreas a Mejorar
-                    </h4>
-                    <ul className="space-y-1 text-sm">
-                      {step2Data.sostenibilidad.areas_mejora.map((a, i) => (
-                        <li key={i}>• {a}</li>
-                      ))}
-                    </ul>
+                    <div className="bg-white p-3 rounded text-sm">
+                      <p className="font-semibold mb-2">Análisis:</p>
+                      <pre className="whitespace-pre-wrap text-gray-700">
+                        {JSON.stringify(
+                          step2Data.sostenibilidad?.indicador_4_3?.analisis,
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
+            </Accordion>
+
+            {/* Botones de navegación */}
+            <div className="flex justify-between mt-6 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentStep(1)}
+                size="lg"
+                disabled={generatingQuestions}
+              >
+                Volver a Editar
+              </Button>
+              <Button
+                onClick={handleGenerateQuestions}
+                size="lg"
+                className="gap-2"
+                disabled={generatingQuestions}
+              >
+                {generatingQuestions ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Generando preguntas...
+                  </>
+                ) : (
+                  <>
+                    Continuar
+                    <MessageSquare className="w-5 h-5" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  // PASO 3: Preguntas Complementarias
+  const renderStep3 = () => {
+    if (!generatedQuestions) {
+      return (
+        <div className="space-y-6">
+          <Card className="border-0 shadow-sm">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Loader2 className="w-12 h-12 animate-spin text-purple-500 mb-4" />
+                <p className="text-lg font-medium">Cargando preguntas...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    // Función auxiliar para determinar si una sección tiene puntaje completo
+    const hasFullScore = (criterio: string, maxScore: number) => {
+      if (!step2Data) return false;
+
+      switch (criterio) {
+        case "intencionalidad":
+          return (
+            (step2Data.intencionalidad?.indicador_1_1?.puntaje || 0) +
+              (step2Data.intencionalidad?.indicador_1_2?.puntaje || 0) ===
+            maxScore
+          );
+        case "originalidad":
+          return (
+            (step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
+              (step2Data.originalidad?.indicador_2_2?.puntaje || 0) ===
+            maxScore
+          );
+        case "impacto":
+          return (
+            (step2Data.impacto?.indicador_3_1?.puntaje || 0) +
+              (step2Data.impacto?.indicador_3_2?.puntaje || 0) ===
+            maxScore
+          );
+        case "sostenibilidad":
+          return (
+            (step2Data.sostenibilidad?.indicador_4_1?.puntaje || 0) +
+              (step2Data.sostenibilidad?.indicador_4_2?.puntaje || 0) +
+              (step2Data.sostenibilidad?.indicador_4_3?.puntaje || 0) ===
+            maxScore
+          );
+        default:
+          return false;
+      }
+    };
+
+    const criterios = [
+      {
+        key: "intencionalidad",
+        name: "Intencionalidad",
+        maxScore: 25,
+        icon: Lightbulb,
+        color: "blue",
+      },
+      {
+        key: "originalidad",
+        name: "Originalidad",
+        maxScore: 30,
+        icon: Sparkles,
+        color: "green",
+      },
+      {
+        key: "impacto",
+        name: "Impacto",
+        maxScore: 15,
+        icon: CheckCircle,
+        color: "orange",
+      },
+      {
+        key: "sostenibilidad",
+        name: "Sostenibilidad",
+        maxScore: 30,
+        icon: Clock,
+        color: "teal",
+      },
+    ];
+
+    // Filtrar criterios que NO tienen puntaje completo
+    const criteriosConPreguntas = criterios.filter(
+      (criterio) => !hasFullScore(criterio.key, criterio.maxScore)
+    );
+
+    // Si todos tienen puntaje completo, mostrar mensaje y pasar directamente al paso 4
+    if (criteriosConPreguntas.length === 0) {
+      return (
+        <div className="space-y-6">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100">
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <CheckCircle className="w-6 h-6" />
+                ¡Excelente trabajo!
+              </CardTitle>
+              <CardDescription>
+                Has obtenido el puntaje máximo en todos los criterios
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <div className="bg-green-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto">
+                  <CheckCircle className="w-16 h-16 text-green-600" />
+                </div>
+                <p className="text-lg">
+                  No necesitas responder preguntas complementarias.
+                </p>
+                <p className="text-muted-foreground">
+                  Tu proyecto ha alcanzado la máxima calificación en el análisis
+                  inicial.
+                </p>
+                <Button
+                  onClick={() => setCurrentStep(4)}
+                  size="lg"
+                  className="mt-6 gap-2"
+                >
+                  Ver Resultado Final
+                  <CheckCircle className="w-5 h-5" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100">
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <MessageSquare className="w-6 h-6" />
+              Preguntas Complementarias
+            </CardTitle>
+            <CardDescription>
+              Responde estas preguntas para mejorar tu puntaje en las áreas
+              identificadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {/* Mostrar puntaje actual */}
+            <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Puntaje Actual</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {generatedQuestions.puntaje_actual} /{" "}
+                    {generatedQuestions.puntaje_maximo} pts
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Áreas a mejorar</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {criteriosConPreguntas.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Accordion type="multiple" className="w-full">
+              {criteriosConPreguntas.map((criterio) => {
+                const questions = generatedQuestions[criterio.key];
+                if (
+                  !questions ||
+                  !questions.preguntas ||
+                  questions.preguntas.length === 0
+                ) {
+                  return null;
+                }
+
+                const Icon = criterio.icon;
+                const colorClasses = {
+                  blue: "bg-blue-500 border-blue-200",
+                  green: "bg-green-500 border-green-200",
+                  orange: "bg-orange-500 border-orange-200",
+                  teal: "bg-teal-500 border-teal-200",
+                };
+
+                return (
+                  <AccordionItem
+                    key={criterio.key}
+                    value={criterio.key}
+                    className="border rounded-lg mb-4"
+                  >
+                    <AccordionTrigger className="px-4 hover:no-underline">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`${
+                              colorClasses[
+                                criterio.color as keyof typeof colorClasses
+                              ]
+                            } text-white rounded-lg p-2`}
+                          >
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <div className="text-left">
+                            <p className="font-semibold">{criterio.name}</p>
+                            <p className="text-sm text-gray-500">
+                              {questions.preguntas.length} pregunta
+                              {questions.preguntas.length > 1 ? "s" : ""} para
+                              mejorar
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="outline">
+                          {criterio.key === "intencionalidad" &&
+                          step2Data?.intencionalidad
+                            ? (step2Data.intencionalidad.indicador_1_1
+                                ?.puntaje || 0) +
+                              (step2Data.intencionalidad.indicador_1_2
+                                ?.puntaje || 0)
+                            : criterio.key === "originalidad" &&
+                              step2Data?.originalidad
+                            ? (step2Data.originalidad.indicador_2_1?.puntaje ||
+                                0) +
+                              (step2Data.originalidad.indicador_2_2?.puntaje ||
+                                0)
+                            : criterio.key === "impacto" && step2Data?.impacto
+                            ? (step2Data.impacto.indicador_3_1?.puntaje || 0) +
+                              (step2Data.impacto.indicador_3_2?.puntaje || 0)
+                            : criterio.key === "sostenibilidad" &&
+                              step2Data?.sostenibilidad
+                            ? (step2Data.sostenibilidad.indicador_4_1
+                                ?.puntaje || 0) +
+                              (step2Data.sostenibilidad.indicador_4_2
+                                ?.puntaje || 0) +
+                              (step2Data.sostenibilidad.indicador_4_3
+                                ?.puntaje || 0)
+                            : 0}{" "}
+                          / {criterio.maxScore} pts
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4 space-y-6">
+                      {/* Introducción */}
+                      {questions.introduccion && (
+                        <Alert className="bg-purple-50 border-purple-200">
+                          <MessageSquare className="w-4 h-4" />
+                          <AlertDescription>
+                            {questions.introduccion}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Preguntas */}
+                      {questions.preguntas.map(
+                        (pregunta: string, idx: number) => (
+                          <div key={idx} className="space-y-3">
+                            <Card className="bg-purple-50 border-purple-200">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-medium text-purple-900">
+                                  Pregunta {idx + 1}
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                  {pregunta}
+                                </p>
+                              </CardContent>
+                            </Card>
+                            <Textarea
+                              placeholder="Escribe tu respuesta aquí..."
+                              className="min-h-[120px]"
+                              value={
+                                step3Answers[criterio.key]?.[
+                                  `respuesta_${idx + 1}`
+                                ] || ""
+                              }
+                              onChange={(e) => {
+                                setStep3Answers((prev) => ({
+                                  ...prev,
+                                  [criterio.key]: {
+                                    ...(prev[criterio.key] || {}),
+                                    [`respuesta_${idx + 1}`]: e.target.value,
+                                  },
+                                }));
+                              }}
+                            />
+                          </div>
+                        )
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
             </Accordion>
           </CardContent>
         </Card>
 
         <div className="flex justify-between">
-          <Button variant="outline" onClick={() => setCurrentStep(1)} size="lg">
+          <Button variant="outline" onClick={() => setCurrentStep(2)} size="lg">
             Anterior
           </Button>
-          <Button onClick={() => setCurrentStep(3)} size="lg" className="gap-2">
-            Continuar a Preguntas
-            <MessageSquare className="w-5 h-5" />
+          <Button
+            onClick={handleEvaluateStep3Answers}
+            size="lg"
+            className="gap-2"
+          >
+            Evaluar y Ver Resultado
+            <CheckCircle className="w-5 h-5" />
           </Button>
         </div>
       </div>
     );
   };
 
-  // PASO 3: Preguntas Complementarias
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100">
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <MessageSquare className="w-6 h-6" />
-            Preguntas Complementarias
-          </CardTitle>
-          <CardDescription>
-            Profundiza tus respuestas para mejorar tu puntaje
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <Accordion type="single" collapsible className="w-full">
-            {/* Preguntas para Ítem 1 */}
-            <AccordionItem
-              value="item-1"
-              className="border rounded-lg mb-4 px-4"
-            >
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-base">
-                    Profundización: Problema y Objetivos
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4 space-y-6">
-                <div className="space-y-4">
-                  <Card className="bg-purple-50 border-purple-200">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-purple-900">
-                        Pregunta Complementaria 1.1
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-700">
-                        ¿Qué datos específicos demuestran la magnitud del
-                        problema en tu institución?
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Textarea
-                    placeholder="Ej: Según evaluaciones internas, el 60% de estudiantes..."
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <Card className="bg-purple-50 border-purple-200">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-purple-900">
-                        Pregunta Complementaria 1.2
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-700">
-                        ¿Qué indicadores utilizarás para medir el logro de tu
-                        objetivo?
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Textarea
-                    placeholder="Ej: Aumento del 30% en la comprensión lectora medido a través de..."
-                    className="min-h-[100px]"
-                  />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Preguntas para Ítem 2 */}
-            <AccordionItem
-              value="item-2"
-              className="border rounded-lg mb-4 px-4"
-            >
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-base">
-                    Profundización: Solución Innovadora
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4 space-y-6">
-                <div className="space-y-4">
-                  <Card className="bg-purple-50 border-purple-200">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-purple-900">
-                        Pregunta Complementaria 2.1
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-700">
-                        ¿Qué recursos tecnológicos y materiales tienes
-                        disponibles para implementar tu solución?
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Textarea
-                    placeholder="Ej: La institución cuenta con 30 tablets, proyector multimedia..."
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <Card className="bg-purple-50 border-purple-200">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-purple-900">
-                        Pregunta Complementaria 2.2
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-700">
-                        ¿Qué hace innovadora tu propuesta comparada con lo que
-                        ya se hace en tu institución?
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Textarea
-                    placeholder="Ej: A diferencia del método tradicional, nuestra propuesta integra..."
-                    className="min-h-[100px]"
-                  />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={() => setCurrentStep(2)} size="lg">
-          Anterior
-        </Button>
-        <Button onClick={() => setCurrentStep(4)} size="lg" className="gap-2">
-          Ver Resultado Final
-          <CheckCircle className="w-5 h-5" />
-        </Button>
-      </div>
-    </div>
-  );
-
   // PASO 4: Resultado Final
-  const renderStep4 = () => (
-    <div className="space-y-6">
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="bg-gradient-to-r from-green-50 to-green-100">
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <CheckCircle className="w-6 h-6" />
-            Análisis Completo
-          </CardTitle>
-          <CardDescription>
-            Resultado final con todas las respuestas integradas
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-6">
-          {/* Puntaje Global */}
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 rounded-xl p-6">
-            <div className="text-center space-y-4">
-              <h3 className="text-xl font-bold">Puntaje Estimado Total</h3>
-              <div className="flex items-center justify-center gap-4">
-                <Badge className="text-4xl px-6 py-3">72 / 100 pts</Badge>
-                <Badge variant="outline" className="text-lg">
-                  Nivel: BUENO
-                </Badge>
-              </div>
-              <Progress value={72} className="h-3" />
-              <p className="text-sm text-muted-foreground">
-                Tu proyecto tiene una base sólida. Implementa las sugerencias
-                para alcanzar nivel EXCELENTE
+  const renderStep4 = () => {
+    if (!step2Data) {
+      return (
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">
+                No hay datos de análisis disponibles
               </p>
-            </div>
-          </div>
-
-          {/* Resumen por Criterio */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Resumen por Criterio</h3>
-
-            <Card className="border-green-200 bg-green-50">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Intencionalidad</CardTitle>
-                  <Badge>18 / 20 pts</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-700">
-                  Problema y objetivo bien definidos. Incluye datos
-                  cuantitativos para fortalecer la justificación.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-blue-200 bg-blue-50">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Originalidad</CardTitle>
-                  <Badge>15 / 20 pts</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-700">
-                  Propuesta innovadora. Agrega más detalles sobre cómo se
-                  diferencia de lo existente.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-yellow-200 bg-yellow-50">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Pertinencia</CardTitle>
-                  <Badge>14 / 20 pts</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-700">
-                  Alineación curricular presente. Especifica competencias del
-                  CNEB a desarrollar.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recomendaciones Finales */}
-          <Card className="border-primary">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lightbulb className="w-5 h-5" />
-                Recomendaciones Prioritarias
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-3">
-                  <Badge className="mt-1">1</Badge>
-                  <div>
-                    <p className="font-medium">
-                      Agregar evidencias cuantitativas
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Incluye porcentajes, estadísticas o resultados de
-                      evaluaciones previas
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Badge className="mt-1">2</Badge>
-                  <div>
-                    <p className="font-medium">
-                      Especificar competencias del CNEB
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Indica qué competencias, capacidades y desempeños
-                      desarrollarás
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Badge className="mt-1">3</Badge>
-                  <div>
-                    <p className="font-medium">Detallar indicadores de éxito</p>
-                    <p className="text-sm text-muted-foreground">
-                      Define cómo medirás el impacto de tu proyecto (KPIs)
-                    </p>
-                  </div>
-                </li>
-              </ul>
             </CardContent>
           </Card>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={() => setCurrentStep(3)} size="lg">
-          Anterior
-        </Button>
-        <div className="flex gap-3">
-          <Button
-            onClick={() => setCurrentStep(1)}
-            variant="outline"
-            size="lg"
-            className="gap-2"
-          >
-            <BookOpen className="w-5 h-5" />
-            Editar Respuestas
-          </Button>
-          <Button size="lg" className="gap-2">
-            <Download className="w-5 h-5" />
-            Descargar Informe
-          </Button>
         </div>
+      );
+    }
+
+    // Verificar si step2Data tiene la estructura de evaluación final (con resumen)
+    const puntajeTotal =
+      (step2Data as any).resumen?.puntaje_total || step2Data.puntaje_total || 0;
+    const puntajeMaximo = 80;
+    const porcentaje = Math.round((puntajeTotal / puntajeMaximo) * 100);
+
+    let nivelFinal = (step2Data as any).resumen?.nivel_final || "DEFICIENTE";
+    if (!(step2Data as any).resumen?.nivel_final) {
+      if (porcentaje >= 90) nivelFinal = "EXCELENTE";
+      else if (porcentaje >= 70) nivelFinal = "BUENO";
+      else if (porcentaje >= 50) nivelFinal = "REGULAR";
+    }
+
+    const handleDownloadReport = () => {
+      const reportData = {
+        proyecto_id: proyecto?.id || "sin-id",
+        tipo_proyecto: proyecto?.tipo_proyecto || "2A",
+        fecha: new Date().toISOString(),
+        puntaje_total: puntajeTotal,
+        puntaje_maximo: puntajeMaximo,
+        nivel: nivelFinal,
+        step1_data: step1Data,
+        step2_analysis: step2Data,
+        step3_answers: step3Answers,
+      };
+
+      const blob = new Blob([JSON.stringify(reportData, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `reporte-cnpie-2a-${
+        proyecto?.id || "proyecto"
+      }-${new Date().getTime()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "✅ Reporte descargado",
+        description: "El archivo JSON ha sido descargado exitosamente",
+      });
+    };
+
+    return (
+      <div className="space-y-6">
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-green-100">
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <CheckCircle className="w-6 h-6" />
+              Análisis Completo
+            </CardTitle>
+            <CardDescription>
+              Resultado final con todas las respuestas integradas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            {/* Puntaje Global */}
+            <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 rounded-xl p-6">
+              <div className="text-center space-y-4">
+                <h3 className="text-xl font-bold">Puntaje Total</h3>
+                <div className="flex items-center justify-center gap-4">
+                  <Badge className="text-4xl px-6 py-3">
+                    {puntajeTotal} / {puntajeMaximo} pts
+                  </Badge>
+                  <Badge variant="outline" className="text-lg">
+                    Nivel: {nivelFinal}
+                  </Badge>
+                </div>
+                <Progress value={porcentaje} className="h-3" />
+              </div>
+            </div>
+
+            {/* Acordeones con resultados por criterio */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Resumen por Criterio</h3>
+
+              <Accordion type="multiple" className="w-full">
+                {/* INTENCIONALIDAD */}
+                <AccordionItem
+                  value="intencionalidad"
+                  className="border rounded-lg mb-4"
+                >
+                  <AccordionTrigger className="px-4 hover:no-underline">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-blue-500 text-white rounded-lg p-2">
+                          <Lightbulb className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold">1. Intencionalidad</p>
+                          <p className="text-sm text-gray-500">
+                            Problema y objetivos
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline">
+                        {(step2Data.intencionalidad?.indicador_1_1?.puntaje ||
+                          0) +
+                          (step2Data.intencionalidad?.indicador_1_2?.puntaje ||
+                            0)}{" "}
+                        / 25 pts
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
+                    <div className="space-y-4">
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">
+                          Indicador 1.1: Problema
+                        </h4>
+                        <div className="flex gap-2 mb-2">
+                          <Badge>
+                            {step2Data.intencionalidad?.indicador_1_1
+                              ?.puntaje || 0}{" "}
+                            pts
+                          </Badge>
+                          <Badge variant="outline">
+                            {step2Data.intencionalidad?.indicador_1_1?.nivel}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-700">
+                          {
+                            step2Data.intencionalidad?.indicador_1_1
+                              ?.justificacion
+                          }
+                        </p>
+                      </div>
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">
+                          Indicador 1.2: Objetivos
+                        </h4>
+                        <div className="flex gap-2 mb-2">
+                          <Badge>
+                            {step2Data.intencionalidad?.indicador_1_2
+                              ?.puntaje || 0}{" "}
+                            pts
+                          </Badge>
+                          <Badge variant="outline">
+                            {step2Data.intencionalidad?.indicador_1_2?.nivel}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-700">
+                          {
+                            step2Data.intencionalidad?.indicador_1_2
+                              ?.justificacion
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* ORIGINALIDAD */}
+                <AccordionItem
+                  value="originalidad"
+                  className="border rounded-lg mb-4"
+                >
+                  <AccordionTrigger className="px-4 hover:no-underline">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-green-500 text-white rounded-lg p-2">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold">2. Originalidad</p>
+                          <p className="text-sm text-gray-500">
+                            Metodología y procedimiento
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline">
+                        {(step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
+                          (step2Data.originalidad?.indicador_2_2?.puntaje ||
+                            0)}{" "}
+                        / 30 pts
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
+                    <div className="space-y-4">
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">
+                          Indicador 2.1: Metodología
+                        </h4>
+                        <div className="flex gap-2 mb-2">
+                          <Badge>
+                            {step2Data.originalidad?.indicador_2_1?.puntaje ||
+                              0}{" "}
+                            pts
+                          </Badge>
+                          <Badge variant="outline">
+                            {step2Data.originalidad?.indicador_2_1?.nivel}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-700">
+                          {step2Data.originalidad?.indicador_2_1?.analisis}
+                        </p>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">
+                          Indicador 2.2: Procedimiento
+                        </h4>
+                        <div className="flex gap-2 mb-2">
+                          <Badge>
+                            {step2Data.originalidad?.indicador_2_2?.puntaje ||
+                              0}{" "}
+                            pts
+                          </Badge>
+                          <Badge variant="outline">
+                            {step2Data.originalidad?.indicador_2_2?.nivel}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-700">
+                          {
+                            step2Data.originalidad?.indicador_2_2
+                              ?.calidad_procedimiento
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* IMPACTO */}
+                <AccordionItem
+                  value="impacto"
+                  className="border rounded-lg mb-4"
+                >
+                  <AccordionTrigger className="px-4 hover:no-underline">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-orange-500 text-white rounded-lg p-2">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold">3. Impacto</p>
+                          <p className="text-sm text-gray-500">
+                            Resultados y cambios
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline">
+                        {(step2Data.impacto?.indicador_3_1?.puntaje || 0) +
+                          (step2Data.impacto?.indicador_3_2?.puntaje || 0)}{" "}
+                        / 15 pts
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
+                    <div className="space-y-4">
+                      <div className="bg-orange-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">
+                          Indicador 3.1: Resultados
+                        </h4>
+                        <div className="flex gap-2 mb-2">
+                          <Badge>
+                            {step2Data.impacto?.indicador_3_1?.puntaje || 0} pts
+                          </Badge>
+                          <Badge variant="outline">
+                            {step2Data.impacto?.indicador_3_1?.nivel}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="bg-orange-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">
+                          Indicador 3.2: Cambios Sistémicos
+                        </h4>
+                        <div className="flex gap-2 mb-2">
+                          <Badge>
+                            {step2Data.impacto?.indicador_3_2?.puntaje || 0} pts
+                          </Badge>
+                          <Badge variant="outline">
+                            {step2Data.impacto?.indicador_3_2?.nivel}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* SOSTENIBILIDAD */}
+                <AccordionItem
+                  value="sostenibilidad"
+                  className="border rounded-lg mb-4"
+                >
+                  <AccordionTrigger className="px-4 hover:no-underline">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-teal-500 text-white rounded-lg p-2">
+                          <Clock className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold">4. Sostenibilidad</p>
+                          <p className="text-sm text-gray-500">
+                            Continuidad y viabilidad
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline">
+                        {(step2Data.sostenibilidad?.indicador_4_1?.puntaje ||
+                          0) +
+                          (step2Data.sostenibilidad?.indicador_4_2?.puntaje ||
+                            0) +
+                          (step2Data.sostenibilidad?.indicador_4_3?.puntaje ||
+                            0)}{" "}
+                        / 30 pts
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
+                    <div className="space-y-4">
+                      <div className="bg-teal-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">
+                          Indicador 4.1: Continuidad
+                        </h4>
+                        <div className="flex gap-2 mb-2">
+                          <Badge>
+                            {step2Data.sostenibilidad?.indicador_4_1?.puntaje ||
+                              0}{" "}
+                            pts
+                          </Badge>
+                          <Badge variant="outline">
+                            {step2Data.sostenibilidad?.indicador_4_1?.nivel}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="bg-teal-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">
+                          Indicador 4.2: Viabilidad
+                        </h4>
+                        <div className="flex gap-2 mb-2">
+                          <Badge>
+                            {step2Data.sostenibilidad?.indicador_4_2?.puntaje ||
+                              0}{" "}
+                            pts
+                          </Badge>
+                          <Badge variant="outline">
+                            {step2Data.sostenibilidad?.indicador_4_2?.nivel}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="bg-teal-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">
+                          Indicador 4.3: Recursos
+                        </h4>
+                        <div className="flex gap-2 mb-2">
+                          <Badge>
+                            {step2Data.sostenibilidad?.indicador_4_3?.puntaje ||
+                              0}{" "}
+                            pts
+                          </Badge>
+                          <Badge variant="outline">
+                            {step2Data.sostenibilidad?.indicador_4_3?.nivel}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex justify-between items-center pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentStep(3)}
+                size="lg"
+              >
+                Volver
+              </Button>
+              <Button
+                onClick={handleDownloadReport}
+                size="lg"
+                className="gap-2"
+              >
+                <Download className="w-5 h-5" />
+                Descargar Reporte
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (!proyecto) {
     return (

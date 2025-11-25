@@ -19,44 +19,61 @@ export interface BienServicio {
   descripcion_utilidad: string;
 }
 
-// Tipos para el Paso 1: Datos iniciales de la ficha
+// Tipos para el Paso 1: Datos iniciales de la ficha (estructurado por criterios)
 export interface FormDataStep1 {
-  // 1.1 Caracterización del problema
-  problema_descripcion: string;
-  problema_evidencias?: string[]; // URLs de PDFs
+  // CRITERIO 1: INTENCIONALIDAD (25 puntos)
+  intencionalidad: {
+    // Indicador 1.1: Caracterización del Problema (15 pts)
+    problema_descripcion: string; // Descripción completa con causas y consecuencias
+    problema_evidencias?: string[]; // URLs de PDFs
+    competencias_cneb?: string[]; // Competencias del CNEB vinculadas
+    area_curricular?: string; // Área curricular
 
-  // 1.2 Objetivos
-  objetivo_general: string;
-  objetivos_especificos?: string[];
+    // Indicador 1.2: Objetivos (10 pts)
+    objetivo_general: string; // Objetivo general SMART
+    objetivos_especificos?: string[]; // Objetivos específicos
+    periodo?: string; // Periodo de implementación
+  };
 
-  // 2.1 Metodología innovadora
-  metodologia_descripcion: string;
+  // CRITERIO 2: ORIGINALIDAD (15 puntos)
+  originalidad: {
+    // Indicador 2.1: Metodología Innovadora (10 pts)
+    metodologia_descripcion: string; // Descripción de la metodología innovadora
+    vinculacion_objetivo?: string; // Cómo se vincula con el objetivo
 
-  // 2.2 Procedimiento metodológico
-  procedimiento_metodologico: string;
-  video_url?: string;
+    // Indicador 2.2: Procedimiento Metodológico (5 pts)
+    procedimiento_metodologico: string; // Procedimiento paso a paso
+    video_url?: string; // Video explicativo (opcional, máx 3 min)
+  };
 
-  // 3.1 Evidencias de impacto
-  impacto_evidencias?: string;
-  evidencias_archivos?: string[]; // URLs de PDFs
+  // CRITERIO 3: IMPACTO (15 puntos)
+  impacto: {
+    // Indicador 3.1: Evidencias de Impacto (10 pts)
+    evidencias_descripcion: string; // Sustento con evidencias de resultados
+    evidencias_archivos?: string[]; // URLs de PDFs de evidencias
+    resultados_cuantitativos?: string; // Datos numéricos de impacto
 
-  // 3.2 Cambios y efectos logrados
-  impacto_cambios?: string;
+    // Indicador 3.2: Cambios Generados (5 pts)
+    cambios_practica_docente?: string; // Cambios en la práctica docente
+    cambios_gestion_escolar?: string; // Cambios en la gestión escolar
+    cambios_comunidad?: string; // Cambios en la comunidad educativa
+  };
 
-  // 4.1 Estrategias de continuidad
-  sostenibilidad_estrategias?: string;
+  // CRITERIO 4: SOSTENIBILIDAD (15 puntos)
+  sostenibilidad: {
+    // Indicador 4.1: Estrategias de Continuidad (5 pts)
+    estrategias_continuidad: string; // Estrategias desarrolladas
 
-  // 4.2 Estrategias de viabilidad
-  sostenibilidad_viabilidad?: string;
+    // Indicador 4.2: Estrategias de Viabilidad (5 pts)
+    estrategias_viabilidad: string; // Estrategias futuras
 
-  // 4.3 Bienes y servicios
-  sostenibilidad_bienes_servicios?: string;
-  bienes_servicios?: BienServicio[];
+    // Indicador 4.3: Bienes y Servicios (5 pts)
+    bienes_servicios_descripcion?: string; // Descripción general
+    bienes_servicios?: BienServicio[]; // Tabla de bienes y servicios
+  };
 
-  // Campos adicionales para contexto
+  // Campos adicionales para contexto general
   contexto?: string;
-  area_curricular?: string;
-  competencias_cneb?: string[];
 }
 
 // Tipos para análisis de IA por ítem
