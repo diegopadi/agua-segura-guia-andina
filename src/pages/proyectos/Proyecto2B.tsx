@@ -18,9 +18,26 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MiniCambioProyecto } from "@/components/MiniCambioProyecto";
 import ResumenDiagnostico from "@/components/ResumenDiagnostico";
+import { useCNPIEProject } from "@/hooks/useCNPIEProject";
 
 export default function Proyecto2B() {
   const navigate = useNavigate();
+  const { proyecto } = useCNPIEProject("2B");
+
+  // Verificar si Etapa 1 está completa
+  const etapa1Completada =
+    proyecto?.estado_aceleradores?.etapa1_acelerador1 === "completado";
+
+  // Verificar si Etapa 2 está completa
+  const etapa2Completada = !!(
+    proyecto?.estado_aceleradores?.etapa2_acelerador2 === "completado" &&
+    proyecto?.estado_aceleradores?.etapa2_acelerador3 === "completado" &&
+    proyecto?.estado_aceleradores?.etapa2_acelerador4 === "completado" &&
+    proyecto?.estado_aceleradores?.etapa2_acelerador5 === "completado" &&
+    proyecto?.estado_aceleradores?.etapa2_acelerador6 === "completado" &&
+    proyecto?.estado_aceleradores?.etapa2_acelerador7 === "completado" &&
+    proyecto?.estado_aceleradores?.etapa2_evaluacion_final === "completado"
+  );
 
   const etapas = [
     {
@@ -30,17 +47,10 @@ export default function Proyecto2B() {
         "Análisis de la situación inicial y contexto del proyecto en implementación.",
       icon: FileSearch,
       color: "#00A6A6",
-      disponible: false,
+      disponible: true,
+      ruta: "/cnpie/2B/etapa1/acelerador1",
     },
-    {
-      numero: 2,
-      titulo: "Aceleración",
-      descripcion:
-        "Herramientas para consolidar y fortalecer tu innovación educativa en proceso.",
-      icon: Zap,
-      color: "#1BBEAE",
-      disponible: false,
-    },
+
     {
       numero: 3,
       titulo: "Evaluación y cierre",
@@ -49,6 +59,7 @@ export default function Proyecto2B() {
       icon: ClipboardCheck,
       color: "#005C6B",
       disponible: false,
+      ruta: "",
     },
   ];
 
@@ -69,9 +80,6 @@ export default function Proyecto2B() {
             fortalecimiento y documentación de tu proyecto en implementación.
           </p>
         </div>
-
-        {/* Resumen de diagnóstico */}
-        <ResumenDiagnostico />
 
         {/* Panel de etapas */}
         <div className="mb-8">
@@ -120,6 +128,9 @@ export default function Proyecto2B() {
                     <Button
                       className="w-full font-medium"
                       disabled={!etapa.disponible}
+                      onClick={() =>
+                        etapa.disponible && etapa.ruta && navigate(etapa.ruta)
+                      }
                       style={{
                         backgroundColor: etapa.disponible
                           ? etapa.color

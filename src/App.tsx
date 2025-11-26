@@ -46,6 +46,7 @@ import Etapa2EvaluacionFinal from "./pages/cnpie/2a/Etapa2EvaluacionFinal";
 import Etapa3Acelerador8 from "./pages/cnpie/2a/Etapa3Acelerador8";
 import ProyectoCompletado from "./pages/cnpie/2a/ProyectoCompletado";
 import Etapa3EvaluacionFinal from "./pages/etapa3/Etapa3EvaluacionFinal";
+import Etapa1Acelerador12b from "./pages/cnpie/2b/Etapa1Acelerador12b";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,8 @@ const App = () => (
                     <Route path="/mini-cambio-proyecto" element={<MiniCambioProyecto />} />
                     {/* CNPIE Routes */}
                     <Route path="/cnpie/2a/etapa1/acelerador1" element={<Etapa1Acelerador1 />} />
+                    <Route path="/cnpie/2B/etapa1/acelerador1" element={<Etapa1Acelerador12b/>} />
+
                     <Route path="/cnpie/2a/etapa2/overview" element={<Etapa2Overview />} />
                     <Route path="/cnpie/2a/etapa2/acelerador2" element={<Etapa2Acelerador2 />} />
                     <Route path="/cnpie/2a/etapa2/acelerador3" element={<Etapa2Acelerador3 />} />
