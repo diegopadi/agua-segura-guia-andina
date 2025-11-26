@@ -1,6 +1,6 @@
 // evaluate-final-cnpie-2a
 // Función para evaluar el proyecto completo (step1 + step3) con los 4 criterios CNPIE 2A
-import { createClient } from "npm:@supabase/supabase-js@2.47.10";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
 const supabaseUrl = Deno.env.get("SUPABASE_URL");
