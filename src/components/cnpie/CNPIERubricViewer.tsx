@@ -24,7 +24,30 @@ export function CNPIERubricViewer({
   rubricas,
   destacarCriterios = [],
 }: CNPIERubricViewerProps) {
-  const totalPuntaje = rubricas.reduce((sum, r) => sum + r.puntaje_maximo, 0);
+  // Filtrar rubricas válidas
+  const rubricasValidas = rubricas.filter(
+    (r) => r && r.puntaje_maximo !== undefined
+  );
+
+  const totalPuntaje = rubricasValidas.reduce(
+    (sum, r) => sum + r.puntaje_maximo,
+    0
+  );
+
+  // Si no hay rúbricas válidas, mostrar mensaje
+  if (rubricasValidas.length === 0) {
+    return (
+      <Card className="border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-primary" />
+            Rúbrica CNPIE
+          </CardTitle>
+          <CardDescription>Cargando rúbricas...</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-primary/20">
@@ -33,7 +56,7 @@ export function CNPIERubricViewer({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />
-              Rúbrica Oficial CNPIE {rubricas[0]?.categoria}
+              Rúbrica Oficial CNPIE {rubricasValidas[0]?.categoria}
             </CardTitle>
             <CardDescription className="mt-2">
               Criterios de evaluación para tu proyecto de innovación
@@ -46,7 +69,7 @@ export function CNPIERubricViewer({
       </CardHeader>
       <CardContent>
         <Accordion type="multiple" className="w-full">
-          {rubricas.map((rubrica) => {
+          {rubricasValidas.map((rubrica) => {
             const isDestacado = destacarCriterios.includes(rubrica.criterio);
             return (
               <AccordionItem key={rubrica.id} value={rubrica.id}>
