@@ -7,7 +7,7 @@ import { CNPIEValidationModal } from "./CNPIEValidationModal";
 
 interface CNPIEAcceleratorLayoutProps {
   proyectoId: string;
-  tipoProyecto: '2A' | '2B' | '2C';
+  tipoProyecto: "2A" | "2B" | "2C";
   etapaNumber: number;
   aceleradorNumber: number;
   children: ReactNode;
@@ -30,7 +30,7 @@ export function CNPIEAcceleratorLayout({
   canProceed,
   currentProgress = 0,
   titulo,
-  descripcion
+  descripcion,
 }: CNPIEAcceleratorLayoutProps) {
   const navigate = useNavigate();
   const [showValidationModal, setShowValidationModal] = useState(false);
@@ -46,17 +46,27 @@ export function CNPIEAcceleratorLayout({
     const success = await onValidate();
     if (success) {
       setShowValidationModal(false);
-      
+
       // Lógica de navegación inteligente
       if (etapaNumber === 1 && aceleradorNumber === 1) {
         // Después de Etapa 1, ir a Overview de Etapa 2
         navigate(`/cnpie/${tipoProyecto.toLowerCase()}/etapa2/overview`);
-      } else if (etapaNumber === 2 && aceleradorNumber >= 2 && aceleradorNumber < 7) {
+      } else if (
+        etapaNumber === 2 &&
+        aceleradorNumber >= 2 &&
+        aceleradorNumber < 7
+      ) {
         // Dentro de Etapa 2, ir al siguiente acelerador
-        navigate(`/cnpie/${tipoProyecto.toLowerCase()}/etapa2/acelerador${aceleradorNumber + 1}`);
+        navigate(
+          `/cnpie/${tipoProyecto.toLowerCase()}/etapa2/acelerador${
+            aceleradorNumber + 1
+          }`
+        );
       } else if (etapaNumber === 2 && aceleradorNumber === 7) {
         // Después del último acelerador de Etapa 2, ir a la Evaluación Final
-        navigate(`/cnpie/${tipoProyecto.toLowerCase()}/etapa2/evaluacion-final`);
+        navigate(
+          `/cnpie/${tipoProyecto.toLowerCase()}/etapa2/evaluacion-final`
+        );
       }
     }
   };
@@ -74,7 +84,7 @@ export function CNPIEAcceleratorLayout({
             <ArrowLeft className="w-4 h-4 mr-2" />
             Volver al Proyecto {tipoProyecto}
           </Button>
-          
+
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">{titulo}</h1>
@@ -96,40 +106,8 @@ export function CNPIEAcceleratorLayout({
         </div>
 
         {/* Content */}
-        <div className="mb-8">
-          {children}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 shadow-lg">
-          <div className="container mx-auto flex justify-between items-center">
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              variant="outline"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? "Guardando..." : "Guardar progreso"}
-            </Button>
-
-            <Button
-              onClick={() => setShowValidationModal(true)}
-              disabled={!canProceed}
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Validar y continuar
-            </Button>
-          </div>
-        </div>
+        <div className="mb-8">{children}</div>
       </div>
-
-      <CNPIEValidationModal
-        isOpen={showValidationModal}
-        onClose={() => setShowValidationModal(false)}
-        onConfirm={handleValidate}
-        etapa={etapaNumber}
-        acelerador={aceleradorNumber}
-      />
     </div>
   );
 }

@@ -1,8 +1,28 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { FileText, Sparkles, CheckCircle, ArrowLeft, BookOpen, Target, Clock, FileCheck, Users, BookMarked, Loader2, Trash2 } from "lucide-react";
+import {
+  FileText,
+  Sparkles,
+  CheckCircle,
+  ArrowLeft,
+  BookOpen,
+  Target,
+  Clock,
+  FileCheck,
+  Users,
+  BookMarked,
+  Loader2,
+  Trash2,
+  Lightbulb,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAcceleratorsSummary } from "@/hooks/useAcceleratorsSummary";
 import RepositoryFilePicker from "@/components/RepositoryFilePicker";
@@ -18,7 +38,7 @@ interface PreguntaGenerada {
 }
 
 interface Recomendacion {
-  recomendacion: "2A" | "2B" | "2C";
+  recomendacion: "2A" | "2B" | "2C" | "2D";
   confianza: number;
   justificacion: string;
   fortalezas: string[];
@@ -29,11 +49,17 @@ export default function Manual() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [experiencias, setExperiencias] = useState<FileRecord[]>([]);
-  const [preguntasGeneradas, setPreguntasGeneradas] = useState<PreguntaGenerada[]>([]);
+  const [preguntasGeneradas, setPreguntasGeneradas] = useState<
+    PreguntaGenerada[]
+  >([]);
   const [generatingQuestions, setGeneratingQuestions] = useState(false);
-  const [recomendacion, setRecomendacion] = useState<Recomendacion | null>(null);
-  const [generatingRecommendation, setGeneratingRecommendation] = useState(false);
-  const { hallazgos, loading, generating, generateSummary, hasData } = useAcceleratorsSummary();
+  const [recomendacion, setRecomendacion] = useState<Recomendacion | null>(
+    null
+  );
+  const [generatingRecommendation, setGeneratingRecommendation] =
+    useState(false);
+  const { hallazgos, loading, generating, generateSummary, hasData } =
+    useAcceleratorsSummary();
 
   useEffect(() => {
     if (!hasData && !loading && !generating) {
@@ -45,12 +71,12 @@ export default function Manual() {
     setExperiencias([...experiencias, ...files]);
     toast({
       title: "Archivos adjuntados",
-      description: `${files.length} archivo(s) agregado(s)`
+      description: `${files.length} archivo(s) agregado(s)`,
     });
   };
 
   const quitarExperiencia = (id: string) => {
-    setExperiencias(experiencias.filter(e => e.id !== id));
+    setExperiencias(experiencias.filter((e) => e.id !== id));
   };
 
   const generarPreguntas = async () => {
@@ -58,7 +84,7 @@ export default function Manual() {
       toast({
         title: "Error",
         description: "Debes generar el resumen diagnóstico primero",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -66,12 +92,15 @@ export default function Manual() {
     try {
       setGeneratingQuestions(true);
 
-      const { data, error } = await supabase.functions.invoke('generate-questions-from-context', {
-        body: {
-          diagnostico: hallazgos,
-          experiencias: experiencias
+      const { data, error } = await supabase.functions.invoke(
+        "generate-questions-from-context",
+        {
+          body: {
+            diagnostico: hallazgos,
+            experiencias: experiencias,
+          },
         }
-      });
+      );
 
       if (error) throw error;
 
@@ -79,15 +108,15 @@ export default function Manual() {
         setPreguntasGeneradas(data.data.preguntas);
         toast({
           title: "Preguntas generadas",
-          description: `${data.data.preguntas.length} preguntas creadas con IA`
+          description: `${data.data.preguntas.length} preguntas creadas con IA`,
         });
       }
     } catch (error) {
-      console.error('Error generando preguntas:', error);
+      console.error("Error generando preguntas:", error);
       toast({
         title: "Error",
         description: "No se pudieron generar las preguntas",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setGeneratingQuestions(false);
@@ -98,13 +127,16 @@ export default function Manual() {
     try {
       setGeneratingRecommendation(true);
 
-      const { data, error } = await supabase.functions.invoke('recommend-project-type', {
-        body: {
-          diagnostico: hallazgos,
-          experiencias: experiencias,
-          respuestas
+      const { data, error } = await supabase.functions.invoke(
+        "recommend-project-type",
+        {
+          body: {
+            diagnostico: hallazgos,
+            experiencias: experiencias,
+            respuestas,
+          },
         }
-      });
+      );
 
       if (error) throw error;
 
@@ -112,19 +144,21 @@ export default function Manual() {
         setRecomendacion(data.data);
         toast({
           title: "Recomendación generada",
-          description: `Proyecto ${data.data.recomendacion} sugerido`
+          description: `Proyecto ${data.data.recomendacion} sugerido`,
         });
-        
+
         setTimeout(() => {
-          document.getElementById('recomendacion')?.scrollIntoView({ behavior: 'smooth' });
+          document
+            .getElementById("recomendacion")
+            ?.scrollIntoView({ behavior: "smooth" });
         }, 100);
       }
     } catch (error) {
-      console.error('Error generando recomendación:', error);
+      console.error("Error generando recomendación:", error);
       toast({
         title: "Error",
         description: "No se pudo generar la recomendación",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setGeneratingRecommendation(false);
@@ -132,185 +166,30 @@ export default function Manual() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#E6F4F1' }}>
+    <div className="min-h-screen" style={{ backgroundColor: "#E6F4F1" }}>
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Encabezado */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-3" style={{ color: '#005C6B' }}>
+          <h1 className="text-4xl font-bold mb-3" style={{ color: "#005C6B" }}>
             Elegir tipo de proyecto
           </h1>
-          <p className="text-lg mb-2" style={{ color: '#00A6A6' }}>
-            Selecciona la categoría de proyecto con la que deseas postular al CNPIE 2025.
+          <p className="text-lg mb-2" style={{ color: "#00A6A6" }}>
+            Selecciona la categoría de proyecto con la que deseas postular al
+            CNPIE 2025.
           </p>
-          <p className="text-base" style={{ color: '#1A1A1A' }}>
-            Puedes basarte en tu diagnóstico, tus experiencias y las preguntas sugeridas para tomar la mejor decisión.
+          <p className="text-base" style={{ color: "#1A1A1A" }}>
+            Puedes basarte en tu diagnóstico, tus experiencias y las preguntas
+            sugeridas para tomar la mejor decisión.
           </p>
         </div>
 
-        {/* Resumen del diagnóstico y experiencias */}
-        <Card className="mb-6 border-0 shadow-md" style={{ backgroundColor: '#DDF4F2' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2" style={{ color: '#005C6B' }}>
-              <FileText className="w-5 h-5" />
-              Resumen de tu diagnóstico
-            </CardTitle>
-            <CardDescription style={{ color: '#1A1A1A', opacity: 0.7 }}>
-              Los datos mostrados son solo de lectura; no editables.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading || generating ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#00A6A6' }} />
-                <span className="ml-3" style={{ color: '#005C6B' }}>
-                  Generando resumen con IA...
-                </span>
-              </div>
-            ) : !hasData ? (
-              <div className="py-8 text-center">
-                <p className="mb-4" style={{ color: '#1A1A1A' }}>
-                  No se encontraron datos de diagnóstico. Completa los aceleradores 1, 2 y 3 primero.
-                </p>
-                <Button 
-                  onClick={generateSummary}
-                  className="text-white font-medium"
-                  style={{ backgroundColor: '#00A6A6' }}
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Intentar generar resumen
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="font-medium" style={{ color: '#005C6B' }}>Docente:</p>
-                    <p style={{ color: '#1A1A1A' }}>{hallazgos?.docente}</p>
-                  </div>
-                  <div>
-                    <p className="font-medium" style={{ color: '#005C6B' }}>Institución:</p>
-                    <p style={{ color: '#1A1A1A' }}>{hallazgos?.institucion}</p>
-                  </div>
-                  <div>
-                    <p className="font-medium" style={{ color: '#005C6B' }}>Región:</p>
-                    <p style={{ color: '#1A1A1A' }}>{hallazgos?.region}</p>
-                  </div>
-                  <div>
-                    <p className="font-medium" style={{ color: '#005C6B' }}>Fecha:</p>
-                    <p style={{ color: '#1A1A1A' }}>{hallazgos?.fecha}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium" style={{ color: '#005C6B' }}>Hallazgos clave:</p>
-                    <Button
-                      onClick={generateSummary}
-                      variant="ghost"
-                      size="sm"
-                      disabled={generating}
-                      className="text-xs"
-                      style={{ color: '#00A6A6' }}
-                    >
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      Regenerar
-                    </Button>
-                  </div>
-                  <ul className="list-disc list-inside space-y-1 text-sm" style={{ color: '#1A1A1A' }}>
-                    {hallazgos?.hallazgos.map((hallazgo, i) => (
-                      <li key={i}>{hallazgo}</li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            )}
-
-            <div>
-              <p className="font-medium mb-3" style={{ color: '#005C6B' }}>
-                Experiencias registradas en tu repositorio:
-              </p>
-
-              {experiencias.length > 0 ? (
-                <div className="space-y-2 mb-3">
-                  {experiencias.map((exp) => (
-                    <div 
-                      key={exp.id}
-                      className="p-3 rounded-lg flex items-center justify-between"
-                      style={{ backgroundColor: '#E6F4F1' }}
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-sm" style={{ color: '#1A1A1A' }}>
-                          {exp.url.split('/').pop()}
-                        </p>
-                        <div className="flex gap-2 mt-1">
-                          <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#DDF4F2', color: '#005C6B' }}>
-                            {exp.file_type || 'documento'}
-                          </span>
-                          <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.6 }}>
-                            {(exp.size_bytes / (1024 * 1024)).toFixed(2)} MB
-                          </span>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => quitarExperiencia(exp.id)}
-                      >
-                        <Trash2 className="w-4 h-4" style={{ color: '#005C6B' }} />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm mb-3" style={{ color: '#1A1A1A', opacity: 0.7 }}>
-                  No hay experiencias adjuntadas. Los documentos de tu repositorio serán utilizados por la IA.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Panel de preguntas IA */}
-        <Card className="mb-6 border-0 shadow-md" style={{ backgroundColor: '#DDF4F2' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2" style={{ color: '#005C6B' }}>
-              <Sparkles className="w-5 h-5" />
-              Preguntas que pueden ayudarte a decidir
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {preguntasGeneradas.length === 0 ? (
-              <Button 
-                onClick={generarPreguntas}
-                className="text-white font-medium"
-                style={{ backgroundColor: '#00A6A6' }}
-                disabled={!hasData || generatingQuestions}
-              >
-                {generatingQuestions ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generando preguntas con IA...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generar preguntas
-                  </>
-                )}
-              </Button>
-            ) : (
-              <QuestionsForm 
-                preguntas={preguntasGeneradas}
-                onSubmit={handleSubmitAnswers}
-                loading={generatingRecommendation}
-              />
-            )}
-          </CardContent>
-        </Card>
-
         {/* Recomendación */}
         {recomendacion && (
-          <Card id="recomendacion" className="mb-6 border-0 shadow-lg" style={{ backgroundColor: '#00A6A6' }}>
+          <Card
+            id="recomendacion"
+            className="mb-6 border-0 shadow-lg"
+            style={{ backgroundColor: "#00A6A6" }}
+          >
             <CardContent className="pt-6 space-y-4">
               <div className="flex items-start gap-4">
                 <CheckCircle className="w-8 h-8 text-white flex-shrink-0 mt-1" />
@@ -337,7 +216,9 @@ export default function Manual() {
                   </ul>
                 </div>
                 <div className="p-3 rounded-lg bg-white/10">
-                  <p className="font-semibold text-white mb-2">Aspectos a fortalecer:</p>
+                  <p className="font-semibold text-white mb-2">
+                    Aspectos a fortalecer:
+                  </p>
                   <ul className="list-disc list-inside space-y-1 text-white/90">
                     {recomendacion.aspectos_a_fortalecer.map((a, i) => (
                       <li key={i}>{a}</li>
@@ -348,7 +229,8 @@ export default function Manual() {
 
               <Alert className="border-0 bg-white/10">
                 <AlertDescription className="text-white text-sm">
-                  Continúa con la recomendación o elige manualmente otro tipo de proyecto abajo.
+                  Continúa con la recomendación o elige manualmente otro tipo de
+                  proyecto abajo.
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -357,15 +239,15 @@ export default function Manual() {
 
         {/* Selección de tipo de proyecto */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4" style={{ color: '#005C6B' }}>
+          <h2 className="text-2xl font-bold mb-4" style={{ color: "#005C6B" }}>
             Selecciona tu tipo de proyecto
           </h2>
-          
-          <div className="grid md:grid-cols-3 gap-6">
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Tarjeta 2A */}
-            <Card 
+            <Card
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
-              style={{ backgroundColor: '#005C6B' }}
+              style={{ backgroundColor: "#005C6B" }}
             >
               <CardHeader>
                 <div className="flex items-center justify-center mb-4">
@@ -384,10 +266,10 @@ export default function Manual() {
                 <p className="text-sm text-white/90 text-center">
                   Innovación Educativa Consolidado (2 años o más de ejecución).
                 </p>
-                <Button 
-                  onClick={() => navigate('/proyectos/2a')}
+                <Button
+                  onClick={() => navigate("/proyectos/2a")}
                   className="w-full bg-white font-medium hover:bg-white/90"
-                  style={{ color: '#005C6B' }}
+                  style={{ color: "#005C6B" }}
                 >
                   Entrar a Proyecto 2A
                 </Button>
@@ -395,9 +277,9 @@ export default function Manual() {
             </Card>
 
             {/* Tarjeta 2B */}
-            <Card 
+            <Card
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
-              style={{ backgroundColor: '#00A6A6' }}
+              style={{ backgroundColor: "#00A6A6" }}
             >
               <CardHeader>
                 <div className="flex items-center justify-center mb-4">
@@ -414,12 +296,13 @@ export default function Manual() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-white/90 text-center">
-                  Innovación Educativa en Implementación (menos de 1 año de ejecución).
+                  Innovación Educativa en Implementación (menos de 1 año de
+                  ejecución).
                 </p>
-                <Button 
-                  onClick={() => navigate('/proyectos/2b')}
+                <Button
+                  onClick={() => navigate("/proyectos/2b")}
                   className="w-full bg-white font-medium hover:bg-white/90"
-                  style={{ color: '#00A6A6' }}
+                  style={{ color: "#00A6A6" }}
                 >
                   Entrar a Proyecto 2B
                 </Button>
@@ -427,9 +310,9 @@ export default function Manual() {
             </Card>
 
             {/* Tarjeta 2C */}
-            <Card 
+            <Card
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
-              style={{ backgroundColor: '#1BBEAE' }}
+              style={{ backgroundColor: "#1BBEAE" }}
             >
               <CardHeader>
                 <div className="flex items-center justify-center mb-4">
@@ -446,14 +329,48 @@ export default function Manual() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-white/90 text-center">
-                  Proyecto de Investigación-Acción Participativa (fase exploratoria o de descubrimiento).
+                  Proyecto de Investigación-Acción Participativa (fase
+                  exploratoria o de descubrimiento).
                 </p>
-                <Button 
-                  onClick={() => navigate('/proyectos/2c')}
+                <Button
+                  onClick={() => navigate("/proyectos/2c")}
                   className="w-full bg-white font-medium hover:bg-white/90"
-                  style={{ color: '#1BBEAE' }}
+                  style={{ color: "#1BBEAE" }}
                 >
                   Entrar a Proyecto 2C
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Tarjeta 2D */}
+            <Card
+              className="border-0 shadow-lg hover:shadow-xl transition-shadow"
+              style={{ backgroundColor: "#50C9BD" }}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/20">
+                    <Lightbulb className="w-8 h-8 text-white" />
+                  </div>
+                </div>
+                <CardTitle className="text-center text-white text-xl">
+                  Proyecto 2D
+                </CardTitle>
+                <CardDescription className="text-center text-white/90 text-sm">
+                  Experimental
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-white/90 text-center">
+                  Proyecto Experimental de Innovación Educativa (fase inicial o
+                  piloto).
+                </p>
+                <Button
+                  onClick={() => navigate("/proyectos/2d")}
+                  className="w-full bg-white font-medium hover:bg-white/90"
+                  style={{ color: "#50C9BD" }}
+                >
+                  Entrar a Proyecto 2D
                 </Button>
               </CardContent>
             </Card>
@@ -462,25 +379,26 @@ export default function Manual() {
 
         {/* Bloque de navegación */}
         <div className="space-y-4">
-          <Alert className="border-0" style={{ backgroundColor: '#DDF4F2' }}>
-            <AlertDescription style={{ color: '#1A1A1A' }}>
-              Puedes cambiar de tipo más adelante usando el botón de cambio rápido (Mini).
+          <Alert className="border-0" style={{ backgroundColor: "#DDF4F2" }}>
+            <AlertDescription style={{ color: "#1A1A1A" }}>
+              Puedes cambiar de tipo más adelante usando el botón de cambio
+              rápido (Mini).
             </AlertDescription>
           </Alert>
 
           <div className="flex flex-col sm:flex-row justify-center items-center gap-6 pt-4">
             <button
-              onClick={() => navigate('/repositorio')}
+              onClick={() => navigate("/repositorio")}
               className="flex items-center gap-2 text-sm font-medium hover:underline"
-              style={{ color: '#005C6B' }}
+              style={{ color: "#005C6B" }}
             >
               <BookOpen className="w-4 h-4" />
               Ir al Repositorio de experiencias
             </button>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate("/")}
               className="flex items-center gap-2 text-sm font-medium hover:underline"
-              style={{ color: '#005C6B' }}
+              style={{ color: "#005C6B" }}
             >
               <ArrowLeft className="w-4 h-4" />
               Volver al inicio
