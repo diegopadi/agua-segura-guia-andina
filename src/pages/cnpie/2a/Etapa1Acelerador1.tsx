@@ -4,6 +4,9 @@ import { useCNPIERubric } from "@/hooks/useCNPIERubric";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
 import { RepositoryExtractionButton } from "@/components/RepositoryExtractionButton";
+import { CriterioAccordionHeader } from "../components/CriterioAccordionHeader";
+import { ProgressStepper } from "../components/ProgressStepper";
+import { QuestionCardWithTextarea } from "../components/QuestionCardWithTextarea";
 import jsPDF from "jspdf";
 import {
   Card,
@@ -93,6 +96,9 @@ export default function Etapa1Acelerador1() {
   const { toast } = useToast();
 
   const rubricaIntencionalidad = getCriterioByName("Intencionalidad");
+  const rubricaOriginalidad = getCriterioByName("Originalidad");
+  const rubricaImpacto = getCriterioByName("Impacto");
+  const rubricaSostenibilidad = getCriterioByName("Sostenibilidad");
 
   // Estado del paso actual y pasos completados
   const [currentStep, setCurrentStep] = useState(1);
@@ -942,78 +948,42 @@ export default function Etapa1Acelerador1() {
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
                   {/* Pregunta 1.1 */}
-                  <div className="space-y-4">
-                    <Card className="bg-amber-50 border-amber-200">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-amber-900">
-                          Pregunta {ITEMS_FICHA_2A[0].preguntas[0].numero}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2A[0].preguntas[0].texto}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Textarea
-                      value={step1Data.intencionalidad?.problema_descripcion}
-                      onChange={(e) =>
-                        setStep1Data({
-                          ...step1Data,
-                          intencionalidad: {
-                            ...step1Data.intencionalidad,
-                            problema_descripcion: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Describe el problema educativo identificado en tu IE..."
-                      className="min-h-[200px]"
-                      maxLength={ANEXO_2A_LIMITS.PROBLEMA_CARACTERIZACION}
-                    />
-                    <div className="flex justify-end">
-                      <span className="text-xs text-muted-foreground">
-                        {step1Data.intencionalidad?.problema_descripcion.length}{" "}
-                        / {ANEXO_2A_LIMITS.PROBLEMA_CARACTERIZACION} caracteres
-                      </span>
-                    </div>
-                  </div>
+                  <QuestionCardWithTextarea
+                    questionNumber={ITEMS_FICHA_2A[0].preguntas[0].numero}
+                    questionText={ITEMS_FICHA_2A[0].preguntas[0].texto}
+                    value={step1Data.intencionalidad?.problema_descripcion}
+                    onChange={(value) =>
+                      setStep1Data({
+                        ...step1Data,
+                        intencionalidad: {
+                          ...step1Data.intencionalidad,
+                          problema_descripcion: value,
+                        },
+                      })
+                    }
+                    placeholder="Describe el problema educativo identificado en tu IE..."
+                    minHeight="min-h-[200px]"
+                    maxLength={ANEXO_2A_LIMITS.PROBLEMA_CARACTERIZACION}
+                  />
 
                   {/* Pregunta 1.2 */}
-                  <div className="space-y-4">
-                    <Card className="bg-amber-50 border-amber-200">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-amber-900">
-                          Pregunta {ITEMS_FICHA_2A[0].preguntas[1].numero}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2A[0].preguntas[1].texto}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Textarea
-                      value={step1Data.intencionalidad?.objetivo_general}
-                      onChange={(e) =>
-                        setStep1Data({
-                          ...step1Data,
-                          intencionalidad: {
-                            ...step1Data.intencionalidad,
-                            objetivo_general: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Redacta el objetivo general del PIE..."
-                      className="min-h-[120px]"
-                      maxLength={ANEXO_2A_LIMITS.OBJETIVOS}
-                    />
-                    <div className="flex justify-end">
-                      <span className="text-xs text-muted-foreground">
-                        {step1Data.intencionalidad?.objetivo_general.length} /{" "}
-                        {ANEXO_2A_LIMITS.OBJETIVOS} caracteres
-                      </span>
-                    </div>
-                  </div>
+                  <QuestionCardWithTextarea
+                    questionNumber={ITEMS_FICHA_2A[0].preguntas[1].numero}
+                    questionText={ITEMS_FICHA_2A[0].preguntas[1].texto}
+                    value={step1Data.intencionalidad?.objetivo_general}
+                    onChange={(value) =>
+                      setStep1Data({
+                        ...step1Data,
+                        intencionalidad: {
+                          ...step1Data.intencionalidad,
+                          objetivo_general: value,
+                        },
+                      })
+                    }
+                    placeholder="Redacta el objetivo general del PIE..."
+                    minHeight="min-h-[120px]"
+                    maxLength={ANEXO_2A_LIMITS.OBJETIVOS}
+                  />
                 </AccordionContent>
               </AccordionItem>
 
@@ -1028,81 +998,43 @@ export default function Etapa1Acelerador1() {
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
                   {/* Pregunta 2.1 */}
-                  <div className="space-y-4">
-                    <Card className="bg-amber-50 border-amber-200">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-amber-900">
-                          Pregunta {ITEMS_FICHA_2A[1].preguntas[0].numero}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2A[1].preguntas[0].texto}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Textarea
-                      value={step1Data.originalidad?.metodologia_descripcion}
-                      onChange={(e) =>
-                        setStep1Data({
-                          ...step1Data,
-                          originalidad: {
-                            ...step1Data.originalidad,
-                            metodologia_descripcion: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Describe la metodología pedagógica..."
-                      className="min-h-[150px]"
-                      maxLength={ANEXO_2A_LIMITS.METODOLOGIA_DESCRIPCION}
-                    />
-                    <div className="flex justify-end">
-                      <span className="text-xs text-muted-foreground">
-                        {step1Data.originalidad.metodologia_descripcion.length}{" "}
-                        / {ANEXO_2A_LIMITS.METODOLOGIA_DESCRIPCION} caracteres
-                      </span>
-                    </div>
-                  </div>
+                  <QuestionCardWithTextarea
+                    questionNumber={ITEMS_FICHA_2A[1].preguntas[0].numero}
+                    questionText={ITEMS_FICHA_2A[1].preguntas[0].texto}
+                    value={step1Data.originalidad?.metodologia_descripcion}
+                    onChange={(value) =>
+                      setStep1Data({
+                        ...step1Data,
+                        originalidad: {
+                          ...step1Data.originalidad,
+                          metodologia_descripcion: value,
+                        },
+                      })
+                    }
+                    placeholder="Describe la metodología pedagógica..."
+                    minHeight="min-h-[150px]"
+                    maxLength={ANEXO_2A_LIMITS.METODOLOGIA_DESCRIPCION}
+                  />
 
                   {/* Pregunta 2.2 */}
                   <div className="space-y-4">
-                    <Card className="bg-amber-50 border-amber-200">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-amber-900">
-                          Pregunta {ITEMS_FICHA_2A[1].preguntas[1].numero}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2A[1].preguntas[1].texto}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Textarea
+                    <QuestionCardWithTextarea
+                      questionNumber={ITEMS_FICHA_2A[1].preguntas[1].numero}
+                      questionText={ITEMS_FICHA_2A[1].preguntas[1].texto}
                       value={step1Data.originalidad.procedimiento_metodologico}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setStep1Data({
                           ...step1Data,
                           originalidad: {
                             ...step1Data.originalidad,
-                            procedimiento_metodologico: e.target.value,
+                            procedimiento_metodologico: value,
                           },
                         })
                       }
                       placeholder="Describe el procedimiento paso a paso..."
-                      className="min-h-[200px]"
+                      minHeight="min-h-[200px]"
                       maxLength={ANEXO_2A_LIMITS.PROCEDIMIENTO_METODOLOGICO}
                     />
-                    <div className="flex justify-end">
-                      <span className="text-xs text-muted-foreground">
-                        {
-                          step1Data.originalidad.procedimiento_metodologico
-                            .length
-                        }{" "}
-                        / {ANEXO_2A_LIMITS.PROCEDIMIENTO_METODOLOGICO}{" "}
-                        caracteres
-                      </span>
-                    </div>
 
                     {/* Video opcional */}
                     <div className="pt-2">
@@ -1139,84 +1071,42 @@ export default function Etapa1Acelerador1() {
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
                   {/* Pregunta 3.1 */}
-                  <div className="space-y-4">
-                    <Card className="bg-amber-50 border-amber-200">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-amber-900">
-                          Pregunta {ITEMS_FICHA_2A[2].preguntas[0].numero}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2A[2].preguntas[0].texto}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Textarea
-                      value={step1Data.impacto.evidencias_descripcion || ""}
-                      onChange={(e) =>
-                        setStep1Data({
-                          ...step1Data,
-                          impacto: {
-                            ...step1Data.impacto,
-                            evidencias_descripcion: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Sustenta con evidencias los resultados obtenidos..."
-                      className="min-h-[200px]"
-                      maxLength={ANEXO_2A_LIMITS.IMPACTO_EVIDENCIAS}
-                    />
-                    <div className="flex justify-end">
-                      <span className="text-xs text-muted-foreground">
-                        {
-                          (step1Data.impacto.evidencias_descripcion || "")
-                            .length
-                        }{" "}
-                        / {ANEXO_2A_LIMITS.IMPACTO_EVIDENCIAS} caracteres
-                      </span>
-                    </div>
-                  </div>
+                  <QuestionCardWithTextarea
+                    questionNumber={ITEMS_FICHA_2A[2].preguntas[0].numero}
+                    questionText={ITEMS_FICHA_2A[2].preguntas[0].texto}
+                    value={step1Data.impacto.evidencias_descripcion || ""}
+                    onChange={(value) =>
+                      setStep1Data({
+                        ...step1Data,
+                        impacto: {
+                          ...step1Data.impacto,
+                          evidencias_descripcion: value,
+                        },
+                      })
+                    }
+                    placeholder="Sustenta con evidencias los resultados obtenidos..."
+                    minHeight="min-h-[200px]"
+                    maxLength={ANEXO_2A_LIMITS.IMPACTO_EVIDENCIAS}
+                  />
 
                   {/* Pregunta 3.2 */}
-                  <div className="space-y-4">
-                    <Card className="bg-amber-50 border-amber-200">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-amber-900">
-                          Pregunta {ITEMS_FICHA_2A[2].preguntas[1].numero}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2A[2].preguntas[1].texto}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Textarea
-                      value={step1Data.impacto.cambios_practica_docente || ""}
-                      onChange={(e) =>
-                        setStep1Data({
-                          ...step1Data,
-                          impacto: {
-                            ...step1Data.impacto,
-                            cambios_practica_docente: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Explica los cambios o efectos logrados..."
-                      className="min-h-[150px]"
-                      maxLength={ANEXO_2A_LIMITS.IMPACTO_CAMBIOS}
-                    />
-                    <div className="flex justify-end">
-                      <span className="text-xs text-muted-foreground">
-                        {
-                          (step1Data.impacto.cambios_practica_docente || "")
-                            .length
-                        }{" "}
-                        / {ANEXO_2A_LIMITS.IMPACTO_CAMBIOS} caracteres
-                      </span>
-                    </div>
-                  </div>
+                  <QuestionCardWithTextarea
+                    questionNumber={ITEMS_FICHA_2A[2].preguntas[1].numero}
+                    questionText={ITEMS_FICHA_2A[2].preguntas[1].texto}
+                    value={step1Data.impacto.cambios_practica_docente || ""}
+                    onChange={(value) =>
+                      setStep1Data({
+                        ...step1Data,
+                        impacto: {
+                          ...step1Data.impacto,
+                          cambios_practica_docente: value,
+                        },
+                      })
+                    }
+                    placeholder="Explica los cambios o efectos logrados..."
+                    minHeight="min-h-[150px]"
+                    maxLength={ANEXO_2A_LIMITS.IMPACTO_CAMBIOS}
+                  />
                 </AccordionContent>
               </AccordionItem>
 
@@ -1231,93 +1121,46 @@ export default function Etapa1Acelerador1() {
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
                   {/* Pregunta 4.1 */}
-                  <div className="space-y-4">
-                    <Card className="bg-amber-50 border-amber-200">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-amber-900">
-                          Pregunta {ITEMS_FICHA_2A[3].preguntas[0].numero}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2A[3].preguntas[0].texto}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Textarea
-                      value={
-                        step1Data.sostenibilidad.estrategias_continuidad || ""
-                      }
-                      onChange={(e) =>
-                        setStep1Data({
-                          ...step1Data,
-                          sostenibilidad: {
-                            ...step1Data.sostenibilidad,
-                            estrategias_continuidad: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Describe las estrategias para fomentar la continuidad..."
-                      className="min-h-[150px]"
-                      maxLength={ANEXO_2A_LIMITS.SOSTENIBILIDAD_ESTRATEGIAS}
-                    />
-                    <div className="flex justify-end">
-                      <span className="text-xs text-muted-foreground">
-                        {
-                          (
-                            step1Data.sostenibilidad.estrategias_continuidad ||
-                            ""
-                          ).length
-                        }{" "}
-                        / {ANEXO_2A_LIMITS.SOSTENIBILIDAD_ESTRATEGIAS}{" "}
-                        caracteres
-                      </span>
-                    </div>
-                  </div>
+                  <QuestionCardWithTextarea
+                    questionNumber={ITEMS_FICHA_2A[3].preguntas[0].numero}
+                    questionText={ITEMS_FICHA_2A[3].preguntas[0].texto}
+                    value={
+                      step1Data.sostenibilidad.estrategias_continuidad || ""
+                    }
+                    onChange={(value) =>
+                      setStep1Data({
+                        ...step1Data,
+                        sostenibilidad: {
+                          ...step1Data.sostenibilidad,
+                          estrategias_continuidad: value,
+                        },
+                      })
+                    }
+                    placeholder="Describe las estrategias para fomentar la continuidad..."
+                    minHeight="min-h-[150px]"
+                    maxLength={ANEXO_2A_LIMITS.SOSTENIBILIDAD_ESTRATEGIAS}
+                  />
 
                   {/* Pregunta 4.2 */}
-                  <div className="space-y-4">
-                    <Card className="bg-amber-50 border-amber-200">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-amber-900">
-                          Pregunta {ITEMS_FICHA_2A[3].preguntas[1].numero}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2A[3].preguntas[1].texto}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Textarea
-                      value={
-                        step1Data.sostenibilidad.estrategias_viabilidad || ""
-                      }
-                      onChange={(e) =>
-                        setStep1Data({
-                          ...step1Data,
-                          sostenibilidad: {
-                            ...step1Data.sostenibilidad,
-                            estrategias_viabilidad: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Describe las estrategias para asegurar la viabilidad..."
-                      className="min-h-[150px]"
-                      maxLength={ANEXO_2A_LIMITS.SOSTENIBILIDAD_VIABILIDAD}
-                    />
-                    <div className="flex justify-end">
-                      <span className="text-xs text-muted-foreground">
-                        {
-                          (
-                            step1Data.sostenibilidad.estrategias_viabilidad ||
-                            ""
-                          ).length
-                        }{" "}
-                        / {ANEXO_2A_LIMITS.SOSTENIBILIDAD_VIABILIDAD} caracteres
-                      </span>
-                    </div>
-                  </div>
+                  <QuestionCardWithTextarea
+                    questionNumber={ITEMS_FICHA_2A[3].preguntas[1].numero}
+                    questionText={ITEMS_FICHA_2A[3].preguntas[1].texto}
+                    value={
+                      step1Data.sostenibilidad.estrategias_viabilidad || ""
+                    }
+                    onChange={(value) =>
+                      setStep1Data({
+                        ...step1Data,
+                        sostenibilidad: {
+                          ...step1Data.sostenibilidad,
+                          estrategias_viabilidad: value,
+                        },
+                      })
+                    }
+                    placeholder="Describe las estrategias para asegurar la viabilidad..."
+                    minHeight="min-h-[150px]"
+                    maxLength={ANEXO_2A_LIMITS.SOSTENIBILIDAD_VIABILIDAD}
+                  />
 
                   {/* Pregunta 4.3 */}
                   <div className="space-y-4">
@@ -1343,19 +1186,19 @@ export default function Etapa1Acelerador1() {
                               <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">
                                 Componente
                               </th>
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[150px]">
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">
                                 Denominación
                               </th>
-                              <th className="p-2 text-left border-r border-blue-400 w-20">
+                              <th className="p-2 text-left border-r border-blue-400 w-25">
                                 Cant.
                               </th>
-                              <th className="p-2 text-left border-r border-blue-400 w-24">
+                              <th className="p-2 text-left border-r border-blue-400 w-30">
                                 P. Unit.
                               </th>
-                              <th className="p-2 text-left border-r border-blue-400 w-24">
+                              <th className="p-2 text-left border-r border-blue-400 w-20">
                                 Subtotal
                               </th>
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[180px]">
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[50px]">
                                 Utilidad
                               </th>
                               <th className="p-2 w-10"></th>
@@ -1669,34 +1512,18 @@ export default function Etapa1Acelerador1() {
             {/* Accordion con todos los criterios */}
             <Accordion type="multiple" className="w-full space-y-4">
               {/* INTENCIONALIDAD */}
-              <AccordionItem
+              <CriterioAccordionHeader
                 value="intencionalidad"
-                className="border rounded-lg"
+                icon={FileText}
+                iconBgColor="bg-blue-500"
+                title="1. Intencionalidad"
+                subtitle="Caracterización del problema y objetivos"
+                currentScore={
+                  (step2Data.intencionalidad?.indicador_1_1?.puntaje || 0) +
+                  (step2Data.intencionalidad?.indicador_1_2?.puntaje || 0)
+                }
+                maxScore={25}
               >
-                <AccordionTrigger className="px-4 hover:no-underline">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-blue-500 text-white rounded-lg p-2">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold">1. Intencionalidad</p>
-                        <p className="text-sm text-gray-500">
-                          Caracterización del problema y objetivos
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-base">
-                        {(step2Data.intencionalidad?.indicador_1_1?.puntaje ||
-                          0) +
-                          (step2Data.intencionalidad?.indicador_1_2?.puntaje ||
-                            0)}{" "}
-                        / 25 pts
-                      </Badge>
-                    </div>
-                  </div>
-                </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 1.1 */}
                   <div className="mb-4 p-4 bg-blue-50 rounded-lg">
@@ -1793,33 +1620,21 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </div>
                 </AccordionContent>
-              </AccordionItem>
+              </CriterioAccordionHeader>
 
               {/* ORIGINALIDAD */}
-              <AccordionItem value="originalidad" className="border rounded-lg">
-                <AccordionTrigger className="px-4 hover:no-underline">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-green-500 text-white rounded-lg p-2">
-                        <Lightbulb className="w-5 h-5" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold">2. Originalidad</p>
-                        <p className="text-sm text-gray-500">
-                          Metodología y procedimiento
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-base">
-                        {(step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
-                          (step2Data.originalidad?.indicador_2_2?.puntaje ||
-                            0)}{" "}
-                        / 25 pts
-                      </Badge>
-                    </div>
-                  </div>
-                </AccordionTrigger>
+              <CriterioAccordionHeader
+                value="originalidad"
+                icon={Lightbulb}
+                iconBgColor="bg-green-500"
+                title="2. Originalidad"
+                subtitle="Metodología y procedimiento"
+                currentScore={
+                  (step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
+                  (step2Data.originalidad?.indicador_2_2?.puntaje || 0)
+                }
+                maxScore={25}
+              >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 2.1 */}
                   <div className="mb-4 p-4 bg-green-50 rounded-lg">
@@ -1895,32 +1710,21 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </div>
                 </AccordionContent>
-              </AccordionItem>
+              </CriterioAccordionHeader>
 
               {/* IMPACTO */}
-              <AccordionItem value="impacto" className="border rounded-lg">
-                <AccordionTrigger className="px-4 hover:no-underline">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-orange-500 text-white rounded-lg p-2">
-                        <Sparkles className="w-5 h-5" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold">3. Impacto</p>
-                        <p className="text-sm text-gray-500">
-                          Resultados y cambios sistémicos
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-base">
-                        {(step2Data.impacto?.indicador_3_1?.puntaje || 0) +
-                          (step2Data.impacto?.indicador_3_2?.puntaje || 0)}{" "}
-                        / 15 pts
-                      </Badge>
-                    </div>
-                  </div>
-                </AccordionTrigger>
+              <CriterioAccordionHeader
+                value="impacto"
+                icon={Sparkles}
+                iconBgColor="bg-orange-500"
+                title="3. Impacto"
+                subtitle="Resultados y cambios sistémicos"
+                currentScore={
+                  (step2Data.impacto?.indicador_3_1?.puntaje || 0) +
+                  (step2Data.impacto?.indicador_3_2?.puntaje || 0)
+                }
+                maxScore={15}
+              >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 3.1 */}
                   <div className="mb-4 p-4 bg-orange-50 rounded-lg">
@@ -1983,39 +1787,22 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </div>
                 </AccordionContent>
-              </AccordionItem>
+              </CriterioAccordionHeader>
 
               {/* SOSTENIBILIDAD */}
-              <AccordionItem
+              <CriterioAccordionHeader
                 value="sostenibilidad"
-                className="border rounded-lg"
+                icon={CheckCircle}
+                iconBgColor="bg-teal-500"
+                title="4. Sostenibilidad"
+                subtitle="Continuidad, viabilidad y recursos"
+                currentScore={
+                  (step2Data.sostenibilidad?.indicador_4_1?.puntaje || 0) +
+                  (step2Data.sostenibilidad?.indicador_4_2?.puntaje || 0) +
+                  (step2Data.sostenibilidad?.indicador_4_3?.puntaje || 0)
+                }
+                maxScore={15}
               >
-                <AccordionTrigger className="px-4 hover:no-underline">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-teal-500 text-white rounded-lg p-2">
-                        <CheckCircle className="w-5 h-5" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold">4. Sostenibilidad</p>
-                        <p className="text-sm text-gray-500">
-                          Continuidad, viabilidad y recursos
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-base">
-                        {(step2Data.sostenibilidad?.indicador_4_1?.puntaje ||
-                          0) +
-                          (step2Data.sostenibilidad?.indicador_4_2?.puntaje ||
-                            0) +
-                          (step2Data.sostenibilidad?.indicador_4_3?.puntaje ||
-                            0)}{" "}
-                        / 15 pts
-                      </Badge>
-                    </div>
-                  </div>
-                </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 4.1 */}
                   <div className="mb-4 p-4 bg-teal-50 rounded-lg">
@@ -2104,7 +1891,7 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </div>
                 </AccordionContent>
-              </AccordionItem>
+              </CriterioAccordionHeader>
             </Accordion>
 
             {/* Botones de navegación */}
@@ -3060,69 +2847,39 @@ export default function Etapa1Acelerador1() {
       titulo="Contexto e Intencionalidad"
       descripcion="Define el problema central, causas, consecuencias y objetivo de tu proyecto"
     >
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-[1fr_350px] md:grid-cols-1 gap-6">
         {/* Contenido Principal */}
-        <div className="md:col-span-2 space-y-6">
+        <div className="space-y-6">
           {/* Progress Stepper */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">
-                Progreso del Diagnóstico
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Progress
-                  value={(currentStep / STEPS.length) * 100}
-                  className="h-2"
-                />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {STEPS.map((step) => {
-                    const status = getStepStatus(step.number);
-                    const IconComponent = step.icon;
-                    return (
-                      <div
-                        key={step.number}
-                        className={`p-3 rounded-lg border text-center transition-colors cursor-pointer ${
-                          status === "completed"
-                            ? "bg-green-50 border-green-200 text-green-700"
-                            : status === "current"
-                            ? "bg-blue-50 border-blue-200 text-blue-700 ring-2 ring-blue-400"
-                            : "bg-muted border-muted-foreground/20 text-muted-foreground"
-                        }`}
-                        onClick={() =>
-                          status !== "pending" && setCurrentStep(step.number)
-                        }
-                      >
-                        <div className="flex justify-center mb-2">
-                          {status === "completed" ? (
-                            <CheckCircle className="w-5 h-5" />
-                          ) : (
-                            <IconComponent className="w-5 h-5" />
-                          )}
-                        </div>
-                        <div className="text-xs font-medium">{step.title}</div>
-                        <div className="text-[10px] text-muted-foreground mt-1">
-                          {step.description}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Contenido del Paso Actual */}
+          <ProgressStepper
+            steps={STEPS}
+            currentStep={currentStep}
+            completedSteps={completedSteps}
+            onStepClick={setCurrentStep}
+          />
           {renderStepContent()}
         </div>
 
         {/* Sidebar con rúbrica */}
-        <div className="md:col-span-1">
+        <div className="lg:block hidden">
           <div className="sticky top-4">
             <CNPIERubricViewer
-              rubricas={rubricaIntencionalidad ? [rubricaIntencionalidad] : []}
-              destacarCriterios={["Intencionalidad"]}
+              rubricas={
+                rubricaIntencionalidad
+                  ? [
+                      rubricaIntencionalidad,
+                      rubricaOriginalidad,
+                      rubricaImpacto,
+                      rubricaSostenibilidad,
+                    ]
+                  : []
+              }
+              destacarCriterios={[
+                "Intencionalidad",
+                "Originalidad",
+                "Impacto",
+                "Sostenibilidad",
+              ]}
             />
           </div>
         </div>
