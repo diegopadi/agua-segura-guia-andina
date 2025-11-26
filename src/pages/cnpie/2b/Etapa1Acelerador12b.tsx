@@ -46,11 +46,6 @@ import {
 import { DocumentFieldSchema } from "@/types/document-extraction";
 import { BienServicio } from "@/types/cnpie";
 
-// ============================================
-// TIPOS Y CONSTANTES PARA PROYECTO 2B
-// ============================================
-
-// Límites de caracteres para ANEXO 2B
 const ANEXO_2B_LIMITS = {
   PROBLEMA_CARACTERIZACION: 5000,
   OBJETIVOS: 1500,
@@ -551,7 +546,7 @@ export default function Etapa1Acelerador12b() {
       });
 
       // Ejecutar la llamada a la API con timeout
-      const apiPromise = supabase.functions.invoke("analyze-cnpie-general", {
+      const apiPromise = supabase.functions.invoke("analyze-cnpie-general-2b", {
         body: { step1Data },
       });
 
@@ -574,7 +569,7 @@ export default function Etapa1Acelerador12b() {
         // Transformar la estructura con emojis a estructura plana
         const dictamenInt =
           data.analysis.intencionalidad?.[
-            "📋 DICTAMEN TÉCNICO: INTENCIONALIDAD (CONSOLIDADOS)"
+            "📋 DICTAMEN TÉCNICO: INTENCIONALIDAD (IMPLEMENTACIÓN)"
           ];
 
         const indicador11 =
@@ -585,7 +580,7 @@ export default function Etapa1Acelerador12b() {
         // Extraer datos de Originalidad
         const dictamenOrig =
           data.analysis.originalidad?.[
-            "📋 DICTAMEN TÉCNICO: ORIGINALIDAD (CONSOLIDADOS)"
+            "📋 DICTAMEN TÉCNICO: ORIGINALIDAD (IMPLEMENTACIÓN)"
           ];
 
         const indicador21 =
@@ -594,34 +589,43 @@ export default function Etapa1Acelerador12b() {
         const indicador22 =
           dictamenOrig?.["🔹 INDICADOR 2.2: Procedimiento y Video"];
 
-        // Extraer datos de Impacto
-        const dictamenImp =
-          data.analysis.impacto?.[
-            "📋 DICTAMEN TÉCNICO: IMPACTO (CONSOLIDADOS)"
+        // Extraer datos de Pertinencia (NUEVO en 2B)
+        const dictamenPert =
+          data.analysis.pertinencia?.[
+            "📋 DICTAMEN TÉCNICO: PERTINENCIA (IMPLEMENTACIÓN)"
           ];
 
         const indicador31 =
-          dictamenImp?.["🔹 INDICADOR 3.1: Resultados de Aprendizaje"];
+          dictamenPert?.["🔹 INDICADOR 3.1: Intereses y Necesidades"];
 
         const indicador32 =
-          dictamenImp?.["🔹 INDICADOR 3.2: Cambios Sistémicos"];
+          dictamenPert?.["🔹 INDICADOR 3.2: Adaptación al Contexto"];
+
+        // Extraer datos de Impacto
+        const dictamenImp =
+          data.analysis.impacto?.[
+            "📋 DICTAMEN TÉCNICO: IMPACTO (IMPLEMENTACIÓN)"
+          ];
+
+        const indicador41 =
+          dictamenImp?.["🔹 INDICADOR 4.1: Resultados de Aprendizaje"];
+
+        const indicador42 =
+          dictamenImp?.["🔹 INDICADOR 4.2: Cambios Sistémicos"];
 
         // Extraer datos de Sostenibilidad
         const dictamenSost =
           data.analysis.sostenibilidad?.[
-            "📋 DICTAMEN TÉCNICO: SOSTENIBILIDAD (CONSOLIDADOS)"
+            "📋 DICTAMEN TÉCNICO: SOSTENIBILIDAD (IMPLEMENTACIÓN)"
           ];
 
-        const indicador41 =
-          dictamenSost?.["🔹 INDICADOR 4.1: Estrategias de Continuidad"];
+        const indicador51 =
+          dictamenSost?.["🔹 INDICADOR 5.1: Estrategias de Viabilidad"];
 
-        const indicador42 =
-          dictamenSost?.["🔹 INDICADOR 4.2: Viabilidad y Aliados"];
+        const indicador52 =
+          dictamenSost?.["🔹 INDICADOR 5.2: Pertinencia de Bienes y Servicios"];
 
-        const indicador43 =
-          dictamenSost?.["🔹 INDICADOR 4.3: Bienes y Servicios"];
-
-        // Calcular puntaje total
+        // Calcular puntaje total (2B tiene 90 puntos máximos)
         const puntajeTotal =
           (indicador11?.PUNTAJE || 0) +
           (indicador12?.PUNTAJE || 0) +
@@ -631,7 +635,8 @@ export default function Etapa1Acelerador12b() {
           (indicador32?.PUNTAJE || 0) +
           (indicador41?.PUNTAJE || 0) +
           (indicador42?.PUNTAJE || 0) +
-          (indicador43?.PUNTAJE || 0);
+          (indicador51?.PUNTAJE || 0) +
+          (indicador52?.PUNTAJE || 0);
 
         // Transformar todos los criterios a estructura plana
         const transformedData = {
@@ -640,16 +645,14 @@ export default function Etapa1Acelerador12b() {
               puntaje: indicador11?.PUNTAJE || 0,
               nivel: indicador11?.NIVEL || "N/A",
               vinculacion_cneb:
-                indicador11?.["Análisis de Criterios"]?.["Vinculación CNEB"] ||
-                "",
+                indicador11?.["Análisis Técnico"]?.["Vinculación CNEB"] || "",
               evidencia:
-                indicador11?.["Análisis de Criterios"]?.[
-                  "Evidencia (Consolidados)"
+                indicador11?.["Análisis Técnico"]?.[
+                  "Evidencia (Contexto Implementación)"
                 ] || "",
-              justificacion:
-                indicador11?.["Análisis de Criterios"]?.[
-                  "Justificación del Puntaje"
-                ] || "",
+              causas_consecuencias:
+                indicador11?.["Análisis Técnico"]?.["Causas/Consecuencias"] ||
+                "",
             },
             indicador_1_2: {
               puntaje: indicador12?.PUNTAJE || 0,
@@ -666,7 +669,7 @@ export default function Etapa1Acelerador12b() {
                 temporal:
                   indicador12?.["Checklist SMART"]?.["T (Temporal)"] === "✅",
               },
-              justificacion: indicador12?.["Justificación del Puntaje"] || "",
+              observacion_final: indicador12?.["Observación Final"] || "",
             },
           },
           originalidad: {
@@ -682,22 +685,20 @@ export default function Etapa1Acelerador12b() {
               observacion: indicador22?.["Observación Final"] || "",
             },
           },
-          impacto: {
+          pertinencia: {
             indicador_3_1: {
               puntaje: indicador31?.PUNTAJE || 0,
               nivel: indicador31?.NIVEL || "N/A",
-              analisis_evidencias:
-                indicador31?.["Análisis de Evidencias"] || {},
+              analisis: indicador31?.["Análisis"] || {},
             },
             indicador_3_2: {
               puntaje: indicador32?.PUNTAJE || 0,
               nivel: indicador32?.NIVEL || "N/A",
-              analisis_transformacion:
-                indicador32?.["Análisis de Transformación"] || {},
+              analisis: indicador32?.["Análisis"] || {},
             },
-            observacion_final: dictamenImp?.["Observación Final"] || "",
+            observacion_final: dictamenPert?.["Observación Final"] || "",
           },
-          sostenibilidad: {
+          impacto: {
             indicador_4_1: {
               puntaje: indicador41?.PUNTAJE || 0,
               nivel: indicador41?.NIVEL || "N/A",
@@ -708,15 +709,23 @@ export default function Etapa1Acelerador12b() {
               nivel: indicador42?.NIVEL || "N/A",
               analisis: indicador42?.["Análisis"] || {},
             },
-            indicador_4_3: {
-              puntaje: indicador43?.PUNTAJE || 0,
-              nivel: indicador43?.NIVEL || "N/A",
-              analisis: indicador43?.["Análisis"] || {},
+            observacion_final: dictamenImp?.["Observación Final"] || "",
+          },
+          sostenibilidad: {
+            indicador_5_1: {
+              puntaje: indicador51?.PUNTAJE || 0,
+              nivel: indicador51?.NIVEL || "N/A",
+              analisis: indicador51?.["Análisis"] || {},
+            },
+            indicador_5_2: {
+              puntaje: indicador52?.PUNTAJE || 0,
+              nivel: indicador52?.NIVEL || "N/A",
+              analisis: indicador52?.["Análisis"] || {},
             },
             observacion_final: dictamenSost?.["Observación Final"] || "",
           },
           puntaje_total: puntajeTotal,
-          puntaje_maximo: 80,
+          puntaje_maximo: 90,
           timestamp: new Date().toISOString(),
         };
 
@@ -798,7 +807,7 @@ export default function Etapa1Acelerador12b() {
       }
 
       const requestPromise = fetch(
-        `https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/generate-survey-questions-A2`,
+        `https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/generate-survey-questions-2B`,
         {
           method: "POST",
           headers: {
@@ -823,7 +832,7 @@ export default function Etapa1Acelerador12b() {
       }
 
       const result = await response.json();
-      console.log("🟢 Respuesta de generate-survey-questions-A2:", result);
+      console.log("🟢 Respuesta de generate-survey-questions-2B:", result);
 
       if (result.success && result.questions) {
         console.log("🟢 Preguntas recibidas:", result.questions);
@@ -871,7 +880,7 @@ export default function Etapa1Acelerador12b() {
     }
 
     try {
-      // Crear objeto combinado separado por secciones
+      // Crear objeto combinado separado por secciones (Incluye Pertinencia para 2B)
       const combinedData = {
         intencionalidad: {
           respuesta_original_1_1:
@@ -889,26 +898,36 @@ export default function Etapa1Acelerador12b() {
             step1Data.originalidad?.procedimiento_metodologico || "",
           nueva_respuesta_2_2: step3Answers.originalidad?.respuesta_2 || "",
         },
-        impacto: {
+        pertinencia: {
           respuesta_original_3_1:
-            step1Data.impacto?.evidencias_descripcion || "",
-          nueva_respuesta_3_1: step3Answers.impacto?.respuesta_1 || "",
+            step1Data.pertinencia?.intereses_necesidades || "",
+          nueva_respuesta_3_1: step3Answers.pertinencia?.respuesta_1 || "",
           respuesta_original_3_2:
+            step1Data.pertinencia?.contexto_cultural || "",
+          nueva_respuesta_3_2: step3Answers.pertinencia?.respuesta_2 || "",
+        },
+        impacto: {
+          respuesta_original_4_1:
+            step1Data.impacto?.evidencias_descripcion || "",
+          nueva_respuesta_4_1: step3Answers.impacto?.respuesta_1 || "",
+          respuesta_original_4_2:
             step1Data.impacto?.cambios_practica_docente || "",
-          nueva_respuesta_3_2: step3Answers.impacto?.respuesta_2 || "",
+          nueva_respuesta_4_2: step3Answers.impacto?.respuesta_2 || "",
         },
         sostenibilidad: {
-          respuesta_original_4_1:
+          respuesta_original_5_1:
             step1Data.sostenibilidad?.estrategias_viabilidad || "",
-          nueva_respuesta_4_1: step3Answers.sostenibilidad?.respuesta_1 || "",
-          respuesta_original_4_2:
-            step1Data.sostenibilidad?.estrategias_viabilidad || "",
-          nueva_respuesta_4_2: step3Answers.sostenibilidad?.respuesta_2 || "",
+          nueva_respuesta_5_1: step3Answers.sostenibilidad?.respuesta_1 || "",
+          respuesta_original_5_2:
+            step1Data.sostenibilidad?.bienes_servicios
+              ?.map((b) => b.descripcion_utilidad)
+              .join(", ") || "",
+          nueva_respuesta_5_2: step3Answers.sostenibilidad?.respuesta_2 || "",
         },
         timestamp: new Date().toISOString(),
       };
 
-      console.log("📦 OBJETO COMBINADO PARA IA:");
+      console.log("📦 OBJETO COMBINADO PARA IA (2B):");
       console.log("========================================");
       console.log("1. INTENCIONALIDAD:");
       console.log(
@@ -948,41 +967,60 @@ export default function Etapa1Acelerador12b() {
         "   Nueva Respuesta 2.2:",
         combinedData.originalidad.nueva_respuesta_2_2
       );
-      console.log("\n3. IMPACTO:");
+      console.log("\n3. PERTINENCIA:");
       console.log(
         "   Respuesta Original 3.1:",
-        combinedData.impacto.respuesta_original_3_1.substring(0, 100) + "..."
+        combinedData.pertinencia.respuesta_original_3_1.substring(0, 100) +
+          "..."
       );
       console.log(
         "   Nueva Respuesta 3.1:",
-        combinedData.impacto.nueva_respuesta_3_1
+        combinedData.pertinencia.nueva_respuesta_3_1
       );
       console.log(
         "   Respuesta Original 3.2:",
-        combinedData.impacto.respuesta_original_3_2.substring(0, 100) + "..."
+        combinedData.pertinencia.respuesta_original_3_2.substring(0, 100) +
+          "..."
       );
       console.log(
         "   Nueva Respuesta 3.2:",
-        combinedData.impacto.nueva_respuesta_3_2
+        combinedData.pertinencia.nueva_respuesta_3_2
       );
-      console.log("\n4. SOSTENIBILIDAD:");
+      console.log("\n4. IMPACTO:");
       console.log(
         "   Respuesta Original 4.1:",
-        combinedData.sostenibilidad.respuesta_original_4_1.substring(0, 100) +
-          "..."
+        combinedData.impacto.respuesta_original_4_1.substring(0, 100) + "..."
       );
       console.log(
         "   Nueva Respuesta 4.1:",
-        combinedData.sostenibilidad.nueva_respuesta_4_1
+        combinedData.impacto.nueva_respuesta_4_1
       );
       console.log(
         "   Respuesta Original 4.2:",
-        combinedData.sostenibilidad.respuesta_original_4_2.substring(0, 100) +
-          "..."
+        combinedData.impacto.respuesta_original_4_2.substring(0, 100) + "..."
       );
       console.log(
         "   Nueva Respuesta 4.2:",
-        combinedData.sostenibilidad.nueva_respuesta_4_2
+        combinedData.impacto.nueva_respuesta_4_2
+      );
+      console.log("\n5. SOSTENIBILIDAD:");
+      console.log(
+        "   Respuesta Original 5.1:",
+        combinedData.sostenibilidad.respuesta_original_5_1.substring(0, 100) +
+          "..."
+      );
+      console.log(
+        "   Nueva Respuesta 5.1:",
+        combinedData.sostenibilidad.nueva_respuesta_5_1
+      );
+      console.log(
+        "   Respuesta Original 5.2:",
+        combinedData.sostenibilidad.respuesta_original_5_2.substring(0, 100) +
+          "..."
+      );
+      console.log(
+        "   Nueva Respuesta 5.2:",
+        combinedData.sostenibilidad.nueva_respuesta_5_2
       );
       console.log("========================================");
       console.log("📤 Objeto completo:", combinedData);
@@ -1002,7 +1040,7 @@ export default function Etapa1Acelerador12b() {
       }
 
       const response = await fetch(
-        "https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/sintetisador-cnpie-2A",
+        "https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/sintetisador-cnpie",
         {
           method: "POST",
           headers: {
@@ -1916,43 +1954,41 @@ export default function Etapa1Acelerador12b() {
                 </AccordionContent>
               </CriterioAccordionHeader>
 
-              {/* IMPACTO */}
+              {/* PERTINENCIA - NUEVO en 2B */}
               <CriterioAccordionHeader
-                value="impacto"
-                icon={Sparkles}
-                iconBgColor="bg-orange-500"
-                title="3. Impacto"
-                subtitle="Resultados y cambios sistémicos"
+                value="pertinencia"
+                icon={Lightbulb}
+                iconBgColor="bg-purple-500"
+                title="3. Pertinencia"
+                subtitle="Intereses, necesidades y adaptación al contexto"
                 currentScore={
-                  (step2Data.impacto?.indicador_3_1?.puntaje || 0) +
-                  (step2Data.impacto?.indicador_3_2?.puntaje || 0)
+                  (step2Data.pertinencia?.indicador_3_1?.puntaje || 0) +
+                  (step2Data.pertinencia?.indicador_3_2?.puntaje || 0)
                 }
                 maxScore={15}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 3.1 */}
-                  <div className="mb-4 p-4 bg-orange-50 rounded-lg">
+                  <div className="mb-4 p-4 bg-purple-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-orange-900">
-                        3.1 Resultados de Aprendizaje
+                      <h4 className="font-semibold text-purple-900">
+                        3.1 Intereses y Necesidades
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.impacto?.indicador_3_1?.puntaje || 0} / 10
-                          pts
+                          {step2Data.pertinencia?.indicador_3_1?.puntaje || 0} /
+                          10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
-                          {step2Data.impacto?.indicador_3_1?.nivel}
+                          {step2Data.pertinencia?.indicador_3_1?.nivel}
                         </Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
-                      <p className="font-semibold mb-2">
-                        Análisis de Evidencias:
-                      </p>
+                      <p className="font-semibold mb-2">Análisis:</p>
                       <pre className="whitespace-pre-wrap text-gray-700">
                         {JSON.stringify(
-                          step2Data.impacto?.indicador_3_1?.analisis_evidencias,
+                          step2Data.pertinencia?.indicador_3_1?.analisis,
                           null,
                           2
                         )}
@@ -1961,67 +1997,18 @@ export default function Etapa1Acelerador12b() {
                   </div>
 
                   {/* Indicador 3.2 */}
-                  <div className="mb-4 p-4 bg-orange-50 rounded-lg">
+                  <div className="mb-4 p-4 bg-purple-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-orange-900">
-                        3.2 Cambios Sistémicos
+                      <h4 className="font-semibold text-purple-900">
+                        3.2 Adaptación al Contexto
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.impacto?.indicador_3_2?.puntaje || 0} / 5
-                          pts
+                          {step2Data.pertinencia?.indicador_3_2?.puntaje || 0} /
+                          5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
-                          {step2Data.impacto?.indicador_3_2?.nivel}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="bg-white p-3 rounded text-sm">
-                      <p className="font-semibold mb-2">
-                        Análisis de Transformación:
-                      </p>
-                      <pre className="whitespace-pre-wrap text-gray-700">
-                        {JSON.stringify(
-                          step2Data.impacto?.indicador_3_2
-                            ?.analisis_transformacion,
-                          null,
-                          2
-                        )}
-                      </pre>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </CriterioAccordionHeader>
-
-              {/* SOSTENIBILIDAD */}
-              <CriterioAccordionHeader
-                value="sostenibilidad"
-                icon={CheckCircle}
-                iconBgColor="bg-teal-500"
-                title="4. Sostenibilidad"
-                subtitle="Continuidad, viabilidad y recursos"
-                currentScore={
-                  (step2Data.sostenibilidad?.indicador_4_1?.puntaje || 0) +
-                  (step2Data.sostenibilidad?.indicador_4_2?.puntaje || 0) +
-                  (step2Data.sostenibilidad?.indicador_4_3?.puntaje || 0)
-                }
-                maxScore={15}
-              >
-                <AccordionContent className="px-4 pb-4">
-                  {/* Indicador 4.1 */}
-                  <div className="mb-4 p-4 bg-teal-50 rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-teal-900">
-                        4.1 Estrategias de Continuidad
-                      </h4>
-                      <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.sostenibilidad?.indicador_4_1?.puntaje ||
-                            0}{" "}
-                          / 15 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.sostenibilidad?.indicador_4_1?.nivel}
+                          {step2Data.pertinencia?.indicador_3_2?.nivel}
                         </Badge>
                       </div>
                     </div>
@@ -2029,7 +2016,60 @@ export default function Etapa1Acelerador12b() {
                       <p className="font-semibold mb-2">Análisis:</p>
                       <pre className="whitespace-pre-wrap text-gray-700">
                         {JSON.stringify(
-                          step2Data.sostenibilidad?.indicador_4_1?.analisis,
+                          step2Data.pertinencia?.indicador_3_2?.analisis,
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {step2Data.pertinencia?.observacion_final && (
+                    <div className="mt-4 p-3 bg-purple-100 rounded-lg">
+                      <p className="font-semibold mb-1">Observación Final:</p>
+                      <p className="text-gray-700">
+                        {step2Data.pertinencia.observacion_final}
+                      </p>
+                    </div>
+                  )}
+                </AccordionContent>
+              </CriterioAccordionHeader>
+
+              {/* IMPACTO */}
+              <CriterioAccordionHeader
+                value="impacto"
+                icon={Sparkles}
+                iconBgColor="bg-orange-500"
+                title="4. Impacto"
+                subtitle="Resultados y cambios sistémicos"
+                currentScore={
+                  (step2Data.impacto?.indicador_4_1?.puntaje || 0) +
+                  (step2Data.impacto?.indicador_4_2?.puntaje || 0)
+                }
+                maxScore={15}
+              >
+                <AccordionContent className="px-4 pb-4">
+                  {/* Indicador 4.1 */}
+                  <div className="mb-4 p-4 bg-orange-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-orange-900">
+                        4.1 Resultados de Aprendizaje
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.impacto?.indicador_4_1?.puntaje || 0} / 10
+                          pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.impacto?.indicador_4_1?.nivel}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="bg-white p-3 rounded text-sm">
+                      <p className="font-semibold mb-2">Análisis:</p>
+                      <pre className="whitespace-pre-wrap text-gray-700">
+                        {JSON.stringify(
+                          step2Data.impacto?.indicador_4_1?.analisis,
                           null,
                           2
                         )}
@@ -2038,19 +2078,18 @@ export default function Etapa1Acelerador12b() {
                   </div>
 
                   {/* Indicador 4.2 */}
-                  <div className="mb-4 p-4 bg-teal-50 rounded-lg">
+                  <div className="mb-4 p-4 bg-orange-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-teal-900">
-                        4.2 Viabilidad y Aliados
+                      <h4 className="font-semibold text-orange-900">
+                        4.2 Cambios Sistémicos
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.sostenibilidad?.indicador_4_2?.puntaje ||
-                            0}{" "}
-                          / 5 pts
+                          {step2Data.impacto?.indicador_4_2?.puntaje || 0} / 5
+                          pts
                         </Badge>
                         <Badge className="bg-purple-500">
-                          {step2Data.sostenibilidad?.indicador_4_2?.nivel}
+                          {step2Data.impacto?.indicador_4_2?.nivel}
                         </Badge>
                       </div>
                     </div>
@@ -2058,7 +2097,7 @@ export default function Etapa1Acelerador12b() {
                       <p className="font-semibold mb-2">Análisis:</p>
                       <pre className="whitespace-pre-wrap text-gray-700">
                         {JSON.stringify(
-                          step2Data.sostenibilidad?.indicador_4_2?.analisis,
+                          step2Data.impacto?.indicador_4_2?.analisis,
                           null,
                           2
                         )}
@@ -2066,20 +2105,45 @@ export default function Etapa1Acelerador12b() {
                     </div>
                   </div>
 
-                  {/* Indicador 4.3 */}
+                  {step2Data.impacto?.observacion_final && (
+                    <div className="mt-4 p-3 bg-orange-100 rounded-lg">
+                      <p className="font-semibold mb-1">Observación Final:</p>
+                      <p className="text-gray-700">
+                        {step2Data.impacto.observacion_final}
+                      </p>
+                    </div>
+                  )}
+                </AccordionContent>
+              </CriterioAccordionHeader>
+
+              {/* SOSTENIBILIDAD */}
+              <CriterioAccordionHeader
+                value="sostenibilidad"
+                icon={CheckCircle}
+                iconBgColor="bg-teal-500"
+                title="5. Sostenibilidad"
+                subtitle="Viabilidad y recursos"
+                currentScore={
+                  (step2Data.sostenibilidad?.indicador_5_1?.puntaje || 0) +
+                  (step2Data.sostenibilidad?.indicador_5_2?.puntaje || 0)
+                }
+                maxScore={15}
+              >
+                <AccordionContent className="px-4 pb-4">
+                  {/* Indicador 5.1 */}
                   <div className="mb-4 p-4 bg-teal-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-teal-900">
-                        4.3 Bienes y Servicios
+                        5.1 Estrategias de Viabilidad
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.sostenibilidad?.indicador_4_3?.puntaje ||
+                          {step2Data.sostenibilidad?.indicador_5_1?.puntaje ||
                             0}{" "}
-                          / 10 pts
+                          / 5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
-                          {step2Data.sostenibilidad?.indicador_4_3?.nivel}
+                          {step2Data.sostenibilidad?.indicador_5_1?.nivel}
                         </Badge>
                       </div>
                     </div>
@@ -2087,13 +2151,51 @@ export default function Etapa1Acelerador12b() {
                       <p className="font-semibold mb-2">Análisis:</p>
                       <pre className="whitespace-pre-wrap text-gray-700">
                         {JSON.stringify(
-                          step2Data.sostenibilidad?.indicador_4_3?.analisis,
+                          step2Data.sostenibilidad?.indicador_5_1?.analisis,
                           null,
                           2
                         )}
                       </pre>
                     </div>
                   </div>
+
+                  {/* Indicador 5.2 */}
+                  <div className="mb-4 p-4 bg-teal-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-teal-900">
+                        5.2 Pertinencia de Bienes y Servicios
+                      </h4>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">
+                          {step2Data.sostenibilidad?.indicador_5_2?.puntaje ||
+                            0}{" "}
+                          / 10 pts
+                        </Badge>
+                        <Badge className="bg-purple-500">
+                          {step2Data.sostenibilidad?.indicador_5_2?.nivel}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="bg-white p-3 rounded text-sm">
+                      <p className="font-semibold mb-2">Análisis:</p>
+                      <pre className="whitespace-pre-wrap text-gray-700">
+                        {JSON.stringify(
+                          step2Data.sostenibilidad?.indicador_5_2?.analisis,
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {step2Data.sostenibilidad?.observacion_final && (
+                    <div className="mt-4 p-3 bg-teal-100 rounded-lg">
+                      <p className="font-semibold mb-1">Observación Final:</p>
+                      <p className="text-gray-700">
+                        {step2Data.sostenibilidad.observacion_final}
+                      </p>
+                    </div>
+                  )}
                 </AccordionContent>
               </CriterioAccordionHeader>
             </Accordion>
@@ -2175,9 +2277,8 @@ export default function Etapa1Acelerador12b() {
           );
         case "sostenibilidad":
           return (
-            (step2Data.sostenibilidad?.indicador_4_1?.puntaje || 0) +
-              (step2Data.sostenibilidad?.indicador_4_2?.puntaje || 0) +
-              (step2Data.sostenibilidad?.indicador_4_3?.puntaje || 0) ===
+            (step2Data.sostenibilidad?.indicador_5_1?.puntaje || 0) +
+              (step2Data.sostenibilidad?.indicador_5_2?.puntaje || 0) ===
             maxScore
           );
         default:
@@ -2201,6 +2302,13 @@ export default function Etapa1Acelerador12b() {
         color: "green",
       },
       {
+        key: "pertinencia",
+        name: "Pertinencia",
+        maxScore: 15,
+        icon: Lightbulb,
+        color: "purple",
+      },
+      {
         key: "impacto",
         name: "Impacto",
         maxScore: 15,
@@ -2210,7 +2318,7 @@ export default function Etapa1Acelerador12b() {
       {
         key: "sostenibilidad",
         name: "Sostenibilidad",
-        maxScore: 30,
+        maxScore: 15,
         icon: Clock,
         color: "teal",
       },
@@ -2344,26 +2452,32 @@ export default function Etapa1Acelerador12b() {
                         <Badge variant="outline">
                           {criterio.key === "intencionalidad" &&
                           step2Data?.intencionalidad
-                            ? (step2Data.intencionalidad.indicador_1_1
+                            ? ((step2Data.intencionalidad as any).indicador_1_1
                                 ?.puntaje || 0) +
-                              (step2Data.intencionalidad.indicador_1_2
+                              ((step2Data.intencionalidad as any).indicador_1_2
                                 ?.puntaje || 0)
                             : criterio.key === "originalidad" &&
                               step2Data?.originalidad
-                            ? (step2Data.originalidad.indicador_2_1?.puntaje ||
-                                0) +
-                              (step2Data.originalidad.indicador_2_2?.puntaje ||
-                                0)
+                            ? ((step2Data.originalidad as any).indicador_2_1
+                                ?.puntaje || 0) +
+                              ((step2Data.originalidad as any).indicador_2_2
+                                ?.puntaje || 0)
+                            : criterio.key === "pertinencia" &&
+                              step2Data?.pertinencia
+                            ? ((step2Data.pertinencia as any).indicador_3_1
+                                ?.puntaje || 0) +
+                              ((step2Data.pertinencia as any).indicador_3_2
+                                ?.puntaje || 0)
                             : criterio.key === "impacto" && step2Data?.impacto
-                            ? (step2Data.impacto.indicador_3_1?.puntaje || 0) +
-                              (step2Data.impacto.indicador_3_2?.puntaje || 0)
+                            ? ((step2Data.impacto as any).indicador_4_1
+                                ?.puntaje || 0) +
+                              ((step2Data.impacto as any).indicador_4_2
+                                ?.puntaje || 0)
                             : criterio.key === "sostenibilidad" &&
                               step2Data?.sostenibilidad
-                            ? (step2Data.sostenibilidad.indicador_4_1
+                            ? ((step2Data.sostenibilidad as any).indicador_5_1
                                 ?.puntaje || 0) +
-                              (step2Data.sostenibilidad.indicador_4_2
-                                ?.puntaje || 0) +
-                              (step2Data.sostenibilidad.indicador_4_3
+                              ((step2Data.sostenibilidad as any).indicador_5_2
                                 ?.puntaje || 0)
                             : 0}{" "}
                           / {criterio.maxScore} pts
@@ -2706,21 +2820,30 @@ export default function Etapa1Acelerador12b() {
           step1Data?.originalidad?.procedimiento_metodologico || "",
         nueva_respuesta_2_2: step3Answers?.originalidad?.respuesta_2 || "",
       },
-      impacto: {
+      pertinencia: {
         respuesta_original_3_1:
+          step1Data?.pertinencia?.intereses_necesidades || "",
+        nueva_respuesta_3_1: step3Answers?.pertinencia?.respuesta_1 || "",
+        respuesta_original_3_2: step1Data?.pertinencia?.contexto_cultural || "",
+        nueva_respuesta_3_2: step3Answers?.pertinencia?.respuesta_2 || "",
+      },
+      impacto: {
+        respuesta_original_4_1:
           step1Data?.impacto?.evidencias_descripcion || "",
-        nueva_respuesta_3_1: step3Answers?.impacto?.respuesta_1 || "",
-        respuesta_original_3_2:
+        nueva_respuesta_4_1: step3Answers?.impacto?.respuesta_1 || "",
+        respuesta_original_4_2:
           step1Data?.impacto?.cambios_practica_docente || "",
-        nueva_respuesta_3_2: step3Answers?.impacto?.respuesta_2 || "",
+        nueva_respuesta_4_2: step3Answers?.impacto?.respuesta_2 || "",
       },
       sostenibilidad: {
-        respuesta_original_4_1:
-          step1Data?.sostenibilidad?.estrategias_continuidad || "",
-        nueva_respuesta_4_1: step3Answers?.sostenibilidad?.respuesta_1 || "",
-        respuesta_original_4_2:
+        respuesta_original_5_1:
           step1Data?.sostenibilidad?.estrategias_viabilidad || "",
-        nueva_respuesta_4_2: step3Answers?.sostenibilidad?.respuesta_2 || "",
+        nueva_respuesta_5_1: step3Answers?.sostenibilidad?.respuesta_1 || "",
+        respuesta_original_5_2:
+          step1Data?.sostenibilidad?.bienes_servicios
+            ?.map((b) => b.descripcion_utilidad)
+            .join(", ") || "",
+        nueva_respuesta_5_2: step3Answers?.sostenibilidad?.respuesta_2 || "",
       },
     };
 
