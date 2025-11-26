@@ -3,13 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Users, BarChart3, Activity, Settings } from "lucide-react";
+import { LogOut, Users, BarChart3, Activity } from "lucide-react";
 import { UserManagement } from "./UserManagement";
 import { supabase } from "@/integrations/supabase/client";
-
-interface AdminDashboardProps {
-  onLogout: () => void;
-}
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardStats {
   totalUsers: number;
@@ -25,7 +23,9 @@ interface DashboardStats {
   }>;
 }
 
-export const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
+export const AdminDashboard = () => {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     activeUsers: 0,
@@ -105,7 +105,13 @@ export const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
           <h1 className="text-3xl font-bold">Panel de Administración</h1>
           <p className="text-muted-foreground">Mi Cole con Agua Segura</p>
         </div>
-        <Button variant="outline" onClick={onLogout}>
+        <Button 
+          variant="outline" 
+          onClick={async () => {
+            await signOut();
+            navigate("/");
+          }}
+        >
           <LogOut className="w-4 h-4 mr-2" />
           Cerrar Sesión
         </Button>
