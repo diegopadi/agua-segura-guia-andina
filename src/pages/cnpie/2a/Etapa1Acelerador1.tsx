@@ -4,6 +4,7 @@ import { useCNPIERubric } from "@/hooks/useCNPIERubric";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
 import { RepositoryExtractionButton } from "@/components/RepositoryExtractionButton";
+import jsPDF from "jspdf";
 import {
   Card,
   CardContent,
@@ -134,6 +135,24 @@ export default function Etapa1Acelerador1() {
   const [step2Data, setStep2Data] = useState<AnalysisStep2 | null>(null);
   const [step3Data, setStep3Data] = useState<FormDataStep3 | null>(null);
   const [step4Data, setStep4Data] = useState<FinalAnalysisStep4 | null>(null);
+  const [improvedResponses, setImprovedResponses] = useState<{
+    intencionalidad?: {
+      respuesta_1_1: string;
+      respuesta_1_2: string;
+    };
+    originalidad?: {
+      respuesta_2_1: string;
+      respuesta_2_2: string;
+    };
+    impacto?: {
+      respuesta_3_1: string;
+      respuesta_3_2: string;
+    };
+    sostenibilidad?: {
+      respuesta_4_1: string;
+      respuesta_4_2: string;
+    };
+  } | null>(null);
 
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -231,15 +250,29 @@ export default function Etapa1Acelerador1() {
 
     if (savedData) {
       setCurrentStep(savedData.current_step || 1);
-      setCompletedSteps(savedData.completed_steps || []);
+
+      // Cargar completed_steps guardados
+      const loadedCompletedSteps = savedData.completed_steps || [];
+
+      // Auto-marcar pasos como completados basado en datos existentes
+      const autoCompletedSteps = [...loadedCompletedSteps];
 
       if (savedData.step1_data) {
         // Migrar datos antiguos a nueva estructura si es necesario
         const migratedData = migrateOldDataStructure(savedData.step1_data);
         setStep1Data(migratedData);
+
+        // Marcar paso 1 como completado si tiene datos
+        if (!autoCompletedSteps.includes(1)) {
+          autoCompletedSteps.push(1);
+        }
       }
       if (savedData.step2_data) {
         setStep2Data(savedData.step2_data);
+        // Marcar paso 2 como completado si tiene datos
+        if (!autoCompletedSteps.includes(2)) {
+          autoCompletedSteps.push(2);
+        }
       }
       if (savedData.step3_data) {
         setStep3Data(savedData.step3_data);
@@ -247,6 +280,29 @@ export default function Etapa1Acelerador1() {
       if (savedData.step4_data) {
         setStep4Data(savedData.step4_data);
       }
+
+      if (savedData.generated_questions) {
+        setGeneratedQuestions(savedData.generated_questions);
+        // Marcar paso 3 como completado si tiene preguntas generadas
+        if (!autoCompletedSteps.includes(3)) {
+          autoCompletedSteps.push(3);
+        }
+      }
+
+      if (savedData.step3_answers) {
+        setStep3Answers(savedData.step3_answers);
+      }
+
+      if (savedData.improved_responses) {
+        setImprovedResponses(savedData.improved_responses);
+        // Marcar paso 4 como completado si tiene respuestas mejoradas
+        if (!autoCompletedSteps.includes(4)) {
+          autoCompletedSteps.push(4);
+        }
+      }
+
+      // Actualizar completed_steps con los pasos auto-detectados
+      setCompletedSteps(autoCompletedSteps);
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -263,6 +319,9 @@ export default function Etapa1Acelerador1() {
         step2_data: step2Data,
         step3_data: step3Data,
         step4_data: step4Data,
+        generated_questions: generatedQuestions,
+        step3_answers: step3Answers,
+        improved_responses: improvedResponses,
         last_updated: new Date().toISOString(),
       };
 
@@ -485,10 +544,11 @@ export default function Etapa1Acelerador1() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setStep2Data(transformedData as any);
 
-        // Marcar paso 1 como completado y avanzar al paso 2
-        if (!completedSteps.includes(1)) {
-          setCompletedSteps([...completedSteps, 1]);
-        }
+        // Marcar pasos 1 y 2 como completados y avanzar al paso 2
+        const newCompletedSteps = [...completedSteps];
+        if (!newCompletedSteps.includes(1)) newCompletedSteps.push(1);
+        if (!newCompletedSteps.includes(2)) newCompletedSteps.push(2);
+        setCompletedSteps(newCompletedSteps);
 
         setCurrentStep(2);
 
@@ -588,6 +648,12 @@ export default function Etapa1Acelerador1() {
         console.log("🟢 Preguntas recibidas:", result.questions);
         setGeneratedQuestions(result.questions);
         console.log("🟢 Cambiando a paso 3...");
+
+        // Marcar paso 3 como completado
+        if (!completedSteps.includes(3)) {
+          setCompletedSteps([...completedSteps, 3]);
+        }
+
         setCurrentStep(3);
         toast({
           title: "✅ Preguntas generadas",
@@ -614,28 +680,139 @@ export default function Etapa1Acelerador1() {
   };
 
   const handleEvaluateStep3Answers = async () => {
-    if (!step2Data || !step3Answers) {
+    if (!step1Data || !step3Answers) {
       toast({
         title: "Error",
-        description: "No hay datos suficientes para evaluar",
+        description: "No hay datos suficientes para combinar",
         variant: "destructive",
       });
       return;
     }
 
-    setAnalyzing(true);
-
     try {
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new Error("Timeout: La evaluación tardó más de 120 segundos")
-            ),
-          120000
-        )
-      );
+      // Crear objeto combinado separado por secciones
+      const combinedData = {
+        intencionalidad: {
+          respuesta_original_1_1:
+            step1Data.intencionalidad?.problema_descripcion || "",
+          nueva_respuesta_1_1: step3Answers.intencionalidad?.respuesta_1 || "",
+          respuesta_original_1_2:
+            step1Data.intencionalidad?.objetivo_general || "",
+          nueva_respuesta_1_2: step3Answers.intencionalidad?.respuesta_2 || "",
+        },
+        originalidad: {
+          respuesta_original_2_1:
+            step1Data.originalidad?.metodologia_descripcion || "",
+          nueva_respuesta_2_1: step3Answers.originalidad?.respuesta_1 || "",
+          respuesta_original_2_2:
+            step1Data.originalidad?.procedimiento_metodologico || "",
+          nueva_respuesta_2_2: step3Answers.originalidad?.respuesta_2 || "",
+        },
+        impacto: {
+          respuesta_original_3_1:
+            step1Data.impacto?.evidencias_descripcion || "",
+          nueva_respuesta_3_1: step3Answers.impacto?.respuesta_1 || "",
+          respuesta_original_3_2:
+            step1Data.impacto?.cambios_practica_docente || "",
+          nueva_respuesta_3_2: step3Answers.impacto?.respuesta_2 || "",
+        },
+        sostenibilidad: {
+          respuesta_original_4_1:
+            step1Data.sostenibilidad?.estrategias_continuidad || "",
+          nueva_respuesta_4_1: step3Answers.sostenibilidad?.respuesta_1 || "",
+          respuesta_original_4_2:
+            step1Data.sostenibilidad?.estrategias_viabilidad || "",
+          nueva_respuesta_4_2: step3Answers.sostenibilidad?.respuesta_2 || "",
+        },
+        timestamp: new Date().toISOString(),
+      };
 
+      console.log("📦 OBJETO COMBINADO PARA IA:");
+      console.log("========================================");
+      console.log("1. INTENCIONALIDAD:");
+      console.log(
+        "   Respuesta Original 1.1:",
+        combinedData.intencionalidad.respuesta_original_1_1.substring(0, 100) +
+          "..."
+      );
+      console.log(
+        "   Nueva Respuesta 1.1:",
+        combinedData.intencionalidad.nueva_respuesta_1_1
+      );
+      console.log(
+        "   Respuesta Original 1.2:",
+        combinedData.intencionalidad.respuesta_original_1_2.substring(0, 100) +
+          "..."
+      );
+      console.log(
+        "   Nueva Respuesta 1.2:",
+        combinedData.intencionalidad.nueva_respuesta_1_2
+      );
+      console.log("\n2. ORIGINALIDAD:");
+      console.log(
+        "   Respuesta Original 2.1:",
+        combinedData.originalidad.respuesta_original_2_1.substring(0, 100) +
+          "..."
+      );
+      console.log(
+        "   Nueva Respuesta 2.1:",
+        combinedData.originalidad.nueva_respuesta_2_1
+      );
+      console.log(
+        "   Respuesta Original 2.2:",
+        combinedData.originalidad.respuesta_original_2_2.substring(0, 100) +
+          "..."
+      );
+      console.log(
+        "   Nueva Respuesta 2.2:",
+        combinedData.originalidad.nueva_respuesta_2_2
+      );
+      console.log("\n3. IMPACTO:");
+      console.log(
+        "   Respuesta Original 3.1:",
+        combinedData.impacto.respuesta_original_3_1.substring(0, 100) + "..."
+      );
+      console.log(
+        "   Nueva Respuesta 3.1:",
+        combinedData.impacto.nueva_respuesta_3_1
+      );
+      console.log(
+        "   Respuesta Original 3.2:",
+        combinedData.impacto.respuesta_original_3_2.substring(0, 100) + "..."
+      );
+      console.log(
+        "   Nueva Respuesta 3.2:",
+        combinedData.impacto.nueva_respuesta_3_2
+      );
+      console.log("\n4. SOSTENIBILIDAD:");
+      console.log(
+        "   Respuesta Original 4.1:",
+        combinedData.sostenibilidad.respuesta_original_4_1.substring(0, 100) +
+          "..."
+      );
+      console.log(
+        "   Nueva Respuesta 4.1:",
+        combinedData.sostenibilidad.nueva_respuesta_4_1
+      );
+      console.log(
+        "   Respuesta Original 4.2:",
+        combinedData.sostenibilidad.respuesta_original_4_2.substring(0, 100) +
+          "..."
+      );
+      console.log(
+        "   Nueva Respuesta 4.2:",
+        combinedData.sostenibilidad.nueva_respuesta_4_2
+      );
+      console.log("========================================");
+      console.log("📤 Objeto completo:", combinedData);
+
+      // Llamar directamente al sintetizador externo
+      toast({
+        title: "⏳ Mejorando respuestas...",
+        description: "La IA está procesando tus respuestas",
+      });
+
+      // Obtener sesión para autenticación
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -643,12 +820,8 @@ export default function Etapa1Acelerador1() {
         throw new Error("No hay sesión activa");
       }
 
-      console.log("📦 Enviando datos para evaluación final...");
-      console.log("📋 Step 1 - Respuestas iniciales:", step1Data);
-      console.log("💬 Step 3 - Respuestas complementarias:", step3Answers);
-
-      const requestPromise = fetch(
-        `https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/evaluar-cnpie-2A`,
+      const response = await fetch(
+        "https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/sintetisador-cnpie-2A",
         {
           method: "POST",
           headers: {
@@ -656,51 +829,43 @@ export default function Etapa1Acelerador1() {
             Authorization: `Bearer ${session.access_token}`,
             "x-client-info": "agua-segura-guia-andina",
           },
-          body: JSON.stringify({
-            step1Data: step1Data,
-            step3Answers: step3Answers,
-          }),
+          body: JSON.stringify({ combinedData }),
         }
       );
 
-      const response = (await Promise.race([
-        requestPromise,
-        timeoutPromise,
-      ])) as Response;
-
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error ${response.status}: ${errorText}`);
+        const errorText = await response.text().catch(() => "");
+        throw new Error(
+          `Error del sintetizador (${response.status}): ${errorText}`
+        );
       }
 
-      const result = await response.json();
-      console.log("🟢 Respuesta de evaluate-final-cnpie-2a:", result);
+      const data = await response.json();
 
-      if (result.success && result.evaluation) {
-        console.log("🟢 Evaluación recibida:", result.evaluation);
-
-        // Guardar la evaluación final en step4Data o step2Data actualizado
-        setStep2Data(result.evaluation);
-
-        setCurrentStep(4);
-        setAnalyzing(false);
-
-        toast({
-          title: "✅ Evaluación completada",
-          description: `Puntaje final: ${result.evaluation.resumen.puntaje_total}/${result.evaluation.resumen.puntaje_maximo} - Nivel: ${result.evaluation.resumen.nivel_final}`,
-          duration: 5000,
-        });
-      } else {
-        console.error("❌ Error en resultado:", result);
-        throw new Error(result.error || "Error al evaluar respuestas");
+      if (!data?.success || !data?.improved_responses) {
+        throw new Error("No se recibieron respuestas mejoradas");
       }
+
+      console.log("✨ RESPUESTAS MEJORADAS:", data.improved_responses);
+      setImprovedResponses(data.improved_responses);
+
+      // Marcar paso 4 como completado
+      if (!completedSteps.includes(4)) {
+        setCompletedSteps([...completedSteps, 4]);
+      }
+
+      setCurrentStep(4);
+      toast({
+        title: "✅ Respuestas mejoradas generadas",
+        description: "Puedes revisar y copiar las nuevas versiones",
+        duration: 5000,
+      });
     } catch (error: unknown) {
-      console.error("❌ Error evaluando respuestas:", error);
+      console.error("❌ Error combinando respuestas:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "No se pudieron evaluar las respuestas";
-      setAnalyzing(false);
+          : "No se pudieron combinar las respuestas";
       toast({
         title: "Error",
         description: errorMessage,
@@ -2289,385 +2454,563 @@ export default function Etapa1Acelerador1() {
 
   // PASO 4: Resultado Final
   const renderStep4 = () => {
-    if (!step2Data) {
+    const copyToClipboard = (text: string, label: string) => {
+      navigator.clipboard.writeText(text);
+      toast({
+        title: "✅ Copiado",
+        description: `${label} copiado al portapapeles`,
+        duration: 2000,
+      });
+    };
+
+    const generatePDF = () => {
+      if (!improvedResponses || !proyecto) {
+        toast({
+          title: "❌ Error",
+          description: "No hay respuestas mejoradas para generar el PDF",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "🔄 Generando PDF...",
+        description: "Preparando el documento para descarga",
+      });
+
+      try {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.width;
+        const margin = 20;
+        const maxWidth = pageWidth - 2 * margin;
+        let yPos = 20;
+
+        // Helper para agregar texto con salto de página automático
+        const addText = (
+          text: string,
+          fontSize: number,
+          isBold = false,
+          color: [number, number, number] = [0, 0, 0]
+        ) => {
+          doc.setFontSize(fontSize);
+          doc.setTextColor(color[0], color[1], color[2]);
+
+          if (isBold) {
+            doc.setFont("helvetica", "bold");
+          } else {
+            doc.setFont("helvetica", "normal");
+          }
+
+          const lines = doc.splitTextToSize(text, maxWidth);
+          const lineHeight = fontSize * 0.5;
+
+          lines.forEach((line: string) => {
+            if (yPos + lineHeight > doc.internal.pageSize.height - 20) {
+              doc.addPage();
+              yPos = 20;
+            }
+            doc.text(line, margin, yPos);
+            yPos += lineHeight;
+          });
+
+          yPos += 5; // Espacio después del texto
+        };
+
+        const addSection = (title: string, content: string) => {
+          // Título de la pregunta
+          addText(title, 12, true, [41, 128, 185]); // Azul
+          yPos += 2;
+
+          // Contenido de la respuesta
+          addText(content || "(Sin respuesta)", 10, false, [0, 0, 0]);
+          yPos += 8; // Espacio entre secciones
+        };
+
+        // === PORTADA ===
+        doc.setFillColor(41, 128, 185);
+        doc.rect(0, 0, pageWidth, 60, "F");
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont("helvetica", "bold");
+        doc.text("CNPIE 2026 - Anexo 2A", pageWidth / 2, 30, {
+          align: "center",
+        });
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "normal");
+        doc.text("Respuestas Mejoradas por IA", pageWidth / 2, 45, {
+          align: "center",
+        });
+
+        yPos = 80;
+        doc.setTextColor(0, 0, 0);
+
+        addText(`Fecha: ${new Date().toLocaleDateString("es-ES")}`, 10);
+        yPos += 10;
+
+        // === 1. INTENCIONALIDAD ===
+        doc.setFillColor(52, 152, 219);
+        doc.rect(margin - 5, yPos - 5, maxWidth + 10, 12, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("1. INTENCIONALIDAD", margin, yPos + 5);
+        yPos += 20;
+        doc.setTextColor(0, 0, 0);
+
+        addSection(
+          "1.1 Caracterización del Problema",
+          improvedResponses.intencionalidad?.respuesta_1_1 || ""
+        );
+
+        addSection(
+          "1.2 Objetivos del Proyecto",
+          improvedResponses.intencionalidad?.respuesta_1_2 || ""
+        );
+
+        // === 2. ORIGINALIDAD ===
+        if (yPos > doc.internal.pageSize.height - 60) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.setFillColor(46, 204, 113);
+        doc.rect(margin - 5, yPos - 5, maxWidth + 10, 12, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("2. ORIGINALIDAD", margin, yPos + 5);
+        yPos += 20;
+        doc.setTextColor(0, 0, 0);
+
+        addSection(
+          "2.1 Metodología o Estrategia",
+          improvedResponses.originalidad?.respuesta_2_1 || ""
+        );
+
+        addSection(
+          "2.2 Procedimiento Metodológico",
+          improvedResponses.originalidad?.respuesta_2_2 || ""
+        );
+
+        // === 3. IMPACTO ===
+        if (yPos > doc.internal.pageSize.height - 60) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.setFillColor(230, 126, 34);
+        doc.rect(margin - 5, yPos - 5, maxWidth + 10, 12, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("3. IMPACTO", margin, yPos + 5);
+        yPos += 20;
+        doc.setTextColor(0, 0, 0);
+
+        addSection(
+          "3.1 Resultados de Aprendizaje",
+          improvedResponses.impacto?.respuesta_3_1 || ""
+        );
+
+        addSection(
+          "3.2 Cambios Sistémicos",
+          improvedResponses.impacto?.respuesta_3_2 || ""
+        );
+
+        // === 4. SOSTENIBILIDAD ===
+        if (yPos > doc.internal.pageSize.height - 60) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.setFillColor(26, 188, 156);
+        doc.rect(margin - 5, yPos - 5, maxWidth + 10, 12, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("4. SOSTENIBILIDAD", margin, yPos + 5);
+        yPos += 20;
+        doc.setTextColor(0, 0, 0);
+
+        addSection(
+          "4.1 Estrategias de Continuidad",
+          improvedResponses.sostenibilidad?.respuesta_4_1 || ""
+        );
+
+        addSection(
+          "4.2 Viabilidad y Aliados",
+          improvedResponses.sostenibilidad?.respuesta_4_2 || ""
+        );
+
+        // === PIE DE PÁGINA EN TODAS LAS PÁGINAS ===
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.setTextColor(128, 128, 128);
+          doc.text(
+            `Página ${i} de ${pageCount} | Generado por Agua Segura - Guía Andina`,
+            pageWidth / 2,
+            doc.internal.pageSize.height - 10,
+            { align: "center" }
+          );
+        }
+
+        // Descargar PDF
+        const fileName = `CNPIE_2A_${proyecto.id.replace(
+          /[^a-z0-9]/gi,
+          "_"
+        )}_${new Date().getTime()}.pdf`;
+        doc.save(fileName);
+
+        toast({
+          title: "✅ PDF Generado",
+          description: "El documento se ha descargado correctamente",
+        });
+      } catch (error) {
+        console.error("Error generando PDF:", error);
+        toast({
+          title: "❌ Error",
+          description: "No se pudo generar el PDF",
+          variant: "destructive",
+        });
+      }
+    };
+
+    if (!improvedResponses) {
       return (
         <div className="space-y-6">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">
-                No hay datos de análisis disponibles
-              </p>
-            </CardContent>
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
+              <CardTitle className="text-3xl flex items-center gap-3">
+                <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
+                Generando Respuestas Mejoradas
+              </CardTitle>
+              <CardDescription className="text-base">
+                La IA está procesando tus respuestas...
+              </CardDescription>
+            </CardHeader>
           </Card>
         </div>
       );
     }
 
-    // Verificar si step2Data tiene la estructura de evaluación final (con resumen)
-    const puntajeTotal =
-      (step2Data as any).resumen?.puntaje_total || step2Data.puntaje_total || 0;
-    const puntajeMaximo = 80;
-    const porcentaje = Math.round((puntajeTotal / puntajeMaximo) * 100);
-
-    let nivelFinal = (step2Data as any).resumen?.nivel_final || "DEFICIENTE";
-    if (!(step2Data as any).resumen?.nivel_final) {
-      if (porcentaje >= 90) nivelFinal = "EXCELENTE";
-      else if (porcentaje >= 70) nivelFinal = "BUENO";
-      else if (porcentaje >= 50) nivelFinal = "REGULAR";
-    }
-
-    const handleDownloadReport = () => {
-      const reportData = {
-        proyecto_id: proyecto?.id || "sin-id",
-        tipo_proyecto: proyecto?.tipo_proyecto || "2A",
-        fecha: new Date().toISOString(),
-        puntaje_total: puntajeTotal,
-        puntaje_maximo: puntajeMaximo,
-        nivel: nivelFinal,
-        step1_data: step1Data,
-        step2_analysis: step2Data,
-        step3_answers: step3Answers,
-      };
-
-      const blob = new Blob([JSON.stringify(reportData, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `reporte-cnpie-2a-${
-        proyecto?.id || "proyecto"
-      }-${new Date().getTime()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "✅ Reporte descargado",
-        description: "El archivo JSON ha sido descargado exitosamente",
-      });
+    // Reconstruir el objeto combinado para mostrar
+    const combinedDataForDisplay = {
+      intencionalidad: {
+        respuesta_original_1_1:
+          step1Data?.intencionalidad?.problema_descripcion || "",
+        nueva_respuesta_1_1: step3Answers?.intencionalidad?.respuesta_1 || "",
+        respuesta_original_1_2:
+          step1Data?.intencionalidad?.objetivo_general || "",
+        nueva_respuesta_1_2: step3Answers?.intencionalidad?.respuesta_2 || "",
+      },
+      originalidad: {
+        respuesta_original_2_1:
+          step1Data?.originalidad?.metodologia_descripcion || "",
+        nueva_respuesta_2_1: step3Answers?.originalidad?.respuesta_1 || "",
+        respuesta_original_2_2:
+          step1Data?.originalidad?.procedimiento_metodologico || "",
+        nueva_respuesta_2_2: step3Answers?.originalidad?.respuesta_2 || "",
+      },
+      impacto: {
+        respuesta_original_3_1:
+          step1Data?.impacto?.evidencias_descripcion || "",
+        nueva_respuesta_3_1: step3Answers?.impacto?.respuesta_1 || "",
+        respuesta_original_3_2:
+          step1Data?.impacto?.cambios_practica_docente || "",
+        nueva_respuesta_3_2: step3Answers?.impacto?.respuesta_2 || "",
+      },
+      sostenibilidad: {
+        respuesta_original_4_1:
+          step1Data?.sostenibilidad?.estrategias_continuidad || "",
+        nueva_respuesta_4_1: step3Answers?.sostenibilidad?.respuesta_1 || "",
+        respuesta_original_4_2:
+          step1Data?.sostenibilidad?.estrategias_viabilidad || "",
+        nueva_respuesta_4_2: step3Answers?.sostenibilidad?.respuesta_2 || "",
+      },
     };
 
     return (
       <div className="space-y-6">
         <Card className="border-0 shadow-sm">
-          <CardHeader className="bg-gradient-to-r from-green-50 to-green-100">
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <CheckCircle className="w-6 h-6" />
-              Análisis Completo
-            </CardTitle>
-            <CardDescription>
-              Resultado final con todas las respuestas integradas
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            {/* Puntaje Global */}
-            <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 rounded-xl p-6">
-              <div className="text-center space-y-4">
-                <h3 className="text-xl font-bold">Puntaje Total</h3>
-                <div className="flex items-center justify-center gap-4">
-                  <Badge className="text-4xl px-6 py-3">
-                    {puntajeTotal} / {puntajeMaximo} pts
-                  </Badge>
-                  <Badge variant="outline" className="text-lg">
-                    Nivel: {nivelFinal}
-                  </Badge>
-                </div>
-                <Progress value={porcentaje} className="h-3" />
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-3xl flex items-center gap-3">
+                  <Sparkles className="w-8 h-8 text-purple-600" />
+                  Respuestas Mejoradas - Listas para Copiar
+                </CardTitle>
+                <CardDescription className="text-base mt-2">
+                  La IA ha integrado tus respuestas originales con la
+                  información complementaria del coaching
+                </CardDescription>
               </div>
+              <Button
+                onClick={generatePDF}
+                size="lg"
+                className="gap-2"
+                variant="default"
+              >
+                <Download className="w-5 h-5" />
+                Descargar PDF
+              </Button>
             </div>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-8">
+            {/* Respuestas Mejoradas por la IA */}
+            <Card className="bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200">
+              <CardHeader>
+                <CardTitle className="text-2xl flex items-center gap-3">
+                  <Sparkles className="w-7 h-7 text-purple-600" />✨ Respuestas
+                  Mejoradas por IA
+                </CardTitle>
+                <CardDescription className="text-base">
+                  Las 8 respuestas finales integradas y optimizadas - Listas
+                  para copiar al formato oficial
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* 1.1 */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">🔹 1.1 Problema</CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses.intencionalidad?.respuesta_1_1 ||
+                              "",
+                            "Respuesta 1.1"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses.intencionalidad?.respuesta_1_1}
+                    </p>
+                  </CardContent>
+                </Card>
 
-            {/* Acordeones con resultados por criterio */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Resumen por Criterio</h3>
+                {/* 1.2 */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">
+                        🔹 1.2 Objetivos
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses.intencionalidad?.respuesta_1_2 ||
+                              "",
+                            "Respuesta 1.2"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses.intencionalidad?.respuesta_1_2}
+                    </p>
+                  </CardContent>
+                </Card>
 
-              <Accordion type="multiple" className="w-full">
-                {/* INTENCIONALIDAD */}
-                <AccordionItem
-                  value="intencionalidad"
-                  className="border rounded-lg mb-4"
-                >
-                  <AccordionTrigger className="px-4 hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-blue-500 text-white rounded-lg p-2">
-                          <Lightbulb className="w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                          <p className="font-semibold">1. Intencionalidad</p>
-                          <p className="text-sm text-gray-500">
-                            Problema y objetivos
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">
-                        {(step2Data.intencionalidad?.indicador_1_1?.puntaje ||
-                          0) +
-                          (step2Data.intencionalidad?.indicador_1_2?.puntaje ||
-                            0)}{" "}
-                        / 25 pts
-                      </Badge>
+                {/* 2.1 */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">
+                        🔹 2.1 Metodología
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses.originalidad?.respuesta_2_1 || "",
+                            "Respuesta 2.1"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
-                    <div className="space-y-4">
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          Indicador 1.1: Problema
-                        </h4>
-                        <div className="flex gap-2 mb-2">
-                          <Badge>
-                            {step2Data.intencionalidad?.indicador_1_1
-                              ?.puntaje || 0}{" "}
-                            pts
-                          </Badge>
-                          <Badge variant="outline">
-                            {step2Data.intencionalidad?.indicador_1_1?.nivel}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          {
-                            step2Data.intencionalidad?.indicador_1_1
-                              ?.justificacion
-                          }
-                        </p>
-                      </div>
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          Indicador 1.2: Objetivos
-                        </h4>
-                        <div className="flex gap-2 mb-2">
-                          <Badge>
-                            {step2Data.intencionalidad?.indicador_1_2
-                              ?.puntaje || 0}{" "}
-                            pts
-                          </Badge>
-                          <Badge variant="outline">
-                            {step2Data.intencionalidad?.indicador_1_2?.nivel}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          {
-                            step2Data.intencionalidad?.indicador_1_2
-                              ?.justificacion
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses.originalidad?.respuesta_2_1}
+                    </p>
+                  </CardContent>
+                </Card>
 
-                {/* ORIGINALIDAD */}
-                <AccordionItem
-                  value="originalidad"
-                  className="border rounded-lg mb-4"
-                >
-                  <AccordionTrigger className="px-4 hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-green-500 text-white rounded-lg p-2">
-                          <Sparkles className="w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                          <p className="font-semibold">2. Originalidad</p>
-                          <p className="text-sm text-gray-500">
-                            Metodología y procedimiento
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">
-                        {(step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
-                          (step2Data.originalidad?.indicador_2_2?.puntaje ||
-                            0)}{" "}
-                        / 30 pts
-                      </Badge>
+                {/* 2.2 */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">
+                        🔹 2.2 Procedimiento
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses.originalidad?.respuesta_2_2 || "",
+                            "Respuesta 2.2"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
-                    <div className="space-y-4">
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          Indicador 2.1: Metodología
-                        </h4>
-                        <div className="flex gap-2 mb-2">
-                          <Badge>
-                            {step2Data.originalidad?.indicador_2_1?.puntaje ||
-                              0}{" "}
-                            pts
-                          </Badge>
-                          <Badge variant="outline">
-                            {step2Data.originalidad?.indicador_2_1?.nivel}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          {step2Data.originalidad?.indicador_2_1?.analisis}
-                        </p>
-                      </div>
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          Indicador 2.2: Procedimiento
-                        </h4>
-                        <div className="flex gap-2 mb-2">
-                          <Badge>
-                            {step2Data.originalidad?.indicador_2_2?.puntaje ||
-                              0}{" "}
-                            pts
-                          </Badge>
-                          <Badge variant="outline">
-                            {step2Data.originalidad?.indicador_2_2?.nivel}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          {
-                            step2Data.originalidad?.indicador_2_2
-                              ?.calidad_procedimiento
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses.originalidad?.respuesta_2_2}
+                    </p>
+                  </CardContent>
+                </Card>
 
-                {/* IMPACTO */}
-                <AccordionItem
-                  value="impacto"
-                  className="border rounded-lg mb-4"
-                >
-                  <AccordionTrigger className="px-4 hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-orange-500 text-white rounded-lg p-2">
-                          <Sparkles className="w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                          <p className="font-semibold">3. Impacto</p>
-                          <p className="text-sm text-gray-500">
-                            Resultados y cambios
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">
-                        {(step2Data.impacto?.indicador_3_1?.puntaje || 0) +
-                          (step2Data.impacto?.indicador_3_2?.puntaje || 0)}{" "}
-                        / 15 pts
-                      </Badge>
+                {/* 3.1 */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">
+                        🔹 3.1 Resultados
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses.impacto?.respuesta_3_1 || "",
+                            "Respuesta 3.1"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
-                    <div className="space-y-4">
-                      <div className="bg-orange-50 p-4 rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          Indicador 3.1: Resultados
-                        </h4>
-                        <div className="flex gap-2 mb-2">
-                          <Badge>
-                            {step2Data.impacto?.indicador_3_1?.puntaje || 0} pts
-                          </Badge>
-                          <Badge variant="outline">
-                            {step2Data.impacto?.indicador_3_1?.nivel}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="bg-orange-50 p-4 rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          Indicador 3.2: Cambios Sistémicos
-                        </h4>
-                        <div className="flex gap-2 mb-2">
-                          <Badge>
-                            {step2Data.impacto?.indicador_3_2?.puntaje || 0} pts
-                          </Badge>
-                          <Badge variant="outline">
-                            {step2Data.impacto?.indicador_3_2?.nivel}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses.impacto?.respuesta_3_1}
+                    </p>
+                  </CardContent>
+                </Card>
 
-                {/* SOSTENIBILIDAD */}
-                <AccordionItem
-                  value="sostenibilidad"
-                  className="border rounded-lg mb-4"
-                >
-                  <AccordionTrigger className="px-4 hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-teal-500 text-white rounded-lg p-2">
-                          <Clock className="w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                          <p className="font-semibold">4. Sostenibilidad</p>
-                          <p className="text-sm text-gray-500">
-                            Continuidad y viabilidad
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">
-                        {(step2Data.sostenibilidad?.indicador_4_1?.puntaje ||
-                          0) +
-                          (step2Data.sostenibilidad?.indicador_4_2?.puntaje ||
-                            0) +
-                          (step2Data.sostenibilidad?.indicador_4_3?.puntaje ||
-                            0)}{" "}
-                        / 30 pts
-                      </Badge>
+                {/* 3.2 */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">
+                        🔹 3.2 Cambios Sistémicos
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses.impacto?.respuesta_3_2 || "",
+                            "Respuesta 3.2"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
-                    <div className="space-y-4">
-                      <div className="bg-teal-50 p-4 rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          Indicador 4.1: Continuidad
-                        </h4>
-                        <div className="flex gap-2 mb-2">
-                          <Badge>
-                            {step2Data.sostenibilidad?.indicador_4_1?.puntaje ||
-                              0}{" "}
-                            pts
-                          </Badge>
-                          <Badge variant="outline">
-                            {step2Data.sostenibilidad?.indicador_4_1?.nivel}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="bg-teal-50 p-4 rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          Indicador 4.2: Viabilidad
-                        </h4>
-                        <div className="flex gap-2 mb-2">
-                          <Badge>
-                            {step2Data.sostenibilidad?.indicador_4_2?.puntaje ||
-                              0}{" "}
-                            pts
-                          </Badge>
-                          <Badge variant="outline">
-                            {step2Data.sostenibilidad?.indicador_4_2?.nivel}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="bg-teal-50 p-4 rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          Indicador 4.3: Recursos
-                        </h4>
-                        <div className="flex gap-2 mb-2">
-                          <Badge>
-                            {step2Data.sostenibilidad?.indicador_4_3?.puntaje ||
-                              0}{" "}
-                            pts
-                          </Badge>
-                          <Badge variant="outline">
-                            {step2Data.sostenibilidad?.indicador_4_3?.nivel}
-                          </Badge>
-                        </div>
-                      </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses.impacto?.respuesta_3_2}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* 4.1 */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">
+                        🔹 4.1 Continuidad
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses.sostenibilidad?.respuesta_4_1 ||
+                              "",
+                            "Respuesta 4.1"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses.sostenibilidad?.respuesta_4_1}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* 4.2 */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">
+                        🔹 4.2 Viabilidad
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses.sostenibilidad?.respuesta_4_2 ||
+                              "",
+                            "Respuesta 4.2"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses.sostenibilidad?.respuesta_4_2}
+                    </p>
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
 
             {/* Botones de acción */}
-            <div className="flex justify-between items-center pt-4 border-t">
+            <div className="flex justify-between items-center pt-6 border-t">
               <Button
                 variant="outline"
                 onClick={() => setCurrentStep(3)}
@@ -2676,12 +3019,18 @@ export default function Etapa1Acelerador1() {
                 Volver
               </Button>
               <Button
-                onClick={handleDownloadReport}
+                onClick={() => {
+                  toast({
+                    title: "💾 Listo",
+                    description:
+                      "Todas las respuestas están disponibles para copiar",
+                  });
+                }}
                 size="lg"
                 className="gap-2"
               >
-                <Download className="w-5 h-5" />
-                Descargar Reporte
+                <Save className="w-5 h-5" />
+                Cerrar
               </Button>
             </div>
           </CardContent>
