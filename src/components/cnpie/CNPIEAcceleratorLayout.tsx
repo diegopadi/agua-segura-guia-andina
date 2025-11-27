@@ -92,18 +92,9 @@ export function CNPIEAcceleratorLayout({
                 <p className="text-muted-foreground">{descripcion}</p>
               )}
               <p className="text-sm text-muted-foreground mt-2">
-                Acelerador {aceleradorNumber}
+                Acelerador 
               </p>
             </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mt-6">
-            <div className="flex justify-between text-sm mb-2">
-              <span>Progreso del acelerador</span>
-              <span>{currentProgress}%</span>
-            </div>
-            <Progress value={currentProgress} className="h-2" />
           </div>
         </div>
 
