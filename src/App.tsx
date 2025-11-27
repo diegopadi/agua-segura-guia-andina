@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -47,6 +46,7 @@ import Etapa3Acelerador8 from "./pages/cnpie/2a/Etapa3Acelerador8";
 import ProyectoCompletado from "./pages/cnpie/2a/ProyectoCompletado";
 import Etapa3EvaluacionFinal from "./pages/etapa3/Etapa3EvaluacionFinal";
 import Etapa1Acelerador12b from "./pages/cnpie/2b/Etapa1Acelerador12b";
+import Etapa1Acelerador12c from "./pages/cnpie/2c/Etapa1Acelerador12c";
 
 const queryClient = new QueryClient();
 
@@ -60,58 +60,141 @@ const App = () => (
           <Routes>
             {/* Public survey route - NO AUTH REQUIRED */}
             <Route path="/encuesta/:token" element={<PublicSurvey />} />
-            
-            {/* Protected routes - AUTH REQUIRED */}
-            <Route path="/*" element={
-              <AuthGuard>
-                <Layout>
-                  <Routes>
-                    <Route path="/" element={<Inicio />} />
-                    <Route path="/proyectos" element={<Proyectos />} />
-                    <Route path="/proyectos/generacion" element={<Generacion />} />
-                    <Route path="/proyectos/manual" element={<Manual />} />
-                    <Route path="/proyectos/2a" element={<Proyecto2A />} />
-                    <Route path="/proyectos/2b" element={<Proyecto2B />} />
-                    <Route path="/proyectos/2c" element={<Proyecto2C />} />
-                    <Route path="/repositorio" element={<Repositorio />} />
-                    <Route path="/mini-cambio-proyecto" element={<MiniCambioProyecto />} />
-                    {/* CNPIE Routes */}
-                    <Route path="/cnpie/2a/etapa1/acelerador1" element={<Etapa1Acelerador1 />} />
-                    <Route path="/cnpie/2B/etapa1/acelerador1" element={<Etapa1Acelerador12b/>} />
 
-                    <Route path="/cnpie/2a/etapa2/overview" element={<Etapa2Overview />} />
-                    <Route path="/cnpie/2a/etapa2/acelerador2" element={<Etapa2Acelerador2 />} />
-                    <Route path="/cnpie/2a/etapa2/acelerador3" element={<Etapa2Acelerador3 />} />
-                    <Route path="/cnpie/2a/etapa2/acelerador4" element={<Etapa2Acelerador4 />} />
-                    <Route path="/cnpie/2a/etapa2/acelerador5" element={<Etapa2Acelerador5 />} />
-                    <Route path="/cnpie/2a/etapa2/acelerador6" element={<Etapa2Acelerador6 />} />
-                    <Route path="/cnpie/2a/etapa2/acelerador7" element={<Etapa2Acelerador7 />} />
-                    <Route path="/cnpie/2a/etapa2/evaluacion-final" element={<Etapa2EvaluacionFinal />} />
-                    <Route path="/cnpie/2a/etapa3/acelerador8" element={<Etapa3Acelerador8 />} />
-                    <Route path="/cnpie/2a/completado" element={<ProyectoCompletado />} />
-                    <Route path="/etapa1" element={<Etapa1 />} />
-                    <Route path="/etapa1/acelerador1" element={<Acelerador1 />} />
-                    <Route path="/etapa1/acelerador2" element={<Acelerador2 />} />
-                    <Route path="/etapa1/acelerador3" element={<Acelerador3 />} />
-                    <Route path="/etapa2" element={<Etapa2 />} />
-                    <Route path="/etapa2/acelerador4" element={<Acelerador4 />} />
-                    <Route path="/etapa2/acelerador5" element={<Acelerador5 />} />
-                    <Route path="/etapa3" element={<Etapa3 />} />
-            <Route path="/etapa3/acelerador8" element={<Acelerador8 />} />
-            <Route path="/etapa3/acelerador9" element={<Acelerador9 />} />
-            <Route path="/etapa3/acelerador10" element={<Acelerador10 />} />
-            <Route path="/etapa3/acelerador10/visor" element={<A8FinalViewer />} />
-            <Route path="/etapa3/evaluacion-final" element={<Etapa3EvaluacionFinal />} />
-                    <Route path="/documentos" element={<Documentos />} />
-                    <Route path="/ayuda" element={<Ayuda />} />
-                    <Route path="/administracion" element={<Admin />} />
-                    <Route path="/pitch" element={<Pitch />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Layout>
-              </AuthGuard>
-            } />
+            {/* Protected routes - AUTH REQUIRED */}
+            <Route
+              path="/*"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <Routes>
+                      <Route path="/" element={<Inicio />} />
+                      <Route path="/proyectos" element={<Proyectos />} />
+                      <Route
+                        path="/proyectos/generacion"
+                        element={<Generacion />}
+                      />
+                      <Route path="/proyectos/manual" element={<Manual />} />
+                      <Route path="/proyectos/2a" element={<Proyecto2A />} />
+                      <Route path="/proyectos/2b" element={<Proyecto2B />} />
+                      <Route path="/proyectos/2c" element={<Proyecto2C />} />
+                      <Route path="/repositorio" element={<Repositorio />} />
+                      <Route
+                        path="/mini-cambio-proyecto"
+                        element={<MiniCambioProyecto />}
+                      />
+                      {/* CNPIE Routes */}
+                      <Route
+                        path="/cnpie/2a/etapa1/acelerador1"
+                        element={<Etapa1Acelerador1 />}
+                      />
+                      <Route
+                        path="/cnpie/2B/etapa1/acelerador1"
+                        element={<Etapa1Acelerador12b />}
+                      />
+                      <Route
+                        path="/cnpie/2C/etapa1/acelerador1"
+                        element={<Etapa1Acelerador12c />}
+                      />
+                      <Route
+                        path="/cnpie/2d/etapa1/acelerador1"
+                        element={<Etapa1Acelerador12c />}
+                      />
+
+                      <Route
+                        path="/cnpie/2a/etapa2/overview"
+                        element={<Etapa2Overview />}
+                      />
+                      <Route
+                        path="/cnpie/2a/etapa2/acelerador2"
+                        element={<Etapa2Acelerador2 />}
+                      />
+                      <Route
+                        path="/cnpie/2a/etapa2/acelerador3"
+                        element={<Etapa2Acelerador3 />}
+                      />
+                      <Route
+                        path="/cnpie/2a/etapa2/acelerador4"
+                        element={<Etapa2Acelerador4 />}
+                      />
+                      <Route
+                        path="/cnpie/2a/etapa2/acelerador5"
+                        element={<Etapa2Acelerador5 />}
+                      />
+                      <Route
+                        path="/cnpie/2a/etapa2/acelerador6"
+                        element={<Etapa2Acelerador6 />}
+                      />
+                      <Route
+                        path="/cnpie/2a/etapa2/acelerador7"
+                        element={<Etapa2Acelerador7 />}
+                      />
+                      <Route
+                        path="/cnpie/2a/etapa2/evaluacion-final"
+                        element={<Etapa2EvaluacionFinal />}
+                      />
+                      <Route
+                        path="/cnpie/2a/etapa3/acelerador8"
+                        element={<Etapa3Acelerador8 />}
+                      />
+                      <Route
+                        path="/cnpie/2a/completado"
+                        element={<ProyectoCompletado />}
+                      />
+                      <Route path="/etapa1" element={<Etapa1 />} />
+                      <Route
+                        path="/etapa1/acelerador1"
+                        element={<Acelerador1 />}
+                      />
+                      <Route
+                        path="/etapa1/acelerador2"
+                        element={<Acelerador2 />}
+                      />
+                      <Route
+                        path="/etapa1/acelerador3"
+                        element={<Acelerador3 />}
+                      />
+                      <Route path="/etapa2" element={<Etapa2 />} />
+                      <Route
+                        path="/etapa2/acelerador4"
+                        element={<Acelerador4 />}
+                      />
+                      <Route
+                        path="/etapa2/acelerador5"
+                        element={<Acelerador5 />}
+                      />
+                      <Route path="/etapa3" element={<Etapa3 />} />
+                      <Route
+                        path="/etapa3/acelerador8"
+                        element={<Acelerador8 />}
+                      />
+                      <Route
+                        path="/etapa3/acelerador9"
+                        element={<Acelerador9 />}
+                      />
+                      <Route
+                        path="/etapa3/acelerador10"
+                        element={<Acelerador10 />}
+                      />
+                      <Route
+                        path="/etapa3/acelerador10/visor"
+                        element={<A8FinalViewer />}
+                      />
+                      <Route
+                        path="/etapa3/evaluacion-final"
+                        element={<Etapa3EvaluacionFinal />}
+                      />
+                      <Route path="/documentos" element={<Documentos />} />
+                      <Route path="/ayuda" element={<Ayuda />} />
+                      <Route path="/administracion" element={<Admin />} />
+                      <Route path="/pitch" element={<Pitch />} />
+                      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Layout>
+                </AuthGuard>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

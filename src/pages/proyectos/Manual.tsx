@@ -351,7 +351,7 @@ export default function Manual() {
                   </p>
                 </div>
                 <Button
-                  onClick={() => navigate("/proyectos/2c")}
+                  onClick={() => navigate("/cnpie/2C/etapa1/acelerador1")}
                   className="w-full bg-white font-medium hover:bg-white/90"
                   style={{ color: "#1BBEAE" }}
                 >
@@ -391,7 +391,7 @@ export default function Manual() {
                   </p>
                 </div>
                 <Button
-                  onClick={() => navigate("/proyectos/2d")}
+                  onClick={() => navigate("/cnpie/2D/etapa1/acelerador1")}
                   className="w-full bg-white font-medium hover:bg-white/90"
                   style={{ color: "#50C9BD" }}
                 >
