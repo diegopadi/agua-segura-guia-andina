@@ -160,18 +160,18 @@ export default function Etapa1Acelerador12d() {
   const [saving, setSaving] = useState(false);
   const [generatingQuestions, setGeneratingQuestions] = useState(false);
   const [generatedQuestions, setGeneratedQuestions] = useState<{
-    intencionalidad?: {
+    formulacion?: {
       titulo: string;
       introduccion: string;
       preguntas: string[];
     };
-    originalidad?: {
+    participacion?: {
       titulo: string;
       introduccion: string;
       preguntas: string[];
     };
-    impacto?: { titulo: string; introduccion: string; preguntas: string[] };
-    sostenibilidad?: {
+    reflexion?: { titulo: string; introduccion: string; preguntas: string[] };
+    consistencia?: {
       titulo: string;
       introduccion: string;
       preguntas: string[];
@@ -553,7 +553,7 @@ export default function Etapa1Acelerador12d() {
       }
 
       const requestPromise = fetch(
-        `https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/generate-survey-questions-2B`,
+        `https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/generate-survey-questions-2D`,
         {
           method: "POST",
           headers: {
@@ -578,7 +578,7 @@ export default function Etapa1Acelerador12d() {
       }
 
       const result = await response.json();
-      console.log("🟢 Respuesta de generate-survey-questions-2B:", result);
+      console.log("🟢 Respuesta de generate-survey-questions-2D:", result);
 
       if (result.success && result.questions) {
         console.log("🟢 Preguntas recibidas:", result.questions);
