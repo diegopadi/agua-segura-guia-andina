@@ -966,3 +966,268 @@ export interface Etapa1Acelerador1Data_2C {
   step3_data?: FormDataStep3_2C;
   step4_data?: FinalAnalysisStep4_2C;
 }
+
+// ============================================
+// TIPOS PARA CATEGORÍA 2D - IAPE (Investigación-Acción Participativa)
+// ============================================
+
+export interface FormDataStep1_2D {
+  formulacion: {
+    problema_causas_consecuencias: string; // 1.1 - Máx 5000 caracteres
+    justificacion: string; // 1.2 - Máx 3000 caracteres
+    preguntas_investigacion: string; // 1.3 - Máx 1500 caracteres
+    objetivos: string; // 1.4 - Máx 1500 caracteres
+  };
+  participacion: {
+    actores_roles: string; // 2.1 - Máx 3000 caracteres
+  };
+  reflexion: {
+    estrategias_reflexion: string; // 3.1 - Máx 3000 caracteres
+  };
+  consistencia: {
+    procedimiento_metodologico: string; // 4.1 - Máx 6000 caracteres
+    tecnicas_instrumentos: string; // 4.2 - Máx 5000 caracteres
+    plan_acciones: Array<{
+      objetivo: string;
+      acciones: string;
+      recursos: string;
+      responsable: string;
+      cronograma: {
+        M: boolean;
+        A: boolean;
+        M2: boolean;
+        J: boolean;
+        J2: boolean;
+        A2: boolean;
+        S: boolean;
+        O: boolean;
+        N: boolean;
+        D: boolean;
+      };
+    }>; // 4.3 - Matriz de acciones
+    bienes_servicios: BienServicio[]; // 4.4 - Lista de bienes
+  };
+}
+
+export interface AnalysisStep2_2D {
+  formulacion?: {
+    indicador_1_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_1_2?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_1_3?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_1_4?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+  };
+  participacion?: {
+    indicador_2_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+  };
+  reflexion?: {
+    indicador_3_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+  };
+  consistencia?: {
+    indicador_4_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_4_2?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_4_3?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_4_4?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+  };
+  puntaje_total?: number;
+  observacion_general?: string;
+}
+
+export interface FormDataStep3_2D {
+  formulacion?: {
+    respuesta_1: string;
+    respuesta_2: string;
+    respuesta_3: string;
+    respuesta_4: string;
+  };
+  participacion?: {
+    respuesta_1: string;
+  };
+  reflexion?: {
+    respuesta_1: string;
+  };
+  consistencia?: {
+    respuesta_1: string;
+    respuesta_2: string;
+    respuesta_3: string;
+    respuesta_4: string;
+  };
+}
+
+export interface FinalAnalysisStep4_2D {
+  formulacion?: {
+    respuesta_1_1: string;
+    respuesta_1_2: string;
+    respuesta_1_3: string;
+    respuesta_1_4: string;
+  };
+  participacion?: {
+    respuesta_2_1: string;
+  };
+  reflexion?: {
+    respuesta_3_1: string;
+  };
+  consistencia?: {
+    respuesta_4_1: string;
+    respuesta_4_2: string;
+    respuesta_4_3: string;
+    respuesta_4_4: string;
+  };
+}
+
+// Límites de caracteres para 2D
+export const ANEXO_2D_LIMITS = {
+  formulacion: {
+    problema_causas_consecuencias: 5000,
+    justificacion: 3000,
+    preguntas_investigacion: 1500,
+    objetivos: 1500,
+  },
+  participacion: {
+    actores_roles: 3000,
+  },
+  reflexion: {
+    estrategias_reflexion: 3000,
+  },
+  consistencia: {
+    procedimiento_metodologico: 6000,
+    tecnicas_instrumentos: 5000,
+  },
+};
+
+// Items de la ficha 2D
+export const ITEMS_FICHA_2D = [
+  {
+    numero: 1,
+    titulo: "FORMULACIÓN DEL PROBLEMA Y OBJETIVO DE LA INVESTIGACIÓN",
+    preguntas: [
+      {
+        numero: "1.1",
+        texto:
+          "Identifica el problema de investigación, sus causas y consecuencias como resultado de una práctica dialógica y reflexiva del equipo investigador. Sustenta este análisis con evidencias cualitativas y cuantitativas confiables y de fuentes primarias y secundarias.",
+        campo: "problema_causas_consecuencias",
+        limite: 5000,
+      },
+      {
+        numero: "1.2",
+        texto:
+          "Justifica las razones fundamentales y convincentes que demuestran la necesidad, importancia y relevancia de realizar la investigación, vinculado a la utilidad social y transformadora de la innovación educativa, tanto para la comunidad educativa como para el conocimiento social en general.",
+        campo: "justificacion",
+        limite: 3000,
+      },
+      {
+        numero: "1.3",
+        texto:
+          "Formula la pregunta de investigación principal y las preguntas de investigación específicas, asegurando que estén vinculadas al problema identificado en la investigación.",
+        campo: "preguntas_investigacion",
+        limite: 1500,
+      },
+      {
+        numero: "1.4",
+        texto:
+          "Formula el objetivo general y los objetivos específicos de la investigación, asegurando que guarden relación con el problema y las preguntas de investigación.",
+        campo: "objetivos",
+        limite: 1500,
+      },
+    ],
+  },
+  {
+    numero: 2,
+    titulo: "PARTICIPACIÓN DE LOS ACTORES EN LA COMUNIDAD EDUCATIVA",
+    preguntas: [
+      {
+        numero: "2.1",
+        texto:
+          "Identifica a los principales actores del equipo de investigación y describe el rol que desempeñarán en el desarrollo del proyecto, en el marco de la metodología IAPE, poniendo a los estudiantes en el centro del proceso.",
+        campo: "actores_roles",
+        limite: 3000,
+      },
+    ],
+  },
+  {
+    numero: 3,
+    titulo: "REFLEXIÓN DE LOS ACTORES EN LA COMUNIDAD EDUCATIVA",
+    preguntas: [
+      {
+        numero: "3.1",
+        texto:
+          "Sustenta las estrategias utilizadas para promover la participación activa y la reflexión dialógica de los actores involucrados en la investigación, en el marco de la metodología IAPE.",
+        campo: "estrategias_reflexion",
+        limite: 3000,
+      },
+    ],
+  },
+  {
+    numero: 4,
+    titulo: "CONSISTENCIA DE LA INVESTIGACIÓN",
+    preguntas: [
+      {
+        numero: "4.1",
+        texto:
+          "Describe y explica el procedimiento metodológico que refleje el proceso cíclico a seguir para alcanzar los objetivos de la investigación en el marco de la IAPE.",
+        campo: "procedimiento_metodologico",
+        limite: 6000,
+      },
+      {
+        numero: "4.2",
+        texto:
+          "Describe las técnicas e instrumentos utilizados para la recolección y análisis de datos en el marco de la IAPE, asegurando su vinculación con el logro de los objetivos y la participación activa de los actores del equipo de investigación.",
+        campo: "tecnicas_instrumentos",
+        limite: 5000,
+      },
+      {
+        numero: "4.3",
+        texto:
+          "Presenta un plan de acciones y responsabilidades en el marco de la IAPE, vinculado al logro de los objetivos e involucrando la participación activa de los actores del equipo de investigación.",
+        campo: "plan_acciones",
+        tipo: "matriz",
+      },
+      {
+        numero: "4.4",
+        texto:
+          "Describe la pertinencia de los bienes y servicios que demanda el proyecto para garantizar su sostenibilidad y continuidad a largo plazo.",
+        campo: "bienes_servicios",
+        tipo: "tabla",
+      },
+    ],
+  },
+];
