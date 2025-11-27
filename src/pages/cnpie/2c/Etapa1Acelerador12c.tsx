@@ -54,19 +54,19 @@ import {
 import { DocumentFieldSchema } from "@/types/document-extraction";
 import {
   BienServicio,
-  ANEXO_2B_LIMITS,
-  ITEMS_FICHA_2B,
-  FormDataStep1_2B,
-  AnalysisStep2_2B,
-  FormDataStep3_2B,
-  FinalAnalysisStep4_2B,
+  ANEXO_2C_LIMITS,
+  ITEMS_FICHA_2C,
+  FormDataStep1_2C,
+  AnalysisStep2_2C,
+  FormDataStep3_2C,
+  FinalAnalysisStep4_2C,
 } from "@/types/cnpie";
 
 // Alias para mantener compatibilidad con el código existente
-type FormDataStep1 = FormDataStep1_2B;
-type AnalysisStep2 = AnalysisStep2_2B;
-type FormDataStep3 = FormDataStep3_2B;
-type FinalAnalysisStep4 = FinalAnalysisStep4_2B;
+type FormDataStep1 = FormDataStep1_2C;
+type AnalysisStep2 = AnalysisStep2_2C;
+type FormDataStep3 = FormDataStep3_2C;
+type FinalAnalysisStep4 = FinalAnalysisStep4_2C;
 
 // Pasos del flujo
 const STEPS = [
@@ -103,15 +103,16 @@ export default function Etapa1Acelerador12c() {
     validateAccelerator,
     getAcceleratorData,
     getAllData,
-  } = useCNPIEProject("2B");
+  } = useCNPIEProject("2C");
 
-  const { rubricas, getCriterioByName } = useCNPIERubric("2B");
+  const { rubricas, getCriterioByName } = useCNPIERubric("2C");
   const { toast } = useToast();
 
   const rubricaIntencionalidad = getCriterioByName("Intencionalidad");
   const rubricaOriginalidad = getCriterioByName("Originalidad");
   const rubricaPertinencia = getCriterioByName("Pertinencia");
-  const rubricaImpacto = getCriterioByName("Impacto");
+  const rubricaParticipacion = getCriterioByName("Participación");
+  const rubricaReflexion = getCriterioByName("Reflexión");
   const rubricaSostenibilidad = getCriterioByName("Sostenibilidad");
 
   // Estado del paso actual y pasos completados
@@ -133,7 +134,6 @@ export default function Etapa1Acelerador12c() {
     originalidad: {
       metodologia_descripcion: "",
       procedimiento_metodologico: "",
-      video_url: "",
     },
 
     // CRITERIO 3: PERTINENCIA
@@ -142,15 +142,17 @@ export default function Etapa1Acelerador12c() {
       contexto_cultural: "",
     },
 
-    // CRITERIO 4: IMPACTO
-    impacto: {
-      evidencias_descripcion: "",
-      cambios_practica_docente: "",
-      cambios_gestion_escolar: "",
-      cambios_comunidad: "",
+    // CRITERIO 4: PARTICIPACIÓN
+    participacion: {
+      actores_roles: "",
     },
 
-    // CRITERIO 5: SOSTENIBILIDAD
+    // CRITERIO 5: REFLEXIÓN
+    reflexion: {
+      mecanismos_reflexion: "",
+    },
+
+    // CRITERIO 6: SOSTENIBILIDAD
     sostenibilidad: {
       estrategias_viabilidad: "",
       bienes_servicios: [],
@@ -169,13 +171,19 @@ export default function Etapa1Acelerador12c() {
       respuesta_2_1: string;
       respuesta_2_2: string;
     };
-    impacto?: {
+    pertinencia?: {
       respuesta_3_1: string;
       respuesta_3_2: string;
     };
-    sostenibilidad?: {
+    participacion?: {
       respuesta_4_1: string;
-      respuesta_4_2: string;
+    };
+    reflexion?: {
+      respuesta_5_1: string;
+    };
+    sostenibilidad?: {
+      respuesta_6_1: string;
+      respuesta_6_2: string;
     };
   } | null>(null);
 
@@ -215,7 +223,8 @@ export default function Etapa1Acelerador12c() {
       oldData.intencionalidad &&
       oldData.originalidad &&
       oldData.pertinencia &&
-      oldData.impacto &&
+      oldData.participacion &&
+      oldData.reflexion &&
       oldData.sostenibilidad
     ) {
       return oldData as FormDataStep1;
@@ -236,24 +245,16 @@ export default function Etapa1Acelerador12c() {
           (oldData.metodologia_descripcion as string) || "",
         procedimiento_metodologico:
           (oldData.procedimiento_metodologico as string) || "",
-        video_url: (oldData.video_url as string) || "",
       },
       pertinencia: {
         intereses_necesidades: (oldData.intereses_necesidades as string) || "",
         contexto_cultural: (oldData.contexto_cultural as string) || "",
       },
-      impacto: {
-        evidencias_descripcion:
-          (oldData.impacto_evidencias as string) ||
-          (oldData.evidencias_descripcion as string) ||
-          "",
-        cambios_practica_docente:
-          (oldData.impacto_cambios as string) ||
-          (oldData.cambios_practica_docente as string) ||
-          "",
-        cambios_gestion_escolar:
-          (oldData.cambios_gestion_escolar as string) || "",
-        cambios_comunidad: (oldData.cambios_comunidad as string) || "",
+      participacion: {
+        actores_roles: (oldData.actores_roles as string) || "",
+      },
+      reflexion: {
+        mecanismos_reflexion: (oldData.mecanismos_reflexion as string) || "",
       },
       sostenibilidad: {
         estrategias_viabilidad:
@@ -764,13 +765,14 @@ export default function Etapa1Acelerador12c() {
             step1Data.pertinencia?.contexto_cultural || "",
           nueva_respuesta_3_2: step3Answers.pertinencia?.respuesta_2 || "",
         },
-        impacto: {
-          respuesta_original_4_1:
-            step1Data.impacto?.evidencias_descripcion || "",
-          nueva_respuesta_4_1: step3Answers.impacto?.respuesta_1 || "",
-          respuesta_original_4_2:
-            step1Data.impacto?.cambios_practica_docente || "",
-          nueva_respuesta_4_2: step3Answers.impacto?.respuesta_2 || "",
+        participacion: {
+          respuesta_original_4_1: step1Data.participacion?.actores_roles || "",
+          nueva_respuesta_4_1: step3Answers.participacion?.respuesta_1 || "",
+        },
+        reflexion: {
+          respuesta_original_5_1:
+            step1Data.reflexion?.mecanismos_reflexion || "",
+          nueva_respuesta_5_1: step3Answers.reflexion?.respuesta_1 || "",
         },
         sostenibilidad: {
           respuesta_original_5_1:
@@ -785,7 +787,7 @@ export default function Etapa1Acelerador12c() {
         timestamp: new Date().toISOString(),
       };
 
-      console.log("📦 OBJETO COMBINADO PARA IA (2B):");
+      console.log("📦 OBJETO COMBINADO PARA IA (2C):");
       console.log("========================================");
       console.log("1. INTENCIONALIDAD:");
       console.log(
@@ -844,40 +846,42 @@ export default function Etapa1Acelerador12c() {
         "   Nueva Respuesta 3.2:",
         combinedData.pertinencia.nueva_respuesta_3_2
       );
-      console.log("\n4. IMPACTO:");
+      console.log("\n4. PARTICIPACIÓN:");
       console.log(
         "   Respuesta Original 4.1:",
-        combinedData.impacto.respuesta_original_4_1.substring(0, 100) + "..."
+        combinedData.participacion.respuesta_original_4_1.substring(0, 100) +
+          "..."
       );
       console.log(
         "   Nueva Respuesta 4.1:",
-        combinedData.impacto.nueva_respuesta_4_1
+        combinedData.participacion.nueva_respuesta_4_1
       );
-      console.log(
-        "   Respuesta Original 4.2:",
-        combinedData.impacto.respuesta_original_4_2.substring(0, 100) + "..."
-      );
-      console.log(
-        "   Nueva Respuesta 4.2:",
-        combinedData.impacto.nueva_respuesta_4_2
-      );
-      console.log("\n5. SOSTENIBILIDAD:");
+      console.log("\n5. REFLEXIÓN:");
       console.log(
         "   Respuesta Original 5.1:",
+        combinedData.reflexion.respuesta_original_5_1.substring(0, 100) + "..."
+      );
+      console.log(
+        "   Nueva Respuesta 5.1:",
+        combinedData.reflexion.nueva_respuesta_5_1
+      );
+      console.log("\n6. SOSTENIBILIDAD:");
+      console.log(
+        "   Respuesta Original 6.1:",
         combinedData.sostenibilidad.respuesta_original_5_1.substring(0, 100) +
           "..."
       );
       console.log(
-        "   Nueva Respuesta 5.1:",
+        "   Nueva Respuesta 6.1:",
         combinedData.sostenibilidad.nueva_respuesta_5_1
       );
       console.log(
-        "   Respuesta Original 5.2:",
+        "   Respuesta Original 6.2:",
         combinedData.sostenibilidad.respuesta_original_5_2.substring(0, 100) +
           "..."
       );
       console.log(
-        "   Nueva Respuesta 5.2:",
+        "   Nueva Respuesta 6.2:",
         combinedData.sostenibilidad.nueva_respuesta_5_2
       );
       console.log("========================================");
@@ -1017,15 +1021,15 @@ export default function Etapa1Acelerador12c() {
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-base">
-                      1. {ITEMS_FICHA_2B[0].titulo}
+                      1. {ITEMS_FICHA_2C[0].titulo}
                     </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
                   {/* Pregunta 1.1 */}
                   <QuestionCardWithTextarea
-                    questionNumber={ITEMS_FICHA_2B[0].preguntas[0].numero}
-                    questionText={ITEMS_FICHA_2B[0].preguntas[0].texto}
+                    questionNumber={ITEMS_FICHA_2C[0].preguntas[0].numero}
+                    questionText={ITEMS_FICHA_2C[0].preguntas[0].texto}
                     value={step1Data.intencionalidad?.problema_descripcion}
                     onChange={(value) =>
                       setStep1Data({
@@ -1038,13 +1042,13 @@ export default function Etapa1Acelerador12c() {
                     }
                     placeholder="Describe el problema educativo identificado en tu IE..."
                     minHeight="min-h-[200px]"
-                    maxLength={ANEXO_2B_LIMITS.PROBLEMA_CARACTERIZACION}
+                    maxLength={ANEXO_2C_LIMITS.PROBLEMA_CARACTERIZACION}
                   />
 
                   {/* Pregunta 1.2 */}
                   <QuestionCardWithTextarea
-                    questionNumber={ITEMS_FICHA_2B[0].preguntas[1].numero}
-                    questionText={ITEMS_FICHA_2B[0].preguntas[1].texto}
+                    questionNumber={ITEMS_FICHA_2C[0].preguntas[1].numero}
+                    questionText={ITEMS_FICHA_2C[0].preguntas[1].texto}
                     value={step1Data.intencionalidad?.objetivo_general}
                     onChange={(value) =>
                       setStep1Data({
@@ -1057,7 +1061,7 @@ export default function Etapa1Acelerador12c() {
                     }
                     placeholder="Redacta el objetivo general del PIE..."
                     minHeight="min-h-[120px]"
-                    maxLength={ANEXO_2B_LIMITS.OBJETIVOS}
+                    maxLength={ANEXO_2C_LIMITS.OBJETIVOS}
                   />
                 </AccordionContent>
               </AccordionItem>
@@ -1067,15 +1071,15 @@ export default function Etapa1Acelerador12c() {
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-base">
-                      2. {ITEMS_FICHA_2B[1].titulo}
+                      2. {ITEMS_FICHA_2C[1].titulo}
                     </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
                   {/* Pregunta 2.1 */}
                   <QuestionCardWithTextarea
-                    questionNumber={ITEMS_FICHA_2B[1].preguntas[0].numero}
-                    questionText={ITEMS_FICHA_2B[1].preguntas[0].texto}
+                    questionNumber={ITEMS_FICHA_2C[1].preguntas[0].numero}
+                    questionText={ITEMS_FICHA_2C[1].preguntas[0].texto}
                     value={step1Data.originalidad?.metodologia_descripcion}
                     onChange={(value) =>
                       setStep1Data({
@@ -1088,14 +1092,14 @@ export default function Etapa1Acelerador12c() {
                     }
                     placeholder="Describe la metodología pedagógica..."
                     minHeight="min-h-[150px]"
-                    maxLength={ANEXO_2B_LIMITS.METODOLOGIA_DESCRIPCION}
+                    maxLength={ANEXO_2C_LIMITS.METODOLOGIA_DESCRIPCION}
                   />
 
                   {/* Pregunta 2.2 */}
                   <div className="space-y-4">
                     <QuestionCardWithTextarea
-                      questionNumber={ITEMS_FICHA_2B[1].preguntas[1].numero}
-                      questionText={ITEMS_FICHA_2B[1].preguntas[1].texto}
+                      questionNumber={ITEMS_FICHA_2C[1].preguntas[1].numero}
+                      questionText={ITEMS_FICHA_2C[1].preguntas[1].texto}
                       value={step1Data.originalidad.procedimiento_metodologico}
                       onChange={(value) =>
                         setStep1Data({
@@ -1108,29 +1112,8 @@ export default function Etapa1Acelerador12c() {
                       }
                       placeholder="Describe el procedimiento paso a paso..."
                       minHeight="min-h-[200px]"
-                      maxLength={ANEXO_2B_LIMITS.PROCEDIMIENTO_METODOLOGICO}
+                      maxLength={ANEXO_2C_LIMITS.PROCEDIMIENTO_METODOLOGICO}
                     />
-
-                    {/* Video opcional */}
-                    <div className="pt-2">
-                      <Label className="text-sm font-medium mb-2 block">
-                        Video explicativo (opcional - máximo 3 minutos)
-                      </Label>
-                      <Input
-                        type="url"
-                        value={step1Data.originalidad.video_url || ""}
-                        onChange={(e) =>
-                          setStep1Data({
-                            ...step1Data,
-                            originalidad: {
-                              ...step1Data.originalidad,
-                              video_url: e.target.value,
-                            },
-                          })
-                        }
-                        placeholder="https://youtube.com/watch?v=..."
-                      />
-                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -1140,15 +1123,15 @@ export default function Etapa1Acelerador12c() {
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-base">
-                      3. {ITEMS_FICHA_2B[2].titulo}
+                      3. {ITEMS_FICHA_2C[2].titulo}
                     </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
                   {/* Pregunta 3.1 */}
                   <QuestionCardWithTextarea
-                    questionNumber={ITEMS_FICHA_2B[2].preguntas[0].numero}
-                    questionText={ITEMS_FICHA_2B[2].preguntas[0].texto}
+                    questionNumber={ITEMS_FICHA_2C[2].preguntas[0].numero}
+                    questionText={ITEMS_FICHA_2C[2].preguntas[0].texto}
                     value={step1Data.pertinencia.intereses_necesidades || ""}
                     onChange={(value) =>
                       setStep1Data({
@@ -1161,13 +1144,13 @@ export default function Etapa1Acelerador12c() {
                     }
                     placeholder="Describe cómo el proyecto responde a los intereses..."
                     minHeight="min-h-[150px]"
-                    maxLength={ANEXO_2B_LIMITS.PERTINENCIA_INTERESES}
+                    maxLength={ANEXO_2C_LIMITS.PERTINENCIA_INTERESES}
                   />
 
                   {/* Pregunta 3.2 */}
                   <QuestionCardWithTextarea
-                    questionNumber={ITEMS_FICHA_2B[2].preguntas[1].numero}
-                    questionText={ITEMS_FICHA_2B[2].preguntas[1].texto}
+                    questionNumber={ITEMS_FICHA_2C[2].preguntas[1].numero}
+                    questionText={ITEMS_FICHA_2C[2].preguntas[1].texto}
                     value={step1Data.pertinencia.contexto_cultural || ""}
                     onChange={(value) =>
                       setStep1Data({
@@ -1180,75 +1163,87 @@ export default function Etapa1Acelerador12c() {
                     }
                     placeholder="Describe cómo el proyecto se adapta al contexto..."
                     minHeight="min-h-[150px]"
-                    maxLength={ANEXO_2B_LIMITS.PERTINENCIA_CONTEXTO}
+                    maxLength={ANEXO_2C_LIMITS.PERTINENCIA_CONTEXTO}
                   />
                 </AccordionContent>
               </AccordionItem>
 
-              {/* SECCIÓN 4: IMPACTO DE LA IMPLEMENTACIÓN */}
+              {/* SECCIÓN 4: PARTICIPACIÓN */}
               <AccordionItem value="item-4" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-base">
-                      4. {ITEMS_FICHA_2B[3].titulo}
+                      4. {ITEMS_FICHA_2C[3].titulo}
                     </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
                   {/* Pregunta 4.1 */}
                   <QuestionCardWithTextarea
-                    questionNumber={ITEMS_FICHA_2B[3].preguntas[0].numero}
-                    questionText={ITEMS_FICHA_2B[3].preguntas[0].texto}
-                    value={step1Data.impacto.evidencias_descripcion || ""}
+                    questionNumber={ITEMS_FICHA_2C[3].preguntas[0].numero}
+                    questionText={ITEMS_FICHA_2C[3].preguntas[0].texto}
+                    value={step1Data.participacion.actores_roles || ""}
                     onChange={(value) =>
                       setStep1Data({
                         ...step1Data,
-                        impacto: {
-                          ...step1Data.impacto,
-                          evidencias_descripcion: value,
+                        participacion: {
+                          ...step1Data.participacion,
+                          actores_roles: value,
                         },
                       })
                     }
-                    placeholder="Sustenta con evidencias los resultados obtenidos..."
+                    placeholder="Identifica a los actores clave y sus roles..."
                     minHeight="min-h-[200px]"
-                    maxLength={ANEXO_2B_LIMITS.IMPACTO_EVIDENCIAS}
-                  />
-
-                  {/* Pregunta 4.2 */}
-                  <QuestionCardWithTextarea
-                    questionNumber={ITEMS_FICHA_2B[3].preguntas[1].numero}
-                    questionText={ITEMS_FICHA_2B[3].preguntas[1].texto}
-                    value={step1Data.impacto.cambios_practica_docente || ""}
-                    onChange={(value) =>
-                      setStep1Data({
-                        ...step1Data,
-                        impacto: {
-                          ...step1Data.impacto,
-                          cambios_practica_docente: value,
-                        },
-                      })
-                    }
-                    placeholder="Explica los cambios o efectos logrados..."
-                    minHeight="min-h-[150px]"
-                    maxLength={ANEXO_2B_LIMITS.IMPACTO_CAMBIOS}
+                    maxLength={ANEXO_2C_LIMITS.PARTICIPACION_ACTORES}
                   />
                 </AccordionContent>
               </AccordionItem>
 
-              {/* SECCIÓN 5: SOSTENIBILIDAD */}
+              {/* SECCIÓN 5: REFLEXIÓN */}
               <AccordionItem value="item-5" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-base">
-                      5. {ITEMS_FICHA_2B[4].titulo}
+                      5. {ITEMS_FICHA_2C[4].titulo}
                     </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
                   {/* Pregunta 5.1 */}
                   <QuestionCardWithTextarea
-                    questionNumber={ITEMS_FICHA_2B[4].preguntas[0].numero}
-                    questionText={ITEMS_FICHA_2B[4].preguntas[0].texto}
+                    questionNumber={ITEMS_FICHA_2C[4].preguntas[0].numero}
+                    questionText={ITEMS_FICHA_2C[4].preguntas[0].texto}
+                    value={step1Data.reflexion.mecanismos_reflexion || ""}
+                    onChange={(value) =>
+                      setStep1Data({
+                        ...step1Data,
+                        reflexion: {
+                          ...step1Data.reflexion,
+                          mecanismos_reflexion: value,
+                        },
+                      })
+                    }
+                    placeholder="Describe los mecanismos de reflexión..."
+                    minHeight="min-h-[200px]"
+                    maxLength={ANEXO_2C_LIMITS.REFLEXION_MECANISMOS}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* SECCIÓN 6: SOSTENIBILIDAD */}
+              <AccordionItem value="item-6" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-base">
+                      6. {ITEMS_FICHA_2C[5].titulo}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-6">
+                  {/* Pregunta 6.1 */}
+                  <QuestionCardWithTextarea
+                    questionNumber={ITEMS_FICHA_2C[5].preguntas[0].numero}
+                    questionText={ITEMS_FICHA_2C[5].preguntas[0].texto}
                     value={
                       step1Data.sostenibilidad.estrategias_viabilidad || ""
                     }
@@ -1263,20 +1258,20 @@ export default function Etapa1Acelerador12c() {
                     }
                     placeholder="Describe las estrategias para asegurar la viabilidad..."
                     minHeight="min-h-[150px]"
-                    maxLength={ANEXO_2B_LIMITS.SOSTENIBILIDAD_VIABILIDAD}
+                    maxLength={ANEXO_2C_LIMITS.SOSTENIBILIDAD_VIABILIDAD}
                   />
 
-                  {/* Pregunta 5.2 */}
+                  {/* Pregunta 6.2 */}
                   <div className="space-y-4">
                     <Card className="bg-amber-50 border-amber-200">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium text-amber-900">
-                          Pregunta {ITEMS_FICHA_2B[4].preguntas[1].numero}
+                          Pregunta {ITEMS_FICHA_2C[5].preguntas[1].numero}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2B[4].preguntas[1].texto}
+                          {ITEMS_FICHA_2C[5].preguntas[1].texto}
                         </p>
                       </CardContent>
                     </Card>
@@ -1916,47 +1911,47 @@ export default function Etapa1Acelerador12c() {
                 </AccordionContent>
               </CriterioAccordionHeader>
 
-              {/* IMPACTO */}
+              {/* PARTICIPACIÓN - Nuevo en 2C */}
               <CriterioAccordionHeader
-                value="impacto"
+                value="participacion"
                 icon={Sparkles}
                 iconBgColor="bg-orange-500"
-                title="4. Impacto"
-                subtitle="Resultados y cambios sistémicos"
+                title="4. Participación"
+                subtitle="Actores clave y roles"
                 currentScore={
-                  (step2Data.impacto?.indicador_4_1?.puntaje || 0) +
-                  (step2Data.impacto?.indicador_4_2?.puntaje || 0)
+                  step2Data.participacion?.indicador_4_1?.puntaje || 0
                 }
-                maxScore={15}
+                maxScore={10}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 4.1 */}
                   <div className="mb-4 p-4 bg-orange-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-orange-900">
-                        4.1 Resultados de Aprendizaje
+                        4.1 Actores Clave del Equipo
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.impacto?.indicador_4_1?.puntaje || 0} / 10
-                          pts
+                          {step2Data.participacion?.indicador_4_1?.puntaje || 0}{" "}
+                          / 10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
-                          {step2Data.impacto?.indicador_4_1?.nivel}
+                          {step2Data.participacion?.indicador_4_1?.nivel}
                         </Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
                       <div className="whitespace-pre-wrap text-gray-700">
-                        {typeof step2Data.impacto?.indicador_4_1?.analisis ===
-                        "string"
-                          ? step2Data.impacto?.indicador_4_1?.analisis
-                          : typeof step2Data.impacto?.indicador_4_1
+                        {typeof step2Data.participacion?.indicador_4_1
+                          ?.analisis === "string"
+                          ? step2Data.participacion?.indicador_4_1?.analisis
+                          : typeof step2Data.participacion?.indicador_4_1
                               ?.analisis === "object" &&
-                            step2Data.impacto?.indicador_4_1?.analisis !== null
+                            step2Data.participacion?.indicador_4_1?.analisis !==
+                              null
                           ? Object.entries(
-                              step2Data.impacto.indicador_4_1.analisis
+                              step2Data.participacion.indicador_4_1.analisis
                             )
                               .map(([key, value]) => `${key}: ${value}`)
                               .join("\n\n")
@@ -1964,34 +1959,48 @@ export default function Etapa1Acelerador12c() {
                       </div>
                     </div>
                   </div>
+                </AccordionContent>
+              </CriterioAccordionHeader>
 
-                  {/* Indicador 4.2 */}
-                  <div className="mb-4 p-4 bg-orange-50 rounded-lg">
+              {/* REFLEXIÓN - Nuevo en 2C */}
+              <CriterioAccordionHeader
+                value="reflexion"
+                icon={CheckCircle}
+                iconBgColor="bg-indigo-500"
+                title="5. Reflexión"
+                subtitle="Mecanismos de mejora continua"
+                currentScore={step2Data.reflexion?.indicador_5_1?.puntaje || 0}
+                maxScore={10}
+              >
+                <AccordionContent className="px-4 pb-4">
+                  {/* Indicador 5.1 */}
+                  <div className="mb-4 p-4 bg-indigo-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-orange-900">
-                        4.2 Cambios Sistémicos
+                      <h4 className="font-semibold text-indigo-900">
+                        5.1 Espacios de Reflexión
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.impacto?.indicador_4_2?.puntaje || 0} / 5
-                          pts
+                          {step2Data.reflexion?.indicador_5_1?.puntaje || 0} /
+                          10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
-                          {step2Data.impacto?.indicador_4_2?.nivel}
+                          {step2Data.reflexion?.indicador_5_1?.nivel}
                         </Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
                       <div className="whitespace-pre-wrap text-gray-700">
-                        {typeof step2Data.impacto?.indicador_4_2?.analisis ===
+                        {typeof step2Data.reflexion?.indicador_5_1?.analisis ===
                         "string"
-                          ? step2Data.impacto?.indicador_4_2?.analisis
-                          : typeof step2Data.impacto?.indicador_4_2
+                          ? step2Data.reflexion?.indicador_5_1?.analisis
+                          : typeof step2Data.reflexion?.indicador_5_1
                               ?.analisis === "object" &&
-                            step2Data.impacto?.indicador_4_2?.analisis !== null
+                            step2Data.reflexion?.indicador_5_1?.analisis !==
+                              null
                           ? Object.entries(
-                              step2Data.impacto.indicador_4_2.analisis
+                              step2Data.reflexion.indicador_5_1.analisis
                             )
                               .map(([key, value]) => `${key}: ${value}`)
                               .join("\n\n")
@@ -1999,15 +2008,6 @@ export default function Etapa1Acelerador12c() {
                       </div>
                     </div>
                   </div>
-
-                  {step2Data.impacto?.observacion_final && (
-                    <div className="mt-4 p-3 bg-orange-100 rounded-lg">
-                      <p className="font-semibold mb-1">Observación Final:</p>
-                      <p className="text-gray-700">
-                        {step2Data.impacto.observacion_final}
-                      </p>
-                    </div>
-                  )}
                 </AccordionContent>
               </CriterioAccordionHeader>
 
@@ -2016,11 +2016,11 @@ export default function Etapa1Acelerador12c() {
                 value="sostenibilidad"
                 icon={CheckCircle}
                 iconBgColor="bg-teal-500"
-                title="5. Sostenibilidad"
+                title="6. Sostenibilidad"
                 subtitle="Viabilidad y recursos"
                 currentScore={
-                  (step2Data.sostenibilidad?.indicador_5_1?.puntaje || 0) +
-                  (step2Data.sostenibilidad?.indicador_5_2?.puntaje || 0)
+                  (step2Data.sostenibilidad?.indicador_6_1?.puntaje || 0) +
+                  (step2Data.sostenibilidad?.indicador_6_2?.puntaje || 0)
                 }
                 maxScore={15}
               >
@@ -2180,16 +2180,18 @@ export default function Etapa1Acelerador12c() {
               (step2Data.originalidad?.indicador_2_2?.puntaje || 0) ===
             maxScore
           );
-        case "impacto":
+        case "participacion":
           return (
-            (step2Data.impacto?.indicador_3_1?.puntaje || 0) +
-              (step2Data.impacto?.indicador_3_2?.puntaje || 0) ===
-            maxScore
+            (step2Data.participacion?.indicador_4_1?.puntaje || 0) === maxScore
+          );
+        case "reflexion":
+          return (
+            (step2Data.reflexion?.indicador_5_1?.puntaje || 0) === maxScore
           );
         case "sostenibilidad":
           return (
-            (step2Data.sostenibilidad?.indicador_5_1?.puntaje || 0) +
-              (step2Data.sostenibilidad?.indicador_5_2?.puntaje || 0) ===
+            (step2Data.sostenibilidad?.indicador_6_1?.puntaje || 0) +
+              (step2Data.sostenibilidad?.indicador_6_2?.puntaje || 0) ===
             maxScore
           );
         default:
@@ -2375,20 +2377,22 @@ export default function Etapa1Acelerador12c() {
                                 ?.puntaje || 0)
                             : criterio.key === "pertinencia" &&
                               step2Data?.pertinencia
-                            ? ((step2Data.pertinencia as any).indicador_3_1
-                                ?.puntaje || 0) +
-                              ((step2Data.pertinencia as any).indicador_3_2
-                                ?.puntaje || 0)
-                            : criterio.key === "impacto" && step2Data?.impacto
-                            ? ((step2Data.impacto as any).indicador_4_1
-                                ?.puntaje || 0) +
-                              ((step2Data.impacto as any).indicador_4_2
-                                ?.puntaje || 0)
+                            ? (step2Data.pertinencia.indicador_3_1?.puntaje ||
+                                0) +
+                              (step2Data.pertinencia.indicador_3_2?.puntaje ||
+                                0)
+                            : criterio.key === "participacion" &&
+                              step2Data?.participacion
+                            ? step2Data.participacion.indicador_4_1?.puntaje ||
+                              0
+                            : criterio.key === "reflexion" &&
+                              step2Data?.reflexion
+                            ? step2Data.reflexion.indicador_5_1?.puntaje || 0
                             : criterio.key === "sostenibilidad" &&
                               step2Data?.sostenibilidad
-                            ? ((step2Data.sostenibilidad as any).indicador_5_1
+                            ? (step2Data.sostenibilidad.indicador_6_1
                                 ?.puntaje || 0) +
-                              ((step2Data.sostenibilidad as any).indicador_5_2
+                              (step2Data.sostenibilidad.indicador_6_2
                                 ?.puntaje || 0)
                             : 0}{" "}
                           / {criterio.maxScore} pts
@@ -3109,7 +3113,6 @@ export default function Etapa1Acelerador12c() {
                 rubricaIntencionalidad,
                 rubricaOriginalidad,
                 rubricaPertinencia,
-                rubricaImpacto,
                 rubricaSostenibilidad,
               ].filter(
                 (r): r is NonNullable<typeof r> => r !== null && r !== undefined

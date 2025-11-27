@@ -696,3 +696,273 @@ export interface Etapa1Acelerador1Data_2B {
   step3_data?: FormDataStep3_2B;
   step4_data?: FinalAnalysisStep4_2B;
 }
+
+// ============================================
+// TIPOS PARA 2C - PROYECTOS PROMISORIOS
+// ============================================
+
+// Constantes para la ficha ANEXO 2C
+export const ANEXO_2C_LIMITS = {
+  PROBLEMA_CARACTERIZACION: 3500,
+  OBJETIVOS: 1500,
+  METODOLOGIA_DESCRIPCION: 3500,
+  PROCEDIMIENTO_METODOLOGICO: 5000,
+  PERTINENCIA_INTERESES: 3000,
+  PERTINENCIA_CONTEXTO: 3000,
+  PARTICIPACION_ACTORES: 3000,
+  REFLEXION_MECANISMOS: 3000,
+  SOSTENIBILIDAD_VIABILIDAD: 3000,
+  SOSTENIBILIDAD_BIENES: 3000,
+} as const;
+
+export const ITEMS_FICHA_2C = [
+  {
+    id: "item1",
+    numero: 1,
+    titulo: "IDENTIFICACIÓN DEL PROBLEMA Y DESCRIPCIÓN DE OBJETIVOS",
+    preguntas: [
+      {
+        numero: "1.1",
+        texto:
+          "Caracteriza el problema central o el desafío que su proyecto busca abordar o que ha motivado la implementación de su proyecto. La descripción debe incluir las causas y consecuencias que justifican su implementación y estar vinculada a la(s) competencia(s) del CNEB, la mejora de la práctica docente, la gestión escolar y los aprendizajes de los estudiantes.",
+        maxCaracteres: 3500,
+        recomendaciones: [
+          "Adjuntar de tres 3 a 5 evidencias cualitativas y/o cuantitativas en formato PDF para sustentar el problema, causas y consecuencias.",
+          "Considere como ejemplo: resultados de la evaluación diagnóstica correspondientes a sus documentos de gestión, resultados de evaluación, fragmento del Proyecto Educativo institucional, informes, resultados de encuestas, testimonios de los actores educativos, fichas de observación, cuestionarios u otros documentos relevantes relacionados al diagnóstico.",
+          "Cada archivo no debe exceder los 5MB",
+        ],
+      },
+      {
+        numero: "1.2",
+        texto:
+          "Formula el objetivo general y específicos del proyecto vinculados con la solución del problema central o el logro del desafío identificado, además de lograr la(s) competencia(s) del CNEB, considerando los atributos: especifico, medible, alcanzable, relevante y plazo definido.",
+        maxCaracteres: 1500,
+      },
+    ],
+  },
+  {
+    id: "item2",
+    numero: 2,
+    titulo: "SOLUCIÓN INNOVADORA",
+    preguntas: [
+      {
+        numero: "2.1",
+        texto:
+          "Describe de qué trata la metodología o estrategia innovadora que implementarán en su proyecto, y como se vincula con el objetivo principal del proyecto.",
+        maxCaracteres: 3500,
+      },
+      {
+        numero: "2.2",
+        texto:
+          "Describe el procedimiento metodológico que implementarán en su proyecto, resaltando la originalidad y pertinencia de las herramientas y técnicas que utilizarán.",
+        maxCaracteres: 5000,
+      },
+    ],
+  },
+  {
+    id: "item3",
+    numero: 3,
+    titulo: "PERTINENCIA",
+    preguntas: [
+      {
+        numero: "3.1",
+        texto:
+          "Describe cómo el proyecto responde a los intereses y necesidades identificadas en la comunidad educativa, impulsando el desarrollo de la(s) competencia(s) del CNEB, la mejora de la práctica docente, la gestión escolar y los aprendizajes de los estudiantes.",
+        maxCaracteres: 3000,
+      },
+      {
+        numero: "3.2",
+        texto:
+          "Describe cómo el proyecto se adapta al contexto cultural social y lingüístico de la comunidad educativa en la que se desarrolla desde una perspectiva de equidad.",
+        maxCaracteres: 3000,
+      },
+    ],
+  },
+  {
+    id: "item4",
+    numero: 4,
+    titulo: "PARTICIPACIÓN",
+    preguntas: [
+      {
+        numero: "4.1",
+        texto:
+          "Identifica a los actores clave del equipo de innovación y define sus roles y responsabilidades. La descripción debe asegurar una participación activa y estar explícitamente vinculada a las acciones del procedimiento metodológico de la solución innovadora.",
+        maxCaracteres: 3000,
+      },
+    ],
+  },
+  {
+    id: "item5",
+    numero: 5,
+    titulo: "REFLEXIÓN",
+    preguntas: [
+      {
+        numero: "5.1",
+        texto:
+          "Describe los mecanismos que pretende implementar para promover espacios de reflexión y toma de decisiones para una mejora continua en el marco de la implementación del proyecto.",
+        maxCaracteres: 3000,
+      },
+    ],
+  },
+  {
+    id: "item6",
+    numero: 6,
+    titulo: "SOSTENIBILIDAD",
+    preguntas: [
+      {
+        numero: "6.1",
+        texto:
+          "Describe las estrategias que desarrollaran para asegurar la viabilidad del proyecto y la permanencia de las mejoras, orientadas a la mejora de los aprendizajes.",
+        maxCaracteres: 3000,
+      },
+      {
+        numero: "6.2",
+        texto:
+          "Describe la pertinencia de los bienes y servicios que demanda el proyecto para garantizar su sostenibilidad y continuidad a largo plazo.",
+        maxCaracteres: 3000,
+        requiereTabla: true,
+      },
+    ],
+  },
+] as const;
+
+// Tipos para FormData Step1 - Proyecto 2C (Promisorios)
+export interface FormDataStep1_2C {
+  // CRITERIO 1: INTENCIONALIDAD
+  intencionalidad: {
+    problema_descripcion: string;
+    objetivo_general: string;
+    objetivos_especificos: string[];
+    competencias_cneb: string[];
+    area_curricular: string;
+  };
+
+  // CRITERIO 2: ORIGINALIDAD
+  originalidad: {
+    metodologia_descripcion: string;
+    procedimiento_metodologico: string;
+  };
+
+  // CRITERIO 3: PERTINENCIA
+  pertinencia: {
+    intereses_necesidades: string;
+    contexto_cultural: string;
+  };
+
+  // CRITERIO 4: PARTICIPACIÓN
+  participacion: {
+    actores_roles: string;
+  };
+
+  // CRITERIO 5: REFLEXIÓN
+  reflexion: {
+    mecanismos_reflexion: string;
+  };
+
+  // CRITERIO 6: SOSTENIBILIDAD
+  sostenibilidad: {
+    estrategias_viabilidad: string;
+    bienes_servicios: BienServicio[];
+  };
+}
+
+// Tipos para análisis Step2 - Proyecto 2C
+export interface AnalysisStep2_2C {
+  intencionalidad?: {
+    indicador_1_1?: {
+      puntaje: number;
+      nivel: string;
+      vinculacion_cneb?: string;
+      causas_consecuencias?: string;
+    };
+    indicador_1_2?: {
+      puntaje: number;
+      nivel: string;
+      checklist_smart?: {
+        especifico: boolean;
+        medible: boolean;
+        alcanzable: boolean;
+        relevante: boolean;
+        temporal: boolean;
+      };
+      observacion_final?: string;
+    };
+  };
+  originalidad?: {
+    indicador_2_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_2_2?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+  };
+  pertinencia?: {
+    indicador_3_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_3_2?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    observacion_final?: string;
+  };
+  participacion?: {
+    indicador_4_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+  };
+  reflexion?: {
+    indicador_5_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+  };
+  sostenibilidad?: {
+    indicador_6_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_6_2?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    observacion_final?: string;
+  };
+  puntaje_total: number;
+  puntaje_maximo: number;
+  timestamp: string;
+}
+
+// Tipos para Step3 - Proyecto 2C
+export interface FormDataStep3_2C {
+  complementary_answers?: Record<string, unknown>;
+}
+
+// Tipos para análisis final Step4 - Proyecto 2C
+export interface FinalAnalysisStep4_2C {
+  puntaje_total?: number;
+}
+
+// Estructura completa del acelerador 2C con los 4 pasos
+export interface Etapa1Acelerador1Data_2C {
+  current_step: number;
+  completed_steps: number[];
+  last_updated: string;
+
+  step1_data?: FormDataStep1_2C;
+  step2_data?: AnalysisStep2_2C;
+  step3_data?: FormDataStep3_2C;
+  step4_data?: FinalAnalysisStep4_2C;
+}
