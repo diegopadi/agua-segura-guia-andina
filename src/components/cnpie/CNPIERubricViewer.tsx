@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CNPIERubricCriteria } from "@/hooks/useCNPIERubric";
-import { Target, FileText, Lightbulb } from "lucide-react";
+import { Target, ChevronRight } from "lucide-react";
 
 interface CNPIERubricViewerProps {
   rubricas: CNPIERubricCriteria[];
@@ -30,7 +30,6 @@ export function CNPIERubricViewer({
   rubricas,
   destacarCriterios = [],
 }: CNPIERubricViewerProps) {
-  // Filtrar rubricas válidas
   const rubricasValidas = rubricas.filter(
     (r) => r && r.puntaje_maximo !== undefined
   );
@@ -40,7 +39,6 @@ export function CNPIERubricViewer({
     0
   );
 
-  // Si no hay rúbricas válidas, mostrar mensaje
   if (rubricasValidas.length === 0) {
     return (
       <Card className="border-primary/20">
@@ -107,71 +105,39 @@ export function CNPIERubricViewer({
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-4 pt-2">
-                    {/* Indicador general */}
-                    <div className="flex items-start gap-3">
-                      <FileText className="w-4 h-4 text-muted-foreground mt-1" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          {rubrica.indicador}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Sub-indicadores desde ejemplos */}
+                  <div className="space-y-3 pt-2">
+                    {/* Sub-indicadores */}
                     {subIndicadores.length > 0 && (
-                      <div className="space-y-2 ml-7">
+                      <div className="space-y-2">
                         {subIndicadores.map((sub, idx) => (
                           <div
                             key={idx}
-                            className="flex items-start justify-between p-2 bg-muted/50 rounded-lg"
+                            className="flex items-start gap-2 p-3 bg-muted/40 rounded-lg border border-border/50"
                           >
-                            <div className="flex items-start gap-2 flex-1">
-                              <span className="text-xs font-mono text-primary font-medium">
-                                {sub.codigo}
-                              </span>
+                            <ChevronRight className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                                  {sub.codigo}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {sub.puntaje} pts
+                                </Badge>
+                              </div>
                               <p className="text-sm text-muted-foreground">
                                 {sub.texto}
                               </p>
                             </div>
-                            <Badge variant="outline" className="text-xs ml-2 shrink-0">
-                              {sub.puntaje} pts
-                            </Badge>
                           </div>
                         ))}
                       </div>
                     )}
 
-                    {/* Descripción */}
-                    {rubrica.descripcion && (
-                      <div className="p-3 bg-muted rounded-lg ml-7">
-                        <p className="text-sm">{rubrica.descripcion}</p>
-                      </div>
-                    )}
-
-                    {/* Recomendaciones */}
-                    {rubrica.recomendaciones && (
-                      <div className="flex items-start gap-3 ml-7">
-                        <Lightbulb className="w-4 h-4 text-yellow-600 mt-1" />
-                        <div>
-                          <p className="font-semibold text-sm mb-1">
-                            Recomendaciones
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {rubrica.recomendaciones}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Extensión máxima */}
-                    {rubrica.extension_maxima && (
-                      <div className="flex items-center gap-2 text-sm ml-7">
-                        <Badge variant="outline">
-                          Máximo: {rubrica.extension_maxima.toLocaleString()}{" "}
-                          caracteres
-                        </Badge>
-                      </div>
+                    {/* Si no hay sub-indicadores, mostrar indicador general */}
+                    {subIndicadores.length === 0 && rubrica.indicador && (
+                      <p className="text-sm text-muted-foreground pl-2">
+                        {rubrica.indicador}
+                      </p>
                     )}
                   </div>
                 </AccordionContent>
