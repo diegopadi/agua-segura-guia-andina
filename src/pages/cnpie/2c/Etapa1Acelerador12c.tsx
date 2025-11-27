@@ -397,7 +397,7 @@ export default function Etapa1Acelerador12c() {
       });
 
       // Ejecutar la llamada a la API con timeout
-      const apiPromise = supabase.functions.invoke("analyze-cnpie-general-2b", {
+      const apiPromise = supabase.functions.invoke("analyze-cnpie-general-2c", {
         body: { step1Data },
       });
 
@@ -666,7 +666,7 @@ export default function Etapa1Acelerador12c() {
       }
 
       const requestPromise = fetch(
-        `https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/generate-survey-questions-2B`,
+        `https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/generate-survey-questions-2C`,
         {
           method: "POST",
           headers: {
@@ -691,7 +691,7 @@ export default function Etapa1Acelerador12c() {
       }
 
       const result = await response.json();
-      console.log("🟢 Respuesta de generate-survey-questions-2B:", result);
+      console.log("🟢 Respuesta de generate-survey-questions-2C:", result);
 
       if (result.success && result.questions) {
         console.log("🟢 Preguntas recibidas:", result.questions);
@@ -902,7 +902,7 @@ export default function Etapa1Acelerador12c() {
       }
 
       const response = await fetch(
-        "https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/sintetisador-cnpie",
+        "https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/sintetisador-cnpie-2C",
         {
           method: "POST",
           headers: {
