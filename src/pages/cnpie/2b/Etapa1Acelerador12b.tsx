@@ -1851,13 +1851,21 @@ export default function Etapa1Acelerador12b() {
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
-                      <pre className="whitespace-pre-wrap text-gray-700">
-                        {JSON.stringify(
-                          step2Data.pertinencia?.indicador_3_1?.analisis,
-                          null,
-                          2
-                        )}
-                      </pre>
+                      <div className="whitespace-pre-wrap text-gray-700">
+                        {typeof step2Data.pertinencia?.indicador_3_1
+                          ?.analisis === "string"
+                          ? step2Data.pertinencia?.indicador_3_1?.analisis
+                          : typeof step2Data.pertinencia?.indicador_3_1
+                              ?.analisis === "object" &&
+                            step2Data.pertinencia?.indicador_3_1?.analisis !==
+                              null
+                          ? Object.entries(
+                              step2Data.pertinencia.indicador_3_1.analisis
+                            )
+                              .map(([key, value]) => `${key}: ${value}`)
+                              .join("\n\n")
+                          : "No disponible"}
+                      </div>
                     </div>
                   </div>
 
@@ -1879,13 +1887,21 @@ export default function Etapa1Acelerador12b() {
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
-                      <pre className="whitespace-pre-wrap text-gray-700">
-                        {JSON.stringify(
-                          step2Data.pertinencia?.indicador_3_2?.analisis,
-                          null,
-                          2
-                        )}
-                      </pre>
+                      <div className="whitespace-pre-wrap text-gray-700">
+                        {typeof step2Data.pertinencia?.indicador_3_2
+                          ?.analisis === "string"
+                          ? step2Data.pertinencia?.indicador_3_2?.analisis
+                          : typeof step2Data.pertinencia?.indicador_3_2
+                              ?.analisis === "object" &&
+                            step2Data.pertinencia?.indicador_3_2?.analisis !==
+                              null
+                          ? Object.entries(
+                              step2Data.pertinencia.indicador_3_2.analisis
+                            )
+                              .map(([key, value]) => `${key}: ${value}`)
+                              .join("\n\n")
+                          : "No disponible"}
+                      </div>
                     </div>
                   </div>
 
@@ -1932,13 +1948,20 @@ export default function Etapa1Acelerador12b() {
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
-                      <pre className="whitespace-pre-wrap text-gray-700">
-                        {JSON.stringify(
-                          step2Data.impacto?.indicador_4_1?.analisis,
-                          null,
-                          2
-                        )}
-                      </pre>
+                      <div className="whitespace-pre-wrap text-gray-700">
+                        {typeof step2Data.impacto?.indicador_4_1?.analisis ===
+                        "string"
+                          ? step2Data.impacto?.indicador_4_1?.analisis
+                          : typeof step2Data.impacto?.indicador_4_1
+                              ?.analisis === "object" &&
+                            step2Data.impacto?.indicador_4_1?.analisis !== null
+                          ? Object.entries(
+                              step2Data.impacto.indicador_4_1.analisis
+                            )
+                              .map(([key, value]) => `${key}: ${value}`)
+                              .join("\n\n")
+                          : "No disponible"}
+                      </div>
                     </div>
                   </div>
 
@@ -1960,13 +1983,20 @@ export default function Etapa1Acelerador12b() {
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
-                      <pre className="whitespace-pre-wrap text-gray-700">
-                        {JSON.stringify(
-                          step2Data.impacto?.indicador_4_2?.analisis,
-                          null,
-                          2
-                        )}
-                      </pre>
+                      <div className="whitespace-pre-wrap text-gray-700">
+                        {typeof step2Data.impacto?.indicador_4_2?.analisis ===
+                        "string"
+                          ? step2Data.impacto?.indicador_4_2?.analisis
+                          : typeof step2Data.impacto?.indicador_4_2
+                              ?.analisis === "object" &&
+                            step2Data.impacto?.indicador_4_2?.analisis !== null
+                          ? Object.entries(
+                              step2Data.impacto.indicador_4_2.analisis
+                            )
+                              .map(([key, value]) => `${key}: ${value}`)
+                              .join("\n\n")
+                          : "No disponible"}
+                      </div>
                     </div>
                   </div>
 
@@ -2014,13 +2044,21 @@ export default function Etapa1Acelerador12b() {
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
-                      <pre className="whitespace-pre-wrap text-gray-700">
-                        {JSON.stringify(
-                          step2Data.sostenibilidad?.indicador_5_1?.analisis,
-                          null,
-                          2
-                        )}
-                      </pre>
+                      <div className="whitespace-pre-wrap text-gray-700">
+                        {typeof step2Data.sostenibilidad?.indicador_5_1
+                          ?.analisis === "string"
+                          ? step2Data.sostenibilidad?.indicador_5_1?.analisis
+                          : typeof step2Data.sostenibilidad?.indicador_5_1
+                              ?.analisis === "object" &&
+                            step2Data.sostenibilidad?.indicador_5_1
+                              ?.analisis !== null
+                          ? Object.entries(
+                              step2Data.sostenibilidad.indicador_5_1.analisis
+                            )
+                              .map(([key, value]) => `${key}: ${value}`)
+                              .join("\n\n")
+                          : "No disponible"}
+                      </div>
                     </div>
                   </div>
 
@@ -2043,13 +2081,21 @@ export default function Etapa1Acelerador12b() {
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
-                      <pre className="whitespace-pre-wrap text-gray-700">
-                        {JSON.stringify(
-                          step2Data.sostenibilidad?.indicador_5_2?.analisis,
-                          null,
-                          2
-                        )}
-                      </pre>
+                      <div className="whitespace-pre-wrap text-gray-700">
+                        {typeof step2Data.sostenibilidad?.indicador_5_2
+                          ?.analisis === "string"
+                          ? step2Data.sostenibilidad?.indicador_5_2?.analisis
+                          : typeof step2Data.sostenibilidad?.indicador_5_2
+                              ?.analisis === "object" &&
+                            step2Data.sostenibilidad?.indicador_5_2
+                              ?.analisis !== null
+                          ? Object.entries(
+                              step2Data.sostenibilidad.indicador_5_2.analisis
+                            )
+                              .map(([key, value]) => `${key}: ${value}`)
+                              .join("\n\n")
+                          : "No disponible"}
+                      </div>
                     </div>
                   </div>
 
@@ -2754,7 +2800,6 @@ export default function Etapa1Acelerador12b() {
           <CardContent className="pt-6 space-y-8">
             {/* Respuestas Mejoradas por la IA */}
             <Card className="bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200 pt-10">
-    
               <CardContent className="space-y-6">
                 {/* 1.1 */}
                 <Card className="bg-white">
