@@ -89,3 +89,6 @@ verify_jwt = true
 
 [functions.generate-survey-questions-2D]
 verify_jwt = true
+
+[functions.sintetisador-cnpie-2D]
+verify_jwt = true
