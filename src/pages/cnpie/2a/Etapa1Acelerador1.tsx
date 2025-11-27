@@ -419,6 +419,12 @@ export default function Etapa1Acelerador1() {
         const indicador22 =
           dictamenOrig?.["🔹 INDICADOR 2.2: Procedimiento y Video"];
 
+        console.log("🔵 INDICADOR 2.2 completo:", indicador22);
+        console.log(
+          "🔵 Desglose de Evaluación:",
+          indicador22?.["Desglose de Evaluación"]
+        );
+
         // Extraer datos de Impacto
         const dictamenImp =
           data.analysis.impacto?.[
@@ -503,7 +509,15 @@ export default function Etapa1Acelerador1() {
             indicador_2_2: {
               puntaje: indicador22?.PUNTAJE || 0,
               nivel: indicador22?.NIVEL || "N/A",
-              desglose: indicador22?.["Desglose de Evaluación"] || {},
+              calidad_procedimiento:
+                indicador22?.["Desglose de Evaluación"]?.[
+                  "Calidad del Procedimiento"
+                ] || "",
+              video_detectado:
+                indicador22?.["Desglose de Evaluación"]?.["Video detectado"] ===
+                "✅",
+              puntaje_video:
+                indicador22?.["Desglose de Evaluación"]?.["Puntaje Video"] || 0,
               observacion: indicador22?.["Observación Final"] || "",
             },
           },
@@ -541,7 +555,7 @@ export default function Etapa1Acelerador1() {
             observacion_final: dictamenSost?.["Observación Final"] || "",
           },
           puntaje_total: puntajeTotal,
-          puntaje_maximo: 80,
+          puntaje_maximo: 75,
           timestamp: new Date().toISOString(),
         };
 
@@ -571,7 +585,7 @@ export default function Etapa1Acelerador1() {
 
         toast({
           title: "✅ Análisis completado exitosamente",
-          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 80 posibles. Revisa los detalles por criterio.`,
+          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 75 posibles. Revisa los detalles por criterio.`,
           duration: 5000,
         });
       } else {
@@ -1502,7 +1516,7 @@ export default function Etapa1Acelerador1() {
                   <p className="text-sm text-gray-600 mb-2">Puntaje Total</p>
                   <p className="text-5xl font-bold text-purple-600">
                     {step2Data.puntaje_total || 0}
-                    <span className="text-2xl text-gray-500">/80</span>
+                    <span className="text-2xl text-gray-500">/75</span>
                   </p>
                   <p className="text-sm text-gray-600 mt-2">Puntos obtenidos</p>
                 </div>
@@ -1676,17 +1690,20 @@ export default function Etapa1Acelerador1() {
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
-                      <div className="bg-white p-3 rounded">
-                        <p className="font-semibold mb-2">
-                          Calidad del Procedimiento:
-                        </p>
-                        <p className="text-gray-700">
-                          {
-                            step2Data.originalidad?.indicador_2_2
-                              ?.calidad_procedimiento
-                          }
-                        </p>
-                      </div>
+                      {step2Data.originalidad?.indicador_2_2
+                        ?.calidad_procedimiento && (
+                        <div className="bg-white p-3 rounded">
+                          <p className="font-semibold mb-2">
+                            Calidad del Procedimiento:
+                          </p>
+                          <p className="text-gray-700">
+                            {
+                              step2Data.originalidad?.indicador_2_2
+                                ?.calidad_procedimiento
+                            }
+                          </p>
+                        </div>
+                      )}
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-2">Video Detectado:</p>
                         <p className="text-gray-700">
@@ -1695,7 +1712,8 @@ export default function Etapa1Acelerador1() {
                             ? "✅ Sí"
                             : "❌ No"}{" "}
                           - Puntaje:{" "}
-                          {step2Data.originalidad?.indicador_2_2?.puntaje_video}{" "}
+                          {step2Data.originalidad?.indicador_2_2
+                            ?.puntaje_video || 0}{" "}
                           pts
                         </p>
                       </div>
