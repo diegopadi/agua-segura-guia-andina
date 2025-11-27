@@ -288,13 +288,18 @@ export const ITEMS_FICHA_2A = [
       {
         numero: "1.1",
         texto:
-          "Caracteriza el problema central o el desafío que su proyecto busca abordar. La descripción debe incluir las causas y consecuencias que justifican su implementación.",
+          "Caracteriza el problema central o el desafío que su proyecto busca abordar o que ha motivado la implementación de su proyecto. La descripción debe incluir las causas y consecuencias que justifican su implementación en base a evidencias, y estar vinculada a la(s) competencia(s) del CNEB, la mejora de la práctica docente, la gestión escolar y los aprendizajes de los estudiantes.",
         maxCaracteres: 5000,
+        recomendaciones: [
+          "Adjuntar de tres 3 a 5 evidencias cualitativas y/o cuantitativas en formato PDF para sustentar el problema, causas y consecuencias.",
+          "Considere evidencias correspondientes a los dos últimos años de implementación, como por ejemplo: resultados de la evaluación diagnóstica resultados de evaluación, fragmento del Proyecto Educativo institucional, informes, resultados de encuestas, testimonios de los actores educativos, fichas de observación, cuestionarios u otros documentos relevantes relacionados al diagnóstico.",
+          "Cada archivo no debe exceder los 5MB",
+        ],
       },
       {
         numero: "1.2",
         texto:
-          "Formula el objetivo general y específicos del proyecto vinculados con la solución del problema central.",
+          "Formula el objetivo general y específicos del proyecto vinculados con la solución del problema central o el logro del desafío identificado, además de lograr la(s) competencia(s) del CNEB, considerando los atributos: especifico, medible, alcanzable, relevante y plazo definido.",
         maxCaracteres: 1500,
       },
     ],
@@ -307,14 +312,20 @@ export const ITEMS_FICHA_2A = [
       {
         numero: "2.1",
         texto:
-          "Describe de qué trata la metodología o estrategia innovadora que viene implementando en su proyecto.",
+          "Describe de qué trata la metodología o estrategia innovadora que viene implementando en su proyecto, y como se vincula con el objetivo principal del proyecto.",
         maxCaracteres: 3000,
       },
       {
         numero: "2.2",
         texto:
-          "Describe el procedimiento metodológico que viene implementando. Adjuntar enlace a video (máximo 3 minutos).",
+          "Describe el procedimiento metodológico que viene implementando, a la vez debe de adjuntar el enlace a un video (máximo 3 minutos) donde se describa dicho procedimiento. El video debe resaltar la originalidad y pertinencia de las herramientas y técnicas que viene utilizando.",
         maxCaracteres: 5000,
+        recomendaciones: [
+          "Adjunta un enlace (YouTube) de un video de no más de 3 minutos",
+          "El video debe de describir con precisión y orden el procedimiento metodológico del proyecto, destacando las etapas o fases o acciones; así como las herramientas, técnicas, bienes y servicios.",
+          "Narración clara, buen audio e iluminación",
+          "Evitar exceso de texto o efectos visuales distractores.",
+        ],
       },
     ],
   },
@@ -326,13 +337,18 @@ export const ITEMS_FICHA_2A = [
       {
         numero: "3.1",
         texto:
-          "Sustenta con evidencias los resultados obtenidos durante la implementación del proyecto.",
+          "Sustenta con evidencias los resultados obtenidos durante la implementación del proyecto. Las evidencias deben mostrar la vinculación directa con el objetivo principal y con las competencias priorizadas.",
         maxCaracteres: 3500,
+        recomendaciones: [
+          "Adjuntar de tres 3 a 5 evidencias cualitativas y/o cuantitativas en formato PDF que justifique los resultados obtenidos durante la implementación del proyecto vinculado con el objetivo principal del proyecto y las competencias priorizadas en los últimos dos años.",
+          "Considere evidencias correspondientes a los dos últimos años de implementación, por ejemplo: a) evidencias del Logro de competencias y aprendizajes: Resultados de Evaluaciones; Producciones y Desempeños Estudiantiles) Evidencias del Proceso de Implementación de la solución innovadora: Bitácoras, diarios de campo, y registros fotográficos/audiovisuales, Encuestas de Satisfacción y Percepción. c) Evidencias de Impacto en la Comunidad Educativa: Informes de Monitoreo y Seguimiento; Evidencias de la participación de la comunidad vinculados a las competencias priorizadas; evidencias de la difusión de los resultados del proyecto",
+          "Cada archivo no debe exceder los 5MB.",
+        ],
       },
       {
         numero: "3.2",
         texto:
-          "Explica los cambios o efectos logrados en la práctica docente, la gestión escolar y la comunidad educativa.",
+          "Explica los cambios o efectos logrados en la práctica docente, la gestión escolar y la comunidad educativa y local desde el inicio de la implementación de su proyecto hasta la actualidad.",
         maxCaracteres: 3000,
       },
     ],
@@ -345,13 +361,18 @@ export const ITEMS_FICHA_2A = [
       {
         numero: "4.1",
         texto:
-          "Describe las estrategias que vienen desarrollando para fomentar la continuidad del proyecto.",
+          "Describe las estrategias que vienen desarrollando desde el inicio del proyecto hasta la actualidad para fomentar la continuidad del proyecto y la cultura de innovación a nivel institucional.",
         maxCaracteres: 3000,
+        recomendaciones: [
+          "Adjuntar de tres 3 a 5 evidencias cualitativas y/o cuantitativas en formato PDF que justifique las estrategias o mecanismos o acciones para fomentar la continuidad del proyecto y la cultura de innovación en la IE en los últimos dos años.",
+          "Considere como ejemplo: Convenios suscritos con aliados públicos y/o privados; Incorporación de la propuesta innovadora en los instrumentos de gestión institucional (PAT o PEI); Planes o programas formativos orientados al fortalecimiento de capacidades de los actores educativos; Informe de resultados de pasantías o de transferencia de experiencias a otras instituciones educativas externas.",
+          "Cada archivo no debe exceder los 5MB.",
+        ],
       },
       {
         numero: "4.2",
         texto:
-          "Describe las estrategias que desarrollaran para asegurar la viabilidad del proyecto.",
+          "Describe las estrategias que desarrollaran para asegurar la viabilidad del proyecto y la permanencia de las mejoras, orientadas a la mejora de los aprendizajes.",
         maxCaracteres: 3000,
       },
       {
