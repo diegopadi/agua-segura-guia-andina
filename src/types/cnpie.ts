@@ -385,3 +385,314 @@ export const ITEMS_FICHA_2A = [
     ],
   },
 ] as const;
+
+export const ITEMS_FICHA_2B = [
+  {
+    id: "item1",
+    numero: 1,
+    titulo: "IDENTIFICACIÓN DEL PROBLEMA Y DESCRIPCIÓN DE OBJETIVOS",
+    preguntas: [
+      {
+        numero: "1.1",
+        texto:
+          "Caracteriza el problema central o el desafío que su proyecto busca abordar o que ha motivado la implementación de su proyecto. La descripción debe incluir las causas y consecuencias que justifican su implementación en base a evidencias, y estar vinculada a la(s) competencia(s) del CNEB, la mejora de la práctica docente, la gestión escolar y los aprendizajes de los estudiantes.\n\nSustente con información cualitativa y cuantitativa.",
+        maxCaracteres: 5000,
+        recomendaciones: [
+          "Adjuntar de tres 3 a 5 evidencias cualitativas y/o cuantitativas en formato PDF para sustentar el problema, causas y consecuencias.",
+          "Considere evidencias correspondientes al último año de implementación, como, por ejemplo: resultados de la evaluación diagnóstica resultados de evaluación, fragmento del Proyecto Educativo institucional, informes, resultados de encuestas, testimonios de los actores educativos, fichas de observación, cuestionarios u otros documentos relevantes relacionados al diagnóstico.",
+          "Cada archivo no debe exceder los 5MB",
+        ],
+      },
+      {
+        numero: "1.2",
+        texto:
+          "Formula el objetivo general y específicos del proyecto vinculados con la solución del problema central o el logro del desafío identificado, además de lograr la(s) competencia(s) del CNEB, considerando los atributos: especifico, medible, alcanzable, relevante y plazo definido.",
+        maxCaracteres: 1500,
+      },
+    ],
+  },
+  {
+    id: "item2",
+    numero: 2,
+    titulo: "SOLUCIÓN INNOVADORA",
+    preguntas: [
+      {
+        numero: "2.1",
+        texto:
+          "Describe de qué trata la metodología o estrategia innovadora que viene implementando en su proyecto, y como se vincula con el objetivo principal del proyecto.",
+        maxCaracteres: 3500,
+      },
+      {
+        numero: "2.2",
+        texto:
+          "Describe el procedimiento metodológico que viene implementando, a la vez debe de adjuntar el enlace a un video (máximo 3 minutos) donde se describa dicho procedimiento. El video debe resaltar la originalidad y pertinencia de las herramientas y técnicas que viene utilizando.",
+        maxCaracteres: 5000,
+        recomendaciones: [
+          "Adjunta un enlace (YouTube) de un video de no más de 3 minutos",
+          "El video debe de describir con precisión y orden el procedimiento metodológico del proyecto, destacando las etapas o fases o acciones; así como las herramientas, técnicas, bienes y servicios.",
+          "Narración clara, buen audio e iluminación",
+          "Evitar exceso de texto o efectos visuales distractores.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "item3",
+    numero: 3,
+    titulo: "PERTINENCIA",
+    preguntas: [
+      {
+        numero: "3.1",
+        texto:
+          "Describe cómo el proyecto responde a los intereses y necesidades identificadas en la comunidad educativa, impulsando el desarrollo de la(s) competencia(s) del CNEB, la mejora de la práctica docente, la gestión escolar y los aprendizajes de los estudiantes.",
+        maxCaracteres: 3000,
+      },
+      {
+        numero: "3.2",
+        texto:
+          "Describe cómo el proyecto se adapta al contexto cultural social y lingüístico de la comunidad educativa en la que se desarrolla desde una perspectiva de equidad.",
+        maxCaracteres: 3000,
+      },
+    ],
+  },
+  {
+    id: "item4",
+    numero: 4,
+    titulo: "IMPACTO DE LA IMPLEMENTACIÓN",
+    preguntas: [
+      {
+        numero: "4.1",
+        texto:
+          "Sustenta con evidencias los resultados obtenidos durante la implementación del proyecto. Las evidencias deben mostrar la vinculación directa con el objetivo principal y con las competencias priorizadas.",
+        maxCaracteres: 3500,
+        recomendaciones: [
+          "Adjuntar de tres 3 a 5 evidencias cualitativas y/o cuantitativas en formato PDF que justifique los resultados obtenidos durante la implementación del proyecto vinculado con el objetivo principal del proyecto y las competencias priorizadas en el último año.",
+          "Considere evidencias correspondientes al último año de implementación, por ejemplo: Considere como ejemplo: a) evidencias del Logro de competencias y aprendizajes: Resultados de Evaluaciones; Producciones y Desempeños Estudiantiles b) Evidencias del Proceso de Implementación de la solución innovadora: Bitácoras, diarios de campo, y registros fotográficos/audiovisuales, Encuestas de Satisfacción y Percepción.",
+          "Cada archivo no debe exceder los 5MB.",
+        ],
+      },
+      {
+        numero: "4.2",
+        texto:
+          "Explica los cambios o efectos logrados en la práctica docente, la gestión escolar y la comunidad educativa y local desde el inicio de la implementación de su proyecto hasta la actualidad.",
+        maxCaracteres: 3000,
+      },
+    ],
+  },
+  {
+    id: "item5",
+    numero: 5,
+    titulo: "SOSTENIBILIDAD",
+    preguntas: [
+      {
+        numero: "5.1",
+        texto:
+          "Describe las estrategias que desarrollaran para asegurar la viabilidad del proyecto y la permanencia de las mejoras, orientadas a la mejora de los aprendizajes.",
+        maxCaracteres: 3000,
+      },
+      {
+        numero: "5.2",
+        texto:
+          "Describe la pertinencia de los bienes y servicios que demanda el proyecto para garantizar su sostenibilidad y continuidad a largo plazo.",
+        maxCaracteres: 3000,
+        requiereTabla: true,
+      },
+    ],
+  },
+] as const;
+
+// Constantes para la ficha ANEXO 2B
+export const ANEXO_2B_LIMITS = {
+  PROBLEMA_CARACTERIZACION: 5000,
+  OBJETIVOS: 1500,
+  METODOLOGIA_DESCRIPCION: 3500,
+  PROCEDIMIENTO_METODOLOGICO: 5000,
+  PERTINENCIA_INTERESES: 3000,
+  PERTINENCIA_CONTEXTO: 3000,
+  IMPACTO_EVIDENCIAS: 3500,
+  IMPACTO_CAMBIOS: 3000,
+  SOSTENIBILIDAD_VIABILIDAD: 3000,
+  SOSTENIBILIDAD_BIENES: 3000,
+} as const;
+
+// Tipos para FormData Step1 - Proyecto 2B
+export interface FormDataStep1_2B {
+  // CRITERIO 1: INTENCIONALIDAD
+  intencionalidad: {
+    problema_descripcion: string;
+    objetivo_general: string;
+    objetivos_especificos: string[];
+    competencias_cneb: string[];
+    area_curricular: string;
+  };
+
+  // CRITERIO 2: ORIGINALIDAD
+  originalidad: {
+    metodologia_descripcion: string;
+    procedimiento_metodologico: string;
+    video_url: string;
+  };
+
+  // CRITERIO 3: PERTINENCIA
+  pertinencia: {
+    intereses_necesidades: string;
+    contexto_cultural: string;
+  };
+
+  // CRITERIO 4: IMPACTO
+  impacto: {
+    evidencias_descripcion: string;
+    cambios_practica_docente: string;
+    cambios_gestion_escolar: string;
+    cambios_comunidad: string;
+  };
+
+  // CRITERIO 5: SOSTENIBILIDAD
+  sostenibilidad: {
+    estrategias_viabilidad: string;
+    bienes_servicios: BienServicio[];
+  };
+}
+
+// Tipos para análisis Step2 - Proyecto 2B
+export interface AnalysisStep2_2B {
+  intencionalidad?: {
+    indicador_1_1?: {
+      puntaje: number;
+      nivel: string;
+      vinculacion_cneb?: string;
+      evidencia_consolidados?: string;
+      justificacion?: string;
+    };
+    indicador_1_2?: {
+      puntaje: number;
+      nivel: string;
+      checklist_smart?: {
+        especifico: boolean;
+        medible: boolean;
+        alcanzable: boolean;
+        relevante: boolean;
+        temporal: boolean;
+      };
+      justificacion?: string;
+    };
+    puntaje_total?: number;
+    fortalezas?: string[];
+    areas_mejora?: string[];
+    recomendaciones?: string[];
+  };
+  originalidad?: {
+    indicador_2_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_2_2?: {
+      puntaje: number;
+      nivel: string;
+      calidad_procedimiento?: string;
+      video_detectado?: boolean;
+      puntaje_video?: number;
+      observacion?: string;
+    };
+    puntaje_total?: number;
+    fortalezas?: string[];
+    areas_mejora?: string[];
+  };
+  pertinencia?: {
+    indicador_3_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_3_2?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    puntaje_total?: number;
+    fortalezas?: string[];
+    areas_mejora?: string[];
+    observacion_final?: string;
+  };
+  impacto?: {
+    indicador_3_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_3_2?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+    };
+    indicador_4_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+      analisis_evidencias?: {
+        listado_archivos?: string;
+        uso_en_texto?: string;
+        vinculacion_competencia?: string;
+      };
+    };
+    indicador_4_2?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: string;
+      analisis_transformacion?: {
+        practica_docente_gestion?: string;
+        comunidad?: string;
+      };
+    };
+    puntaje_total?: number;
+    fortalezas?: string[];
+    areas_mejora?: string[];
+    observacion_final?: string;
+  };
+  sostenibilidad?: {
+    indicador_5_1?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: {
+        aliados_estrategicos?: string;
+      };
+    };
+    indicador_5_2?: {
+      puntaje: number;
+      nivel: string;
+      analisis?: {
+        pertinencia?: string;
+      };
+    };
+    puntaje_total?: number;
+    fortalezas?: string[];
+    areas_mejora?: string[];
+    observacion_final?: string;
+  };
+  puntaje_total: number;
+  puntaje_maximo: number;
+  timestamp: string;
+}
+
+// Tipos para Step3 - Proyecto 2B
+export interface FormDataStep3_2B {
+  complementary_answers?: Record<string, unknown>;
+}
+
+// Tipos para análisis final Step4 - Proyecto 2B
+export interface FinalAnalysisStep4_2B {
+  puntaje_total?: number;
+}
+
+// Estructura completa del acelerador 2B con los 4 pasos
+export interface Etapa1Acelerador1Data_2B {
+  current_step: number;
+  completed_steps: number[];
+  last_updated: string;
+
+  step1_data?: FormDataStep1_2B;
+  step2_data?: AnalysisStep2_2B;
+  step3_data?: FormDataStep3_2B;
+  step4_data?: FinalAnalysisStep4_2B;
+}

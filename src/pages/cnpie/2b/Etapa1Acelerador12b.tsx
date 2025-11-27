@@ -44,179 +44,21 @@ import {
   Clock,
 } from "lucide-react";
 import { DocumentFieldSchema } from "@/types/document-extraction";
-import { BienServicio } from "@/types/cnpie";
+import {
+  BienServicio,
+  ANEXO_2B_LIMITS,
+  ITEMS_FICHA_2B,
+  FormDataStep1_2B,
+  AnalysisStep2_2B,
+  FormDataStep3_2B,
+  FinalAnalysisStep4_2B,
+} from "@/types/cnpie";
 
-const ANEXO_2B_LIMITS = {
-  PROBLEMA_CARACTERIZACION: 5000,
-  OBJETIVOS: 1500,
-  METODOLOGIA_DESCRIPCION: 3500,
-  PROCEDIMIENTO_METODOLOGICO: 5000,
-  PERTINENCIA_INTERESES: 3000,
-  PERTINENCIA_CONTEXTO: 3000,
-  IMPACTO_EVIDENCIAS: 3500,
-  IMPACTO_CAMBIOS: 3000,
-  SOSTENIBILIDAD_VIABILIDAD: 3000,
-  SOSTENIBILIDAD_BIENES: 3000,
-} as const;
-
-// Estructura de preguntas para ANEXO 2B
-const ITEMS_FICHA_2B = [
-  {
-    id: "item1",
-    numero: 1,
-    titulo: "IDENTIFICACIÓN DEL PROBLEMA Y DESCRIPCIÓN DE OBJETIVOS",
-    preguntas: [
-      {
-        numero: "1.1",
-        texto:
-          "Caracteriza el problema central o el desafío que su proyecto busca abordar o que ha motivado la implementación de su proyecto. La descripción debe incluir las causas y consecuencias que justifican su implementación en base a evidencias, y estar vinculada a la(s) competencia(s) del CNEB, la mejora de la práctica docente, la gestión escolar y los aprendizajes de los estudiantes. Sustente con información cualitativa y cuantitativa.",
-        maxCaracteres: 5000,
-      },
-      {
-        numero: "1.2",
-        texto:
-          "Formula el objetivo general y específicos del proyecto vinculados con la solución del problema central o el logro del desafío identificado, además de lograr la(s) competencia(s) del CNEB, considerando los atributos: específico, medible, alcanzable, relevante y plazo definido.",
-        maxCaracteres: 1500,
-      },
-    ],
-  },
-  {
-    id: "item2",
-    numero: 2,
-    titulo: "SOLUCIÓN INNOVADORA",
-    preguntas: [
-      {
-        numero: "2.1",
-        texto:
-          "Describe de qué trata la metodología o estrategia innovadora que viene implementando en su proyecto, y cómo se vincula con el objetivo principal del proyecto.",
-        maxCaracteres: 3500,
-      },
-      {
-        numero: "2.2",
-        texto:
-          "Describe el procedimiento metodológico que viene implementando, a la vez debe adjuntar el enlace a un video (máximo 3 minutos) donde se describa dicho procedimiento. El video debe resaltar la originalidad y pertinencia de las herramientas y técnicas que viene utilizando.",
-        maxCaracteres: 5000,
-      },
-    ],
-  },
-  {
-    id: "item3",
-    numero: 3,
-    titulo: "PERTINENCIA",
-    preguntas: [
-      {
-        numero: "3.1",
-        texto:
-          "Describe cómo el proyecto responde a los intereses y necesidades identificadas en la comunidad educativa, impulsando el desarrollo de la(s) competencia(s) del CNEB, la mejora de la práctica docente, la gestión escolar y los aprendizajes de los estudiantes.",
-        maxCaracteres: 3000,
-      },
-      {
-        numero: "3.2",
-        texto:
-          "Describe cómo el proyecto se adapta al contexto cultural, social y lingüístico de la comunidad educativa en la que se desarrolla desde una perspectiva de equidad.",
-        maxCaracteres: 3000,
-      },
-    ],
-  },
-  {
-    id: "item4",
-    numero: 4,
-    titulo: "IMPACTO DE LA IMPLEMENTACIÓN",
-    preguntas: [
-      {
-        numero: "4.1",
-        texto:
-          "Sustenta con evidencias los resultados obtenidos durante la implementación del proyecto. Las evidencias deben mostrar la vinculación directa con el objetivo principal y con las competencias priorizadas.",
-        maxCaracteres: 3500,
-      },
-      {
-        numero: "4.2",
-        texto:
-          "Explica los cambios o efectos logrados en la práctica docente, la gestión escolar y la comunidad educativa y local desde el inicio de la implementación de su proyecto hasta la actualidad.",
-        maxCaracteres: 3000,
-      },
-    ],
-  },
-  {
-    id: "item5",
-    numero: 5,
-    titulo: "SOSTENIBILIDAD",
-    preguntas: [
-      {
-        numero: "5.1",
-        texto:
-          "Describe las estrategias que desarrollarán para asegurar la viabilidad del proyecto y la permanencia de las mejoras, orientadas a la mejora de los aprendizajes.",
-        maxCaracteres: 3000,
-      },
-      {
-        numero: "5.2",
-        texto:
-          "Describe la pertinencia de los bienes y servicios que demanda el proyecto para garantizar su sostenibilidad y continuidad a largo plazo.",
-        maxCaracteres: 3000,
-        requiereTabla: true,
-      },
-    ],
-  },
-] as const;
-
-// Tipos para FormData Step1 - Proyecto 2B
-interface FormDataStep1 {
-  // CRITERIO 1: INTENCIONALIDAD
-  intencionalidad: {
-    problema_descripcion: string;
-    objetivo_general: string;
-    objetivos_especificos: string[];
-    competencias_cneb: string[];
-    area_curricular: string;
-  };
-
-  // CRITERIO 2: ORIGINALIDAD
-  originalidad: {
-    metodologia_descripcion: string;
-    procedimiento_metodologico: string;
-    video_url: string;
-  };
-
-  // CRITERIO 3: PERTINENCIA
-  pertinencia: {
-    intereses_necesidades: string;
-    contexto_cultural: string;
-  };
-
-  // CRITERIO 4: IMPACTO
-  impacto: {
-    evidencias_descripcion: string;
-    cambios_practica_docente: string;
-    cambios_gestion_escolar: string;
-    cambios_comunidad: string;
-  };
-
-  // CRITERIO 5: SOSTENIBILIDAD
-  sostenibilidad: {
-    estrategias_viabilidad: string;
-    bienes_servicios: BienServicio[];
-  };
-}
-
-// Tipos para análisis (simplificados por ahora)
-interface AnalysisStep2 {
-  intencionalidad?: unknown;
-  originalidad?: unknown;
-  pertinencia?: unknown;
-  impacto?: unknown;
-  sostenibilidad?: unknown;
-  puntaje_total: number;
-  puntaje_maximo: number;
-  timestamp: string;
-}
-
-interface FormDataStep3 {
-  complementary_answers?: Record<string, unknown>;
-}
-
-interface FinalAnalysisStep4 {
-  puntaje_total?: number;
-}
+// Alias para mantener compatibilidad con el código existente
+type FormDataStep1 = FormDataStep1_2B;
+type AnalysisStep2 = AnalysisStep2_2B;
+type FormDataStep3 = FormDataStep3_2B;
+type FinalAnalysisStep4 = FinalAnalysisStep4_2B;
 
 // Pasos del flujo
 const STEPS = [
