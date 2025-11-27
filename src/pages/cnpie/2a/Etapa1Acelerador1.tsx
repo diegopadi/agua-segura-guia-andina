@@ -2844,8 +2844,8 @@ export default function Etapa1Acelerador1() {
       onValidate={handleValidate}
       canProceed={true}
       currentProgress={0}
-      titulo="Contexto e Intencionalidad"
-      descripcion="Define el problema central, causas, consecuencias y objetivo de tu proyecto"
+      titulo="Proyectos de Innovación Educativa Consolidados"
+      descripcion=""
     >
       <div className="grid lg:grid-cols-[1fr_350px] md:grid-cols-1 gap-6">
         {/* Contenido Principal */}
