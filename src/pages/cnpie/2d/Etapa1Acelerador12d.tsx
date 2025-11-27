@@ -877,8 +877,8 @@ export default function Etapa1Acelerador12d() {
                       Analizando tu proyecto con IA
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Evaluando los 4 criterios: Intencionalidad, Originalidad,
-                      Impacto y Sostenibilidad...
+                      Evaluando los 4 criterios: Intencionalidad, Participación,
+                      Reflexión y Consistencia...
                     </p>
                     <p className="text-xs text-muted-foreground mt-2 italic">
                       Esto puede tomar hasta 2 minutos
