@@ -175,11 +175,7 @@ export default function Manual() {
           </h1>
           <p className="text-lg mb-2" style={{ color: "#00A6A6" }}>
             Selecciona la categoría de proyecto con la que deseas postular al
-            CNPIE 2025.
-          </p>
-          <p className="text-base" style={{ color: "#1A1A1A" }}>
-            Puedes basarte en tu diagnóstico, tus experiencias y las preguntas
-            sugeridas para tomar la mejor decisión.
+            CNPIE 2026.
           </p>
         </div>
 
@@ -243,7 +239,7 @@ export default function Manual() {
             Selecciona tu tipo de proyecto
           </h2>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             {/* Tarjeta 2A */}
             <Card
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
@@ -258,16 +254,24 @@ export default function Manual() {
                 <CardTitle className="text-center text-white text-xl">
                   Proyecto 2A
                 </CardTitle>
-                <CardDescription className="text-center text-white/90 text-sm">
-                  Consolidado
+                <CardDescription className="text-center text-white/90 text-sm font-medium">
+                  Proyectos de Innovación Educativa Consolidados
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-white/90 text-center">
-                  Innovación Educativa Consolidado (2 años o más de ejecución).
-                </p>
+                <div className="text-sm text-white/90">
+                  <p className="font-semibold mb-2 text-white">
+                    "Para proyectos maduros y sostenibles."
+                  </p>
+                  <p>
+                    Ideal si tu escuela ya tiene una innovación que funciona
+                    desde hace 2 años o más. Aquí debes demostrar con evidencias
+                    sólidas cómo ha mejorado los aprendizajes y que la solución
+                    ya es parte de la cultura de tu escuela.
+                  </p>
+                </div>
                 <Button
-                  onClick={() => navigate("/proyectos/2a")}
+                  onClick={() => navigate("/cnpie/2a/etapa1/acelerador1")}
                   className="w-full bg-white font-medium hover:bg-white/90"
                   style={{ color: "#005C6B" }}
                 >
@@ -290,17 +294,24 @@ export default function Manual() {
                 <CardTitle className="text-center text-white text-xl">
                   Proyecto 2B
                 </CardTitle>
-                <CardDescription className="text-center text-white/90 text-sm">
-                  Implementación
+                <CardDescription className="text-center text-white/90 text-sm font-medium">
+                  Proyectos en Proceso de Implementación
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-white/90 text-center">
-                  Innovación Educativa en Implementación (menos de 1 año de
-                  ejecución).
-                </p>
+                <div className="text-sm text-white/90">
+                  <p className="font-semibold mb-2 text-white">
+                    "Para iniciativas en marcha que buscan crecer."
+                  </p>
+                  <p>
+                    Elige esta opción si tu proyecto tiene al menos 1 año
+                    funcionando. Ya tienes un diagnóstico claro y has empezado a
+                    aplicar estrategias, pero necesitas apoyo para consolidar la
+                    propuesta y mejorar sus resultados.
+                  </p>
+                </div>
                 <Button
-                  onClick={() => navigate("/proyectos/2b")}
+                  onClick={() => navigate("/cnpie/2B/etapa1/acelerador1")}
                   className="w-full bg-white font-medium hover:bg-white/90"
                   style={{ color: "#00A6A6" }}
                 >
@@ -323,15 +334,22 @@ export default function Manual() {
                 <CardTitle className="text-center text-white text-xl">
                   Proyecto 2C
                 </CardTitle>
-                <CardDescription className="text-center text-white/90 text-sm">
-                  Investigación-Acción
+                <CardDescription className="text-center text-white/90 text-sm font-medium">
+                  Proyectos de Innovación Educativa Promisorios
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-white/90 text-center">
-                  Proyecto de Investigación-Acción Participativa (fase
-                  exploratoria o de descubrimiento).
-                </p>
+                <div className="text-sm text-white/90">
+                  <p className="font-semibold mb-2 text-white">
+                    "Para nuevas ideas con alto potencial."
+                  </p>
+                  <p>
+                    Esta es la categoría para proyectos que aún no se han
+                    ejecutado. Si tienes un diseño sólido, planificado
+                    colaborativamente y listo para implementarse por primera vez
+                    en el 2026, este es tu lugar.
+                  </p>
+                </div>
                 <Button
                   onClick={() => navigate("/proyectos/2c")}
                   className="w-full bg-white font-medium hover:bg-white/90"
@@ -356,15 +374,22 @@ export default function Manual() {
                 <CardTitle className="text-center text-white text-xl">
                   Proyecto 2D
                 </CardTitle>
-                <CardDescription className="text-center text-white/90 text-sm">
-                  Experimental
+                <CardDescription className="text-center text-white/90 text-sm font-medium">
+                  Investigación - Acción Participativa (IAPE)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-white/90 text-center">
-                  Proyecto Experimental de Innovación Educativa (fase inicial o
-                  piloto).
-                </p>
+                <div className="text-sm text-white/90">
+                  <p className="font-semibold mb-2 text-white">
+                    "Para docentes que investigan su propia práctica."
+                  </p>
+                  <p>
+                    Si tu equipo quiere resolver un problema pedagógico mediante
+                    un proceso riguroso de reflexión, análisis y construcción de
+                    conocimiento (Investigación-Acción), elige esta ruta. Aquí
+                    el foco es la metodología de investigación.
+                  </p>
+                </div>
                 <Button
                   onClick={() => navigate("/proyectos/2d")}
                   className="w-full bg-white font-medium hover:bg-white/90"
