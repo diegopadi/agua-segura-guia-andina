@@ -110,7 +110,7 @@ export default function Etapa1Acelerador12d() {
   const { rubricas, getCriterioByName } = useCNPIERubric("2D");
   const { toast } = useToast();
 
-  const rubricaFormulacion = getCriterioByName("Formulación");
+  const rubricaIntencionalidad = getCriterioByName("Intencionalidad");
   const rubricaParticipacion = getCriterioByName("Participación");
   const rubricaReflexion = getCriterioByName("Reflexión");
   const rubricaConsistencia = getCriterioByName("Consistencia");
@@ -151,26 +151,7 @@ export default function Etapa1Acelerador12d() {
   const [step2Data, setStep2Data] = useState<AnalysisStep2 | null>(null);
   const [step3Data, setStep3Data] = useState<FormDataStep3 | null>(null);
   const [step4Data, setStep4Data] = useState<FinalAnalysisStep4 | null>(null);
-  const [improvedResponses, setImprovedResponses] = useState<{
-    formulacion?: {
-      respuesta_1_1: string;
-      respuesta_1_2: string;
-      respuesta_1_3: string;
-      respuesta_1_4: string;
-    };
-    participacion?: {
-      respuesta_2_1: string;
-    };
-    reflexion?: {
-      respuesta_3_1: string;
-    };
-    consistencia?: {
-      respuesta_4_1: string;
-      respuesta_4_2: string;
-      respuesta_4_3: string;
-      respuesta_4_4: string;
-    };
-  } | null>(null);
+  const [improvedResponses, setImprovedResponses] = useState<FinalAnalysisStep4 | null>(null);
 
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -2738,18 +2719,17 @@ export default function Etapa1Acelerador12d() {
             {/* Respuestas Mejoradas por la IA */}
             <Card className="bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200 pt-10">
               <CardContent className="space-y-6">
-                {/* 1.1 */}
+                {/* 1.1 Problema */}
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 1.1 Problema</CardTitle>
+                      <CardTitle className="text-lg">🔹 1.1 Problema de Investigación</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses.intencionalidad?.respuesta_1_1 ||
-                              "",
+                            improvedResponses?.formulacion?.respuesta_1_1 || "",
                             "Respuesta 1.1"
                           )
                         }
@@ -2761,25 +2741,22 @@ export default function Etapa1Acelerador12d() {
                   </CardHeader>
                   <CardContent>
                     <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.intencionalidad?.respuesta_1_1}
+                      {improvedResponses?.formulacion?.respuesta_1_1}
                     </p>
                   </CardContent>
                 </Card>
 
-                {/* 1.2 */}
+                {/* 1.2 Justificación */}
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 1.2 Objetivos
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 1.2 Justificación</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses.intencionalidad?.respuesta_1_2 ||
-                              "",
+                            improvedResponses?.formulacion?.respuesta_1_2 || "",
                             "Respuesta 1.2"
                           )
                         }
@@ -2791,24 +2768,76 @@ export default function Etapa1Acelerador12d() {
                   </CardHeader>
                   <CardContent>
                     <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.intencionalidad?.respuesta_1_2}
+                      {improvedResponses?.formulacion?.respuesta_1_2}
                     </p>
                   </CardContent>
                 </Card>
 
-                {/* 2.1 */}
+                {/* 1.3 Preguntas de Investigación */}
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 2.1 Metodología
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 1.3 Preguntas de Investigación</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses.originalidad?.respuesta_2_1 || "",
+                            improvedResponses?.formulacion?.respuesta_1_3 || "",
+                            "Respuesta 1.3"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses?.formulacion?.respuesta_1_3}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* 1.4 Objetivos */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">🔹 1.4 Objetivos</CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses?.formulacion?.respuesta_1_4 || "",
+                            "Respuesta 1.4"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses?.formulacion?.respuesta_1_4}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* 2.1 Participación */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">🔹 2.1 Actores y Roles</CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses?.participacion?.respuesta_2_1 || "",
                             "Respuesta 2.1"
                           )
                         }
@@ -2820,53 +2849,22 @@ export default function Etapa1Acelerador12d() {
                   </CardHeader>
                   <CardContent>
                     <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.originalidad?.respuesta_2_1}
+                      {improvedResponses?.participacion?.respuesta_2_1}
                     </p>
                   </CardContent>
                 </Card>
 
-                {/* 2.2 */}
+                {/* 3.1 Reflexión */}
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 2.2 Procedimiento
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 3.1 Estrategias de Reflexión</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses.originalidad?.respuesta_2_2 || "",
-                            "Respuesta 2.2"
-                          )
-                        }
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Copiar
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.originalidad?.respuesta_2_2}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* 3.1 */}
-                <Card className="bg-white">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 3.1 Resultados
-                      </CardTitle>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.impacto?.respuesta_3_1 || "",
+                            improvedResponses?.reflexion?.respuesta_3_1 || "",
                             "Respuesta 3.1"
                           )
                         }
@@ -2878,54 +2876,22 @@ export default function Etapa1Acelerador12d() {
                   </CardHeader>
                   <CardContent>
                     <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.impacto?.respuesta_3_1}
+                      {improvedResponses?.reflexion?.respuesta_3_1}
                     </p>
                   </CardContent>
                 </Card>
 
-                {/* 3.2 */}
+                {/* 4.1 Procedimiento Metodológico */}
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 3.2 Cambios Sistémicos
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 4.1 Procedimiento Metodológico</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses.impacto?.respuesta_3_2 || "",
-                            "Respuesta 3.2"
-                          )
-                        }
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Copiar
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.impacto?.respuesta_3_2}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* 4.1 */}
-                <Card className="bg-white">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 4.1 Continuidad
-                      </CardTitle>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.sostenibilidad?.respuesta_4_1 ||
-                              "",
+                            improvedResponses?.consistencia?.respuesta_4_1 || "",
                             "Respuesta 4.1"
                           )
                         }
@@ -2937,25 +2903,22 @@ export default function Etapa1Acelerador12d() {
                   </CardHeader>
                   <CardContent>
                     <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.sostenibilidad?.respuesta_4_1}
+                      {improvedResponses?.consistencia?.respuesta_4_1}
                     </p>
                   </CardContent>
                 </Card>
 
-                {/* 4.2 */}
+                {/* 4.2 Técnicas e Instrumentos */}
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 4.2 Viabilidad
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 4.2 Técnicas e Instrumentos</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses.sostenibilidad?.respuesta_4_2 ||
-                              "",
+                            improvedResponses?.consistencia?.respuesta_4_2 || "",
                             "Respuesta 4.2"
                           )
                         }
@@ -2967,7 +2930,61 @@ export default function Etapa1Acelerador12d() {
                   </CardHeader>
                   <CardContent>
                     <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.sostenibilidad?.respuesta_4_2}
+                      {improvedResponses?.consistencia?.respuesta_4_2}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* 4.3 Plan de Acciones */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">🔹 4.3 Plan de Acciones</CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses?.consistencia?.respuesta_4_3 || "",
+                            "Respuesta 4.3"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses?.consistencia?.respuesta_4_3}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* 4.4 Bienes y Servicios */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">🔹 4.4 Bienes y Servicios</CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses?.consistencia?.respuesta_4_4 || "",
+                            "Respuesta 4.4"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses?.consistencia?.respuesta_4_4}
                     </p>
                   </CardContent>
                 </Card>
@@ -3042,21 +3059,12 @@ export default function Etapa1Acelerador12d() {
         <div className="lg:block hidden">
           <div className="sticky top-4">
             <CNPIERubricViewer
-              rubricas={[
-                rubricaIntencionalidad,
-                rubricaOriginalidad,
-                rubricaPertinencia,
-                rubricaImpacto,
-                rubricaSostenibilidad,
-              ].filter(
-                (r): r is NonNullable<typeof r> => r !== null && r !== undefined
-              )}
+              rubricas={rubricas}
               destacarCriterios={[
                 "Intencionalidad",
-                "Originalidad",
-                "Pertinencia",
-                "Impacto",
-                "Sostenibilidad",
+                "Participación",
+                "Reflexión",
+                "Consistencia",
               ]}
             />
           </div>
