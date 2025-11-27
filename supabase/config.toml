@@ -83,3 +83,6 @@ verify_jwt = true
 
 [functions.extract-repository-data]
 verify_jwt = true
+
+[functions.analyze-cnpie-general-2d]
+verify_jwt = true

@@ -378,7 +378,7 @@ export default function Etapa1Acelerador12d() {
 
       // Ejecutar la llamada a la API con timeout
       const apiPromise = supabase.functions.invoke("analyze-cnpie-general-2d", {
-        body: { step1Data },
+        body: step1Data,
       });
 
       const response = (await Promise.race([
@@ -397,120 +397,84 @@ export default function Etapa1Acelerador12d() {
       if (data.success) {
         console.log("🔵 Analysis data completo:", data.analysis);
 
-        // Transformar la estructura con emojis a estructura plana (2D)
-        const dictamenForm =
-          data.analysis.formulacion?.["📋 DICTAMEN TÉCNICO: FORMULACIÓN"];
+        // La edge function ya devuelve la estructura correcta
+        const analysis = data.analysis;
 
-        const indicador11 =
-          dictamenForm?.["🔹 INDICADOR 1.1: Problema y Causas/Consecuencias"];
-        const indicador12 = dictamenForm?.["🔹 INDICADOR 1.2: Justificación"];
-        const indicador13 =
-          dictamenForm?.["🔹 INDICADOR 1.3: Preguntas de Investigación"];
-        const indicador14 = dictamenForm?.["🔹 INDICADOR 1.4: Objetivos"];
-
-        // Extraer datos de Participación
-        const dictamenPart =
-          data.analysis.participacion?.["📋 DICTAMEN TÉCNICO: PARTICIPACIÓN"];
-
-        const indicador21 = dictamenPart?.["🔹 INDICADOR 2.1: Actores y Roles"];
-
-        // Extraer datos de Reflexión
-        const dictamenRefl =
-          data.analysis.reflexion?.["📋 DICTAMEN TÉCNICO: REFLEXIÓN"];
-
-        const indicador31 =
-          dictamenRefl?.["🔹 INDICADOR 3.1: Estrategias de Reflexión"];
-
-        // Extraer datos de Consistencia
-        const dictamenCons =
-          data.analysis.consistencia?.["📋 DICTAMEN TÉCNICO: CONSISTENCIA"];
-
-        const indicador41 =
-          dictamenCons?.["🔹 INDICADOR 4.1: Procedimiento Metodológico"];
-        const indicador42 =
-          dictamenCons?.["🔹 INDICADOR 4.2: Técnicas e Instrumentos"];
-        const indicador43 =
-          dictamenCons?.["🔹 INDICADOR 4.3: Plan de Acciones"];
-        const indicador44 =
-          dictamenCons?.["🔹 INDICADOR 4.4: Bienes y Servicios"];
-
-        // Calcular puntaje total (2D tiene 100 puntos máximos)
-        const puntajeTotal =
-          (indicador11?.PUNTAJE || 0) +
-          (indicador12?.PUNTAJE || 0) +
-          (indicador13?.PUNTAJE || 0) +
-          (indicador14?.PUNTAJE || 0) +
-          (indicador21?.PUNTAJE || 0) +
-          (indicador31?.PUNTAJE || 0) +
-          (indicador41?.PUNTAJE || 0) +
-          (indicador42?.PUNTAJE || 0) +
-          (indicador43?.PUNTAJE || 0) +
-          (indicador44?.PUNTAJE || 0);
-
-        // Transformar todos los criterios a estructura plana (2D)
+        // Transformar a estructura plana esperada por el componente
         const transformedData = {
           formulacion: {
             indicador_1_1: {
-              puntaje: indicador11?.PUNTAJE || 0,
-              nivel: indicador11?.NIVEL || "N/A",
-              analisis: indicador11?.["Análisis"] || "",
+              puntaje: analysis.formulacion?.indicador_1_1?.puntaje || 0,
+              nivel: analysis.formulacion?.indicador_1_1?.nivel || "N/A",
+              analisis: analysis.formulacion?.indicador_1_1?.justificacion || analysis.formulacion?.indicador_1_1?.analisis_problema || "",
             },
             indicador_1_2: {
-              puntaje: indicador12?.PUNTAJE || 0,
-              nivel: indicador12?.NIVEL || "N/A",
-              analisis: indicador12?.["Análisis"] || "",
+              puntaje: analysis.formulacion?.indicador_1_2?.puntaje || 0,
+              nivel: analysis.formulacion?.indicador_1_2?.nivel || "N/A",
+              analisis: analysis.formulacion?.indicador_1_2?.justificacion || analysis.formulacion?.indicador_1_2?.analisis_justificacion || "",
             },
             indicador_1_3: {
-              puntaje: indicador13?.PUNTAJE || 0,
-              nivel: indicador13?.NIVEL || "N/A",
-              analisis: indicador13?.["Análisis"] || "",
+              puntaje: analysis.formulacion?.indicador_1_3?.puntaje || 0,
+              nivel: analysis.formulacion?.indicador_1_3?.nivel || "N/A",
+              analisis: analysis.formulacion?.indicador_1_3?.justificacion || analysis.formulacion?.indicador_1_3?.analisis_preguntas || "",
             },
             indicador_1_4: {
-              puntaje: indicador14?.PUNTAJE || 0,
-              nivel: indicador14?.NIVEL || "N/A",
-              analisis: indicador14?.["Análisis"] || "",
+              puntaje: analysis.formulacion?.indicador_1_4?.puntaje || 0,
+              nivel: analysis.formulacion?.indicador_1_4?.nivel || "N/A",
+              analisis: analysis.formulacion?.indicador_1_4?.justificacion || "",
             },
+            fortalezas: analysis.formulacion?.fortalezas || [],
+            areas_mejora: analysis.formulacion?.areas_mejora || [],
+            recomendaciones: analysis.formulacion?.recomendaciones || [],
           },
           participacion: {
             indicador_2_1: {
-              puntaje: indicador21?.PUNTAJE || 0,
-              nivel: indicador21?.NIVEL || "N/A",
-              analisis: indicador21?.["Análisis"] || "",
+              puntaje: analysis.participacion?.indicador_2_1?.puntaje || 0,
+              nivel: analysis.participacion?.indicador_2_1?.nivel || "N/A",
+              analisis: analysis.participacion?.indicador_2_1?.analisis || "",
             },
+            fortalezas: analysis.participacion?.fortalezas || [],
+            areas_mejora: analysis.participacion?.areas_mejora || [],
           },
           reflexion: {
             indicador_3_1: {
-              puntaje: indicador31?.PUNTAJE || 0,
-              nivel: indicador31?.NIVEL || "N/A",
-              analisis: indicador31?.["Análisis"] || "",
+              puntaje: analysis.reflexion?.indicador_3_1?.puntaje || 0,
+              nivel: analysis.reflexion?.indicador_3_1?.nivel || "N/A",
+              analisis: analysis.reflexion?.indicador_3_1?.analisis || "",
             },
+            fortalezas: analysis.reflexion?.fortalezas || [],
+            areas_mejora: analysis.reflexion?.areas_mejora || [],
           },
           consistencia: {
             indicador_4_1: {
-              puntaje: indicador41?.PUNTAJE || 0,
-              nivel: indicador41?.NIVEL || "N/A",
-              analisis: indicador41?.["Análisis"] || "",
+              puntaje: analysis.consistencia?.indicador_4_1?.puntaje || 0,
+              nivel: analysis.consistencia?.indicador_4_1?.nivel || "N/A",
+              analisis: analysis.consistencia?.indicador_4_1?.analisis || "",
             },
             indicador_4_2: {
-              puntaje: indicador42?.PUNTAJE || 0,
-              nivel: indicador42?.NIVEL || "N/A",
-              analisis: indicador42?.["Análisis"] || "",
+              puntaje: analysis.consistencia?.indicador_4_2?.puntaje || 0,
+              nivel: analysis.consistencia?.indicador_4_2?.nivel || "N/A",
+              analisis: analysis.consistencia?.indicador_4_2?.analisis || "",
             },
             indicador_4_3: {
-              puntaje: indicador43?.PUNTAJE || 0,
-              nivel: indicador43?.NIVEL || "N/A",
-              analisis: indicador43?.["Análisis"] || "",
+              puntaje: analysis.consistencia?.indicador_4_3?.puntaje || 0,
+              nivel: analysis.consistencia?.indicador_4_3?.nivel || "N/A",
+              analisis: analysis.consistencia?.indicador_4_3?.analisis || "",
             },
             indicador_4_4: {
-              puntaje: indicador44?.PUNTAJE || 0,
-              nivel: indicador44?.NIVEL || "N/A",
-              analisis: indicador44?.["Análisis"] || "",
+              puntaje: analysis.consistencia?.indicador_4_4?.puntaje || 0,
+              nivel: analysis.consistencia?.indicador_4_4?.nivel || "N/A",
+              analisis: analysis.consistencia?.indicador_4_4?.analisis || "",
             },
+            fortalezas: analysis.consistencia?.fortalezas || [],
+            areas_mejora: analysis.consistencia?.areas_mejora || [],
           },
-          puntaje_total: puntajeTotal,
-          puntaje_maximo: 100,
-          timestamp: new Date().toISOString(),
+          puntaje_total: analysis.puntaje_total || 0,
+          puntaje_maximo: analysis.puntaje_maximo || 100,
+          timestamp: analysis.timestamp || new Date().toISOString(),
         };
+
+        const puntajeTotal = transformedData.puntaje_total;
 
         console.log("🔵 Puntaje total calculado:", puntajeTotal);
 
