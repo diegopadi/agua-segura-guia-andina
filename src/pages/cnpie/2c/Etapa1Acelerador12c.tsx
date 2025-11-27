@@ -1652,26 +1652,19 @@ export default function Etapa1Acelerador12c() {
                         </p>
                       </div>
                       {step2Data.intencionalidad?.indicador_1_1
-                        ?.evidencia_consolidados && (
+                        ?.causas_consecuencias && (
                         <div className="bg-white p-3 rounded">
-                          <p className="font-semibold mb-1">Evidencia:</p>
+                          <p className="font-semibold mb-1">
+                            Causas y Consecuencias:
+                          </p>
                           <p className="text-gray-700">
                             {
                               step2Data.intencionalidad?.indicador_1_1
-                                ?.evidencia_consolidados
+                                ?.causas_consecuencias
                             }
                           </p>
                         </div>
                       )}
-                      <div className="bg-white p-3 rounded">
-                        <p className="font-semibold mb-1">Justificación:</p>
-                        <p className="text-gray-700">
-                          {
-                            step2Data.intencionalidad?.indicador_1_1
-                              ?.justificacion
-                          }
-                        </p>
-                      </div>
                     </div>
                   </div>
 
@@ -1707,15 +1700,20 @@ export default function Etapa1Acelerador12c() {
                           ))}
                         </div>
                       </div>
-                      <div className="bg-white p-3 rounded">
-                        <p className="font-semibold mb-1">Justificación:</p>
-                        <p className="text-gray-700">
-                          {
-                            step2Data.intencionalidad?.indicador_1_2
-                              ?.justificacion
-                          }
-                        </p>
-                      </div>
+                      {step2Data.intencionalidad?.indicador_1_2
+                        ?.observacion_final && (
+                        <div className="bg-white p-3 rounded">
+                          <p className="font-semibold mb-1">
+                            Observación Final:
+                          </p>
+                          <p className="text-gray-700">
+                            {
+                              step2Data.intencionalidad?.indicador_1_2
+                                ?.observacion_final
+                            }
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </AccordionContent>
@@ -1775,40 +1773,13 @@ export default function Etapa1Acelerador12c() {
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
-                      {step2Data.originalidad?.indicador_2_2
-                        ?.calidad_procedimiento && (
-                        <div className="bg-white p-3 rounded">
-                          <p className="font-semibold mb-2">
-                            Calidad del Procedimiento:
-                          </p>
-                          <p className="text-gray-700">
-                            {
-                              step2Data.originalidad?.indicador_2_2
-                                ?.calidad_procedimiento
-                            }
-                          </p>
-                        </div>
-                      )}
                       <div className="bg-white p-3 rounded">
-                        <p className="font-semibold mb-2">Video Detectado:</p>
-                        <p className="text-gray-700">
-                          {step2Data.originalidad?.indicador_2_2
-                            ?.video_detectado
-                            ? "✅ Sí"
-                            : "❌ No"}{" "}
-                          - Puntaje:{" "}
-                          {step2Data.originalidad?.indicador_2_2?.puntaje_video}{" "}
-                          pts
-                        </p>
-                      </div>
-                      {step2Data.originalidad?.indicador_2_2?.observacion && (
-                        <div className="bg-white p-3 rounded">
-                          <p className="font-semibold mb-1">Observación:</p>
-                          <p className="text-gray-700">
-                            {step2Data.originalidad?.indicador_2_2?.observacion}
-                          </p>
+                        <p className="font-semibold mb-2">Análisis:</p>
+                        <div className="whitespace-pre-wrap text-gray-700">
+                          {step2Data.originalidad?.indicador_2_2?.analisis ||
+                            "No disponible"}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </AccordionContent>
@@ -2029,31 +2000,31 @@ export default function Etapa1Acelerador12c() {
                   <div className="mb-4 p-4 bg-teal-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-teal-900">
-                        5.1 Estrategias de Viabilidad
+                        6.1 Estrategias de Viabilidad
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.sostenibilidad?.indicador_5_1?.puntaje ||
+                          {step2Data.sostenibilidad?.indicador_6_1?.puntaje ||
                             0}{" "}
                           / 5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
-                          {step2Data.sostenibilidad?.indicador_5_1?.nivel}
+                          {step2Data.sostenibilidad?.indicador_6_1?.nivel}
                         </Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
                       <div className="whitespace-pre-wrap text-gray-700">
-                        {typeof step2Data.sostenibilidad?.indicador_5_1
+                        {typeof step2Data.sostenibilidad?.indicador_6_1
                           ?.analisis === "string"
-                          ? step2Data.sostenibilidad?.indicador_5_1?.analisis
-                          : typeof step2Data.sostenibilidad?.indicador_5_1
+                          ? step2Data.sostenibilidad?.indicador_6_1?.analisis
+                          : typeof step2Data.sostenibilidad?.indicador_6_1
                               ?.analisis === "object" &&
-                            step2Data.sostenibilidad?.indicador_5_1
+                            step2Data.sostenibilidad?.indicador_6_1
                               ?.analisis !== null
                           ? Object.entries(
-                              step2Data.sostenibilidad.indicador_5_1.analisis
+                              step2Data.sostenibilidad.indicador_6_1.analisis
                             )
                               .map(([key, value]) => `${key}: ${value}`)
                               .join("\n\n")
@@ -2062,35 +2033,35 @@ export default function Etapa1Acelerador12c() {
                     </div>
                   </div>
 
-                  {/* Indicador 5.2 */}
+                  {/* Indicador 6.2 */}
                   <div className="mb-4 p-4 bg-teal-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-teal-900">
-                        5.2 Pertinencia de Bienes y Servicios
+                        6.2 Pertinencia de Bienes y Servicios
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.sostenibilidad?.indicador_5_2?.puntaje ||
+                          {step2Data.sostenibilidad?.indicador_6_2?.puntaje ||
                             0}{" "}
                           / 10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
-                          {step2Data.sostenibilidad?.indicador_5_2?.nivel}
+                          {step2Data.sostenibilidad?.indicador_6_2?.nivel}
                         </Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
                       <div className="whitespace-pre-wrap text-gray-700">
-                        {typeof step2Data.sostenibilidad?.indicador_5_2
+                        {typeof step2Data.sostenibilidad?.indicador_6_2
                           ?.analisis === "string"
-                          ? step2Data.sostenibilidad?.indicador_5_2?.analisis
-                          : typeof step2Data.sostenibilidad?.indicador_5_2
+                          ? step2Data.sostenibilidad?.indicador_6_2?.analisis
+                          : typeof step2Data.sostenibilidad?.indicador_6_2
                               ?.analisis === "object" &&
-                            step2Data.sostenibilidad?.indicador_5_2
+                            step2Data.sostenibilidad?.indicador_6_2
                               ?.analisis !== null
                           ? Object.entries(
-                              step2Data.sostenibilidad.indicador_5_2.analisis
+                              step2Data.sostenibilidad.indicador_6_2.analisis
                             )
                               .map(([key, value]) => `${key}: ${value}`)
                               .join("\n\n")
@@ -2180,6 +2151,12 @@ export default function Etapa1Acelerador12c() {
               (step2Data.originalidad?.indicador_2_2?.puntaje || 0) ===
             maxScore
           );
+        case "pertinencia":
+          return (
+            (step2Data.pertinencia?.indicador_3_1?.puntaje || 0) +
+              (step2Data.pertinencia?.indicador_3_2?.puntaje || 0) ===
+            maxScore
+          );
         case "participacion":
           return (
             (step2Data.participacion?.indicador_4_1?.puntaje || 0) === maxScore
@@ -2210,7 +2187,7 @@ export default function Etapa1Acelerador12c() {
       {
         key: "originalidad",
         name: "Originalidad",
-        maxScore: 30,
+        maxScore: 25,
         icon: Sparkles,
         color: "green",
       },
@@ -2222,11 +2199,18 @@ export default function Etapa1Acelerador12c() {
         color: "purple",
       },
       {
-        key: "impacto",
-        name: "Impacto",
-        maxScore: 15,
+        key: "participacion",
+        name: "Participación",
+        maxScore: 10,
         icon: CheckCircle,
         color: "orange",
+      },
+      {
+        key: "reflexion",
+        name: "Reflexión",
+        maxScore: 10,
+        icon: Lightbulb,
+        color: "indigo",
       },
       {
         key: "sostenibilidad",
@@ -2365,16 +2349,16 @@ export default function Etapa1Acelerador12c() {
                         <Badge variant="outline">
                           {criterio.key === "intencionalidad" &&
                           step2Data?.intencionalidad
-                            ? ((step2Data.intencionalidad as any).indicador_1_1
+                            ? (step2Data.intencionalidad.indicador_1_1
                                 ?.puntaje || 0) +
-                              ((step2Data.intencionalidad as any).indicador_1_2
+                              (step2Data.intencionalidad.indicador_1_2
                                 ?.puntaje || 0)
                             : criterio.key === "originalidad" &&
                               step2Data?.originalidad
-                            ? ((step2Data.originalidad as any).indicador_2_1
-                                ?.puntaje || 0) +
-                              ((step2Data.originalidad as any).indicador_2_2
-                                ?.puntaje || 0)
+                            ? (step2Data.originalidad.indicador_2_1?.puntaje ||
+                                0) +
+                              (step2Data.originalidad.indicador_2_2?.puntaje ||
+                                0)
                             : criterio.key === "pertinencia" &&
                               step2Data?.pertinencia
                             ? (step2Data.pertinencia.indicador_3_1?.puntaje ||
@@ -2599,7 +2583,7 @@ export default function Etapa1Acelerador12c() {
                 }),
                 new Paragraph({
                   text:
-                    (improvedResponses as any).pertinencia?.respuesta_3_1 ||
+                    improvedResponses.pertinencia?.respuesta_3_1 ||
                     "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
@@ -2610,7 +2594,7 @@ export default function Etapa1Acelerador12c() {
                 }),
                 new Paragraph({
                   text:
-                    (improvedResponses as any).pertinencia?.respuesta_3_2 ||
+                    improvedResponses.pertinencia?.respuesta_3_2 ||
                     "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
@@ -2622,53 +2606,60 @@ export default function Etapa1Acelerador12c() {
                   spacing: { before: 400, after: 200 },
                 }),
                 new Paragraph({
-                  text: "4.1 Resultados de Aprendizaje",
+                  text: "4.1 Actores y Roles",
                   heading: HeadingLevel.HEADING_2,
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
                   text:
-                    improvedResponses.impacto?.respuesta_3_1 ||
-                    "(Sin respuesta)",
-                  spacing: { after: 200 },
-                }),
-                new Paragraph({
-                  text: "4.2 Cambios Sistémicos",
-                  heading: HeadingLevel.HEADING_2,
-                  spacing: { before: 200, after: 100 },
-                }),
-                new Paragraph({
-                  text:
-                    improvedResponses.impacto?.respuesta_3_2 ||
+                    improvedResponses.participacion?.respuesta_4_1 ||
                     "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
 
-                // 5. SOSTENIBILIDAD
+                // 5. REFLEXIÓN
                 new Paragraph({
-                  text: "5. SOSTENIBILIDAD",
+                  text: "5. REFLEXIÓN",
                   heading: HeadingLevel.HEADING_1,
                   spacing: { before: 400, after: 200 },
                 }),
                 new Paragraph({
-                  text: "5.1 Estrategias de Viabilidad",
+                  text: "5.1 Mecanismos de Reflexión",
                   heading: HeadingLevel.HEADING_2,
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
                   text:
-                    improvedResponses.sostenibilidad?.respuesta_4_1 ||
+                    improvedResponses.reflexion?.respuesta_5_1 ||
+                    "(Sin respuesta)",
+                  spacing: { after: 300 },
+                }),
+
+                // 6. SOSTENIBILIDAD
+                new Paragraph({
+                  text: "6. SOSTENIBILIDAD",
+                  heading: HeadingLevel.HEADING_1,
+                  spacing: { before: 400, after: 200 },
+                }),
+                new Paragraph({
+                  text: "6.1 Estrategias de Viabilidad",
+                  heading: HeadingLevel.HEADING_2,
+                  spacing: { before: 200, after: 100 },
+                }),
+                new Paragraph({
+                  text:
+                    improvedResponses.sostenibilidad?.respuesta_6_1 ||
                     "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
-                  text: "5.2 Pertinencia de Bienes y Servicios",
+                  text: "6.2 Pertinencia de Bienes y Servicios",
                   heading: HeadingLevel.HEADING_2,
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
                   text:
-                    improvedResponses.sostenibilidad?.respuesta_4_2 ||
+                    improvedResponses.sostenibilidad?.respuesta_6_2 ||
                     "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
@@ -2755,23 +2746,24 @@ export default function Etapa1Acelerador12c() {
         respuesta_original_3_2: step1Data?.pertinencia?.contexto_cultural || "",
         nueva_respuesta_3_2: step3Answers?.pertinencia?.respuesta_2 || "",
       },
-      impacto: {
-        respuesta_original_4_1:
-          step1Data?.impacto?.evidencias_descripcion || "",
-        nueva_respuesta_4_1: step3Answers?.impacto?.respuesta_1 || "",
-        respuesta_original_4_2:
-          step1Data?.impacto?.cambios_practica_docente || "",
-        nueva_respuesta_4_2: step3Answers?.impacto?.respuesta_2 || "",
+      participacion: {
+        respuesta_original_4_1: step1Data?.participacion?.actores_roles || "",
+        nueva_respuesta_4_1: step3Answers?.participacion?.respuesta_1 || "",
+      },
+      reflexion: {
+        respuesta_original_5_1:
+          step1Data?.reflexion?.mecanismos_reflexion || "",
+        nueva_respuesta_5_1: step3Answers?.reflexion?.respuesta_1 || "",
       },
       sostenibilidad: {
-        respuesta_original_5_1:
+        respuesta_original_6_1:
           step1Data?.sostenibilidad?.estrategias_viabilidad || "",
-        nueva_respuesta_5_1: step3Answers?.sostenibilidad?.respuesta_1 || "",
-        respuesta_original_5_2:
+        nueva_respuesta_6_1: step3Answers?.sostenibilidad?.respuesta_1 || "",
+        respuesta_original_6_2:
           step1Data?.sostenibilidad?.bienes_servicios
             ?.map((b) => b.descripcion_utilidad)
             .join(", ") || "",
-        nueva_respuesta_5_2: step3Answers?.sostenibilidad?.respuesta_2 || "",
+        nueva_respuesta_6_2: step3Answers?.sostenibilidad?.respuesta_2 || "",
       },
     };
 
@@ -2921,77 +2913,19 @@ export default function Etapa1Acelerador12c() {
                   </CardContent>
                 </Card>
 
-                {/* 3.1 */}
-                <Card className="bg-white">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 3.1 Resultados
-                      </CardTitle>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.impacto?.respuesta_3_1 || "",
-                            "Respuesta 3.1"
-                          )
-                        }
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Copiar
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.impacto?.respuesta_3_1}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* 3.2 */}
-                <Card className="bg-white">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 3.2 Cambios Sistémicos
-                      </CardTitle>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.impacto?.respuesta_3_2 || "",
-                            "Respuesta 3.2"
-                          )
-                        }
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Copiar
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.impacto?.respuesta_3_2}
-                    </p>
-                  </CardContent>
-                </Card>
-
                 {/* 4.1 */}
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <CardTitle className="text-lg">
-                        🔹 4.1 Continuidad
+                        🔹 4.1 Actores y Roles
                       </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses.sostenibilidad?.respuesta_4_1 ||
+                            improvedResponses.participacion?.respuesta_4_1 ||
                               "",
                             "Respuesta 4.1"
                           )
@@ -3004,26 +2938,25 @@ export default function Etapa1Acelerador12c() {
                   </CardHeader>
                   <CardContent>
                     <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.sostenibilidad?.respuesta_4_1}
+                      {improvedResponses.participacion?.respuesta_4_1}
                     </p>
                   </CardContent>
                 </Card>
 
-                {/* 4.2 */}
+                {/* 5.1 */}
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <CardTitle className="text-lg">
-                        🔹 4.2 Viabilidad
+                        🔹 5.1 Mecanismos de Reflexión
                       </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses.sostenibilidad?.respuesta_4_2 ||
-                              "",
-                            "Respuesta 4.2"
+                            improvedResponses.reflexion?.respuesta_5_1 || "",
+                            "Respuesta 5.1"
                           )
                         }
                       >
@@ -3034,7 +2967,67 @@ export default function Etapa1Acelerador12c() {
                   </CardHeader>
                   <CardContent>
                     <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.sostenibilidad?.respuesta_4_2}
+                      {improvedResponses.reflexion?.respuesta_5_1}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* 6.1 */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">
+                        🔹 6.1 Continuidad
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses.sostenibilidad?.respuesta_6_1 ||
+                              "",
+                            "Respuesta 6.1"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses.sostenibilidad?.respuesta_6_1}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* 6.2 */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">
+                        🔹 6.2 Viabilidad
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            improvedResponses.sostenibilidad?.respuesta_6_2 ||
+                              "",
+                            "Respuesta 6.2"
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {improvedResponses.sostenibilidad?.respuesta_6_2}
                     </p>
                   </CardContent>
                 </Card>
@@ -3121,7 +3114,8 @@ export default function Etapa1Acelerador12c() {
                 "Intencionalidad",
                 "Originalidad",
                 "Pertinencia",
-                "Impacto",
+                "Participación",
+                "Reflexión",
                 "Sostenibilidad",
               ]}
             />

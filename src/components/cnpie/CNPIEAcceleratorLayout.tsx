@@ -78,11 +78,11 @@ export function CNPIEAcceleratorLayout({
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/proyectos/${tipoProyecto.toLowerCase()}`)}
+            onClick={() => navigate(`/proyectos/manual`)}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver al Proyecto {tipoProyecto}
+            Volver
           </Button>
 
           <div className="flex items-center justify-between">
@@ -91,9 +91,7 @@ export function CNPIEAcceleratorLayout({
               {descripcion && (
                 <p className="text-muted-foreground">{descripcion}</p>
               )}
-              <p className="text-sm text-muted-foreground mt-2">
-                Acelerador 
-              </p>
+              <p className="text-sm text-muted-foreground mt-2">Acelerador</p>
             </div>
           </div>
         </div>
