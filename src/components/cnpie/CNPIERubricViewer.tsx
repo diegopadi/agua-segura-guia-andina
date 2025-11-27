@@ -20,10 +20,10 @@ interface CNPIERubricViewerProps {
   destacarCriterios?: string[];
 }
 
-interface GroupedCriterio {
-  criterio: string;
-  indicadores: CNPIERubricCriteria[];
-  puntajeTotal: number;
+interface SubIndicador {
+  codigo: string;
+  texto: string;
+  puntaje: number;
 }
 
 export function CNPIERubricViewer({
@@ -34,26 +34,6 @@ export function CNPIERubricViewer({
   const rubricasValidas = rubricas.filter(
     (r) => r && r.puntaje_maximo !== undefined
   );
-
-  // Agrupar por criterio principal
-  const criteriosAgrupados: GroupedCriterio[] = [];
-  const criterioMap = new Map<string, GroupedCriterio>();
-
-  rubricasValidas.forEach((rubrica) => {
-    const existing = criterioMap.get(rubrica.criterio);
-    if (existing) {
-      existing.indicadores.push(rubrica);
-      existing.puntajeTotal += rubrica.puntaje_maximo;
-    } else {
-      const newGroup: GroupedCriterio = {
-        criterio: rubrica.criterio,
-        indicadores: [rubrica],
-        puntajeTotal: rubrica.puntaje_maximo,
-      };
-      criterioMap.set(rubrica.criterio, newGroup);
-      criteriosAgrupados.push(newGroup);
-    }
-  });
 
   const totalPuntaje = rubricasValidas.reduce(
     (sum, r) => sum + r.puntaje_maximo,
@@ -75,6 +55,21 @@ export function CNPIERubricViewer({
     );
   }
 
+  const parseSubIndicadores = (ejemplos: any): SubIndicador[] => {
+    if (!ejemplos) return [];
+    try {
+      if (typeof ejemplos === 'string') {
+        return JSON.parse(ejemplos);
+      }
+      if (Array.isArray(ejemplos)) {
+        return ejemplos;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
   return (
     <Card className="border-primary/20">
       <CardHeader>
@@ -95,78 +90,89 @@ export function CNPIERubricViewer({
       </CardHeader>
       <CardContent>
         <Accordion type="multiple" className="w-full">
-          {criteriosAgrupados.map((grupo) => {
-            const isDestacado = destacarCriterios.includes(grupo.criterio);
+          {rubricasValidas.map((rubrica) => {
+            const isDestacado = destacarCriterios.includes(rubrica.criterio);
+            const subIndicadores = parseSubIndicadores(rubrica.ejemplos);
+
             return (
-              <AccordionItem key={grupo.criterio} value={grupo.criterio}>
+              <AccordionItem key={rubrica.id} value={rubrica.id}>
                 <AccordionTrigger
                   className={isDestacado ? "text-primary font-semibold" : ""}
                 >
                   <div className="flex items-center justify-between w-full pr-4">
-                    <span>{grupo.criterio}</span>
+                    <span>{rubrica.criterio}</span>
                     <Badge variant={isDestacado ? "default" : "secondary"}>
-                      {grupo.puntajeTotal} pts
+                      {rubrica.puntaje_maximo} pts
                     </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4 pt-2">
-                    {grupo.indicadores.map((rubrica, idx) => (
-                      <div
-                        key={rubrica.id}
-                        className={`${idx > 0 ? "border-t pt-4" : ""}`}
-                      >
-                        {/* Indicador */}
-                        <div className="flex items-start gap-3">
-                          <FileText className="w-4 h-4 text-muted-foreground mt-1" />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <p className="font-semibold text-sm">
-                                Indicador {rubrica.indicador.split(" ")[0]}
-                              </p>
-                              <Badge variant="outline" className="text-xs">
-                                {rubrica.puntaje_maximo} pts
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {rubrica.indicador}
-                            </p>
-                          </div>
-                        </div>
+                    {/* Indicador general */}
+                    <div className="flex items-start gap-3">
+                      <FileText className="w-4 h-4 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {rubrica.indicador}
+                        </p>
+                      </div>
+                    </div>
 
-                        {/* Descripción */}
-                        {rubrica.descripcion && (
-                          <div className="p-3 bg-muted rounded-lg mt-2 ml-7">
-                            <p className="text-sm">{rubrica.descripcion}</p>
-                          </div>
-                        )}
-
-                        {/* Recomendaciones */}
-                        {rubrica.recomendaciones && (
-                          <div className="flex items-start gap-3 mt-2 ml-7">
-                            <Lightbulb className="w-4 h-4 text-yellow-600 mt-1" />
-                            <div>
-                              <p className="font-semibold text-sm mb-1">
-                                Recomendaciones
-                              </p>
+                    {/* Sub-indicadores desde ejemplos */}
+                    {subIndicadores.length > 0 && (
+                      <div className="space-y-2 ml-7">
+                        {subIndicadores.map((sub, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-start justify-between p-2 bg-muted/50 rounded-lg"
+                          >
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-xs font-mono text-primary font-medium">
+                                {sub.codigo}
+                              </span>
                               <p className="text-sm text-muted-foreground">
-                                {rubrica.recomendaciones}
+                                {sub.texto}
                               </p>
                             </div>
-                          </div>
-                        )}
-
-                        {/* Extensión máxima */}
-                        {rubrica.extension_maxima && (
-                          <div className="flex items-center gap-2 text-sm mt-2 ml-7">
-                            <Badge variant="outline">
-                              Máximo: {rubrica.extension_maxima.toLocaleString()}{" "}
-                              caracteres
+                            <Badge variant="outline" className="text-xs ml-2 shrink-0">
+                              {sub.puntaje} pts
                             </Badge>
                           </div>
-                        )}
+                        ))}
                       </div>
-                    ))}
+                    )}
+
+                    {/* Descripción */}
+                    {rubrica.descripcion && (
+                      <div className="p-3 bg-muted rounded-lg ml-7">
+                        <p className="text-sm">{rubrica.descripcion}</p>
+                      </div>
+                    )}
+
+                    {/* Recomendaciones */}
+                    {rubrica.recomendaciones && (
+                      <div className="flex items-start gap-3 ml-7">
+                        <Lightbulb className="w-4 h-4 text-yellow-600 mt-1" />
+                        <div>
+                          <p className="font-semibold text-sm mb-1">
+                            Recomendaciones
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {rubrica.recomendaciones}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Extensión máxima */}
+                    {rubrica.extension_maxima && (
+                      <div className="flex items-center gap-2 text-sm ml-7">
+                        <Badge variant="outline">
+                          Máximo: {rubrica.extension_maxima.toLocaleString()}{" "}
+                          caracteres
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
