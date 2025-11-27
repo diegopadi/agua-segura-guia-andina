@@ -7,7 +7,15 @@ import { RepositoryExtractionButton } from "@/components/RepositoryExtractionBut
 import { CriterioAccordionHeader } from "../components/CriterioAccordionHeader";
 import { ProgressStepper } from "../components/ProgressStepper";
 import { QuestionCardWithTextarea } from "../components/QuestionCardWithTextarea";
-import jsPDF from "jspdf";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  AlignmentType,
+} from "docx";
+import { saveAs } from "file-saver";
 import {
   Card,
   CardContent,
@@ -875,6 +883,10 @@ export default function Etapa1Acelerador1() {
       }
 
       setCurrentStep(4);
+
+      // Autoguardar el resultado final
+      await handleSave();
+
       toast({
         title: "✅ Respuestas mejoradas generadas",
         description: "Puedes revisar y copiar las nuevas versiones",
@@ -2268,211 +2280,195 @@ export default function Etapa1Acelerador1() {
       });
     };
 
-    const generatePDF = () => {
+    const generateDOCX = async () => {
       if (!improvedResponses || !proyecto) {
         toast({
           title: "❌ Error",
-          description: "No hay respuestas mejoradas para generar el PDF",
+          description: "No hay respuestas mejoradas para generar el documento",
           variant: "destructive",
         });
         return;
       }
 
       toast({
-        title: "🔄 Generando PDF...",
+        title: "🔄 Generando documento Word...",
         description: "Preparando el documento para descarga",
       });
 
       try {
-        const doc = new jsPDF();
-        const pageWidth = doc.internal.pageSize.width;
-        const margin = 20;
-        const maxWidth = pageWidth - 2 * margin;
-        let yPos = 20;
+        // Crear documento DOCX
+        const doc = new Document({
+          sections: [
+            {
+              properties: {},
+              children: [
+                // PORTADA
+                new Paragraph({
+                  text: "CNPIE 2026 - Anexo 2A",
+                  heading: HeadingLevel.TITLE,
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 200 },
+                }),
+                new Paragraph({
+                  text: "Respuestas Mejoradas por IA",
+                  heading: HeadingLevel.HEADING_2,
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 400 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Fecha: ${new Date().toLocaleDateString("es-ES")}`,
+                      size: 20,
+                    }),
+                  ],
+                  spacing: { after: 400 },
+                }),
 
-        // Helper para agregar texto con salto de página automático
-        const addText = (
-          text: string,
-          fontSize: number,
-          isBold = false,
-          color: [number, number, number] = [0, 0, 0]
-        ) => {
-          doc.setFontSize(fontSize);
-          doc.setTextColor(color[0], color[1], color[2]);
+                // 1. INTENCIONALIDAD
+                new Paragraph({
+                  text: "1. INTENCIONALIDAD",
+                  heading: HeadingLevel.HEADING_1,
+                  spacing: { before: 400, after: 200 },
+                }),
+                new Paragraph({
+                  text: "1.1 Caracterización del Problema",
+                  heading: HeadingLevel.HEADING_2,
+                  spacing: { before: 200, after: 100 },
+                }),
+                new Paragraph({
+                  text:
+                    improvedResponses.intencionalidad?.respuesta_1_1 ||
+                    "(Sin respuesta)",
+                  spacing: { after: 200 },
+                }),
+                new Paragraph({
+                  text: "1.2 Objetivos del Proyecto",
+                  heading: HeadingLevel.HEADING_2,
+                  spacing: { before: 200, after: 100 },
+                }),
+                new Paragraph({
+                  text:
+                    improvedResponses.intencionalidad?.respuesta_1_2 ||
+                    "(Sin respuesta)",
+                  spacing: { after: 300 },
+                }),
 
-          if (isBold) {
-            doc.setFont("helvetica", "bold");
-          } else {
-            doc.setFont("helvetica", "normal");
-          }
+                // 2. ORIGINALIDAD
+                new Paragraph({
+                  text: "2. ORIGINALIDAD",
+                  heading: HeadingLevel.HEADING_1,
+                  spacing: { before: 400, after: 200 },
+                }),
+                new Paragraph({
+                  text: "2.1 Metodología o Estrategia",
+                  heading: HeadingLevel.HEADING_2,
+                  spacing: { before: 200, after: 100 },
+                }),
+                new Paragraph({
+                  text:
+                    improvedResponses.originalidad?.respuesta_2_1 ||
+                    "(Sin respuesta)",
+                  spacing: { after: 200 },
+                }),
+                new Paragraph({
+                  text: "2.2 Procedimiento Metodológico",
+                  heading: HeadingLevel.HEADING_2,
+                  spacing: { before: 200, after: 100 },
+                }),
+                new Paragraph({
+                  text:
+                    improvedResponses.originalidad?.respuesta_2_2 ||
+                    "(Sin respuesta)",
+                  spacing: { after: 300 },
+                }),
 
-          const lines = doc.splitTextToSize(text, maxWidth);
-          const lineHeight = fontSize * 0.5;
+                // 3. IMPACTO
+                new Paragraph({
+                  text: "3. IMPACTO",
+                  heading: HeadingLevel.HEADING_1,
+                  spacing: { before: 400, after: 200 },
+                }),
+                new Paragraph({
+                  text: "3.1 Resultados de Aprendizaje",
+                  heading: HeadingLevel.HEADING_2,
+                  spacing: { before: 200, after: 100 },
+                }),
+                new Paragraph({
+                  text:
+                    improvedResponses.impacto?.respuesta_3_1 ||
+                    "(Sin respuesta)",
+                  spacing: { after: 200 },
+                }),
+                new Paragraph({
+                  text: "3.2 Cambios Sistémicos",
+                  heading: HeadingLevel.HEADING_2,
+                  spacing: { before: 200, after: 100 },
+                }),
+                new Paragraph({
+                  text:
+                    improvedResponses.impacto?.respuesta_3_2 ||
+                    "(Sin respuesta)",
+                  spacing: { after: 300 },
+                }),
 
-          lines.forEach((line: string) => {
-            if (yPos + lineHeight > doc.internal.pageSize.height - 20) {
-              doc.addPage();
-              yPos = 20;
-            }
-            doc.text(line, margin, yPos);
-            yPos += lineHeight;
-          });
+                // 4. SOSTENIBILIDAD
+                new Paragraph({
+                  text: "4. SOSTENIBILIDAD",
+                  heading: HeadingLevel.HEADING_1,
+                  spacing: { before: 400, after: 200 },
+                }),
+                new Paragraph({
+                  text: "4.1 Estrategias de Continuidad",
+                  heading: HeadingLevel.HEADING_2,
+                  spacing: { before: 200, after: 100 },
+                }),
+                new Paragraph({
+                  text:
+                    improvedResponses.sostenibilidad?.respuesta_4_1 ||
+                    "(Sin respuesta)",
+                  spacing: { after: 200 },
+                }),
+                new Paragraph({
+                  text: "4.2 Viabilidad y Aliados",
+                  heading: HeadingLevel.HEADING_2,
+                  spacing: { before: 200, after: 100 },
+                }),
+                new Paragraph({
+                  text:
+                    improvedResponses.sostenibilidad?.respuesta_4_2 ||
+                    "(Sin respuesta)",
+                  spacing: { after: 300 },
+                }),
 
-          yPos += 5; // Espacio después del texto
-        };
-
-        const addSection = (title: string, content: string) => {
-          // Título de la pregunta
-          addText(title, 12, true, [41, 128, 185]); // Azul
-          yPos += 2;
-
-          // Contenido de la respuesta
-          addText(content || "(Sin respuesta)", 10, false, [0, 0, 0]);
-          yPos += 8; // Espacio entre secciones
-        };
-
-        // === PORTADA ===
-        doc.setFillColor(41, 128, 185);
-        doc.rect(0, 0, pageWidth, 60, "F");
-
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(24);
-        doc.setFont("helvetica", "bold");
-        doc.text("CNPIE 2026 - Anexo 2A", pageWidth / 2, 30, {
-          align: "center",
+                // PIE DE PÁGINA
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Generado por Agua Segura - Guía Andina",
+                      size: 16,
+                      italics: true,
+                    }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                  spacing: { before: 400 },
+                }),
+              ],
+            },
+          ],
         });
 
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "normal");
-        doc.text("Respuestas Mejoradas por IA", pageWidth / 2, 45, {
-          align: "center",
-        });
-
-        yPos = 80;
-        doc.setTextColor(0, 0, 0);
-
-        addText(`Fecha: ${new Date().toLocaleDateString("es-ES")}`, 10);
-        yPos += 10;
-
-        // === 1. INTENCIONALIDAD ===
-        doc.setFillColor(52, 152, 219);
-        doc.rect(margin - 5, yPos - 5, maxWidth + 10, 12, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text("1. INTENCIONALIDAD", margin, yPos + 5);
-        yPos += 20;
-        doc.setTextColor(0, 0, 0);
-
-        addSection(
-          "1.1 Caracterización del Problema",
-          improvedResponses.intencionalidad?.respuesta_1_1 || ""
-        );
-
-        addSection(
-          "1.2 Objetivos del Proyecto",
-          improvedResponses.intencionalidad?.respuesta_1_2 || ""
-        );
-
-        // === 2. ORIGINALIDAD ===
-        if (yPos > doc.internal.pageSize.height - 60) {
-          doc.addPage();
-          yPos = 20;
-        }
-
-        doc.setFillColor(46, 204, 113);
-        doc.rect(margin - 5, yPos - 5, maxWidth + 10, 12, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text("2. ORIGINALIDAD", margin, yPos + 5);
-        yPos += 20;
-        doc.setTextColor(0, 0, 0);
-
-        addSection(
-          "2.1 Metodología o Estrategia",
-          improvedResponses.originalidad?.respuesta_2_1 || ""
-        );
-
-        addSection(
-          "2.2 Procedimiento Metodológico",
-          improvedResponses.originalidad?.respuesta_2_2 || ""
-        );
-
-        // === 3. IMPACTO ===
-        if (yPos > doc.internal.pageSize.height - 60) {
-          doc.addPage();
-          yPos = 20;
-        }
-
-        doc.setFillColor(230, 126, 34);
-        doc.rect(margin - 5, yPos - 5, maxWidth + 10, 12, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text("3. IMPACTO", margin, yPos + 5);
-        yPos += 20;
-        doc.setTextColor(0, 0, 0);
-
-        addSection(
-          "3.1 Resultados de Aprendizaje",
-          improvedResponses.impacto?.respuesta_3_1 || ""
-        );
-
-        addSection(
-          "3.2 Cambios Sistémicos",
-          improvedResponses.impacto?.respuesta_3_2 || ""
-        );
-
-        // === 4. SOSTENIBILIDAD ===
-        if (yPos > doc.internal.pageSize.height - 60) {
-          doc.addPage();
-          yPos = 20;
-        }
-
-        doc.setFillColor(26, 188, 156);
-        doc.rect(margin - 5, yPos - 5, maxWidth + 10, 12, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text("4. SOSTENIBILIDAD", margin, yPos + 5);
-        yPos += 20;
-        doc.setTextColor(0, 0, 0);
-
-        addSection(
-          "4.1 Estrategias de Continuidad",
-          improvedResponses.sostenibilidad?.respuesta_4_1 || ""
-        );
-
-        addSection(
-          "4.2 Viabilidad y Aliados",
-          improvedResponses.sostenibilidad?.respuesta_4_2 || ""
-        );
-
-        // === PIE DE PÁGINA EN TODAS LAS PÁGINAS ===
-        const pageCount = doc.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-          doc.setPage(i);
-          doc.setFontSize(8);
-          doc.setTextColor(128, 128, 128);
-          doc.text(
-            `Página ${i} de ${pageCount} | Generado por Agua Segura - Guía Andina`,
-            pageWidth / 2,
-            doc.internal.pageSize.height - 10,
-            { align: "center" }
-          );
-        }
-
-        // Descargar PDF
+        // Generar y descargar el archivo
+        const blob = await Packer.toBlob(doc);
         const fileName = `CNPIE_2A_${proyecto.id.replace(
           /[^a-z0-9]/gi,
           "_"
-        )}_${new Date().getTime()}.pdf`;
-        doc.save(fileName);
+        )}_${new Date().getTime()}.docx`;
+        saveAs(blob, fileName);
 
         toast({
-          title: "✅ PDF Generado",
-          description: "El documento se ha descargado correctamente",
+          title: "✅ Documento generado",
+          description: "El archivo Word se ha descargado correctamente",
         });
       } catch (error) {
         console.error("Error generando PDF:", error);
@@ -2554,29 +2550,19 @@ export default function Etapa1Acelerador1() {
                 </CardDescription>
               </div>
               <Button
-                onClick={generatePDF}
+                onClick={generateDOCX}
                 size="lg"
                 className="gap-2"
                 variant="default"
               >
                 <Download className="w-5 h-5" />
-                Descargar PDF
+                Descargar Word
               </Button>
             </div>
           </CardHeader>
           <CardContent className="pt-6 space-y-8">
             {/* Respuestas Mejoradas por la IA */}
-            <Card className="bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200">
-              <CardHeader>
-                <CardTitle className="text-2xl flex items-center gap-3">
-                  <Sparkles className="w-7 h-7 text-purple-600" />✨ Respuestas
-                  Mejoradas por IA
-                </CardTitle>
-                <CardDescription className="text-base">
-                  Las 8 respuestas finales integradas y optimizadas - Listas
-                  para copiar al formato oficial
-                </CardDescription>
-              </CardHeader>
+            <Card className="bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200 pt-10">
               <CardContent className="space-y-6">
                 {/* 1.1 */}
                 <Card className="bg-white">
