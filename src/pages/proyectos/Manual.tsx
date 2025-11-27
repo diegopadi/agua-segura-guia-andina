@@ -283,7 +283,7 @@ export default function Manual() {
             {/* Tarjeta 2B */}
             <Card
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
-              style={{ backgroundColor: "#00A6A6" }}
+              style={{ backgroundColor: "#005C6B" }}
             >
               <CardHeader>
                 <div className="flex items-center justify-center mb-4">
@@ -313,7 +313,7 @@ export default function Manual() {
                 <Button
                   onClick={() => navigate("/cnpie/2B/etapa1/acelerador1")}
                   className="w-full bg-white font-medium hover:bg-white/90"
-                  style={{ color: "#00A6A6" }}
+                  style={{ color: "#005C6B" }}
                 >
                   Entrar a Proyecto 2B
                 </Button>
@@ -323,7 +323,7 @@ export default function Manual() {
             {/* Tarjeta 2C */}
             <Card
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
-              style={{ backgroundColor: "#1BBEAE" }}
+              style={{ backgroundColor: "#005C6B" }}
             >
               <CardHeader>
                 <div className="flex items-center justify-center mb-4">
@@ -353,7 +353,7 @@ export default function Manual() {
                 <Button
                   onClick={() => navigate("/cnpie/2C/etapa1/acelerador1")}
                   className="w-full bg-white font-medium hover:bg-white/90"
-                  style={{ color: "#1BBEAE" }}
+                  style={{ color: "#005C6B" }}
                 >
                   Entrar a Proyecto 2C
                 </Button>
@@ -363,7 +363,7 @@ export default function Manual() {
             {/* Tarjeta 2D */}
             <Card
               className="border-0 shadow-lg hover:shadow-xl transition-shadow"
-              style={{ backgroundColor: "#50C9BD" }}
+              style={{ backgroundColor: "#005C6B" }}
             >
               <CardHeader>
                 <div className="flex items-center justify-center mb-4">
@@ -393,7 +393,7 @@ export default function Manual() {
                 <Button
                   onClick={() => navigate("/cnpie/2D/etapa1/acelerador1")}
                   className="w-full bg-white font-medium hover:bg-white/90"
-                  style={{ color: "#50C9BD" }}
+                  style={{ color: "#005C6B" }}
                 >
                   Entrar a Proyecto 2D
                 </Button>
