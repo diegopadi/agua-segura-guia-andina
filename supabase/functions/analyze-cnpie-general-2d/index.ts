@@ -166,17 +166,18 @@ const PROMPT_EVALUACION_CONSISTENCIA_2D = `
 ### ROL Y PROPÓSITO
 Actúas como el **Evaluador Técnico Especializado** para el CNPIE 2026.
 Tu función es evaluar el **Criterio 4: Consistencia** de la Categoría **2D - Proyectos IAPE**.
+Total criterio: 35 puntos.
 
 ### PARÁMETROS DE EVALUACIÓN
 
-**INDICADOR 4.1: PROCEDIMIENTO METODOLÓGICO** (Máx 15 Puntos)
+**INDICADOR 4.1: PROCEDIMIENTO METODOLÓGICO** (Máx 10 Puntos)
 * **Requisito:** Descripción clara de las fases del ciclo IAPE (planificación, acción, observación, reflexión).
 * **Extensión Máxima:** 5000 caracteres.
 * **Escala de Calificación:**
-    * **Excelente (12-15 pts):** Fases claramente descritas, secuencia lógica, coherencia metodológica.
-    * **Bueno (9-11 pts):** Fases descritas pero con inconsistencias menores.
-    * **Regular (5-8 pts):** Descripción superficial de las fases.
-    * **Deficiente (0-4 pts):** No describe el ciclo IAPE.
+    * **Excelente (8-10 pts):** Fases claramente descritas, secuencia lógica, coherencia metodológica.
+    * **Bueno (5-7 pts):** Fases descritas pero con inconsistencias menores.
+    * **Regular (3-4 pts):** Descripción superficial de las fases.
+    * **Deficiente (0-2 pts):** No describe el ciclo IAPE.
 
 **INDICADOR 4.2: TÉCNICAS E INSTRUMENTOS** (Máx 10 Puntos)
 * **Requisito:** Identificar técnicas e instrumentos de recojo de información coherentes con la metodología.
@@ -187,14 +188,14 @@ Tu función es evaluar el **Criterio 4: Consistencia** de la Categoría **2D - P
     * **Regular (3-4 pts):** Técnicas poco desarrolladas.
     * **Deficiente (0-2 pts):** Sin técnicas identificadas.
 
-**INDICADOR 4.3: PLAN DE ACTIVIDADES** (Máx 5 Puntos)
+**INDICADOR 4.3: PLAN DE ACTIVIDADES** (Máx 10 Puntos)
 * **Requisito:** Cronograma detallado de actividades con responsables y plazos.
 * **Extensión Máxima:** Tabla/lista estructurada.
 * **Escala de Calificación:**
-    * **Excelente (5 pts):** Cronograma completo, realista y detallado.
-    * **Bueno (4 pts):** Cronograma general pero viable.
-    * **Regular (2-3 pts):** Cronograma incompleto.
-    * **Deficiente (0-1 pts):** Sin cronograma.
+    * **Excelente (8-10 pts):** Cronograma completo, realista y detallado.
+    * **Bueno (5-7 pts):** Cronograma general pero viable.
+    * **Regular (3-4 pts):** Cronograma incompleto.
+    * **Deficiente (0-2 pts):** Sin cronograma.
 
 **INDICADOR 4.4: BIENES Y SERVICIOS** (Máx 5 Puntos)
 * **Requisito:** Lista justificada de bienes y servicios necesarios para la investigación.
@@ -212,7 +213,7 @@ Tu función es evaluar el **Criterio 4: Consistencia** de la Categoría **2D - P
 Responde en formato JSON:
 {
   "indicador_4_1": {
-    "puntaje": 12,
+    "puntaje": 8,
     "nivel": "Excelente",
     "fases_identificadas": ["planificación", "acción", "observación", "reflexión"],
     "coherencia_metodologica": "...",
@@ -225,8 +226,8 @@ Responde en formato JSON:
     "analisis": "..."
   },
   "indicador_4_3": {
-    "puntaje": 4,
-    "nivel": "Bueno",
+    "puntaje": 8,
+    "nivel": "Excelente",
     "actividades_identificadas": 0,
     "analisis": "..."
   },
