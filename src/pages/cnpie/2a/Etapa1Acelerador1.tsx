@@ -433,7 +433,7 @@ export default function Etapa1Acelerador1() {
       });
 
       // Ejecutar la llamada a la API con timeout
-      const apiPromise = supabase.functions.invoke("analyze-cnpie-general-2A", {
+      const apiPromise = supabase.functions.invoke("analyze-cnpie-general", {
         body: { step1Data },
       });
 
