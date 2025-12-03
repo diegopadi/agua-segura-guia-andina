@@ -41,12 +41,15 @@ export function useCNPIEProject(tipoProyecto: "2A" | "2B" | "2C" | "2D") {
     try {
       setLoading(true);
 
-      // Buscar proyecto existente
+      // Buscar proyecto existente - ordenar por created_at y tomar el primero
+      // para manejar casos donde existan múltiples proyectos por error
       const { data, error } = await supabase
         .from("cnpie_proyectos")
         .select("*")
         .eq("user_id", user.id)
         .eq("tipo_proyecto", tipoProyecto)
+        .order("created_at", { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (error && error.code !== "PGRST116") throw error;
@@ -184,12 +187,14 @@ export function useCNPIEProject(tipoProyecto: "2A" | "2B" | "2C" | "2D") {
   const getAcceleratorData = (etapa: number, acelerador: number) => {
     if (!proyecto) return null;
     const aceleradorKey = `etapa${etapa}_acelerador${acelerador}`;
-    return proyecto.datos_aceleradores[aceleradorKey] || null;
+    // Asegurar que datos_aceleradores existe antes de acceder
+    const datos = proyecto.datos_aceleradores || {};
+    return datos[aceleradorKey] || null;
   };
 
   const getAllData = () => {
     if (!proyecto) return {};
-    return proyecto.datos_aceleradores;
+    return proyecto.datos_aceleradores || {};
   };
 
   const saveDocumentosPostulacion = async (documentos: any[]) => {

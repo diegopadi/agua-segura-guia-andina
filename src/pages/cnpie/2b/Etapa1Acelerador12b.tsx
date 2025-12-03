@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useCNPIEProject } from "@/hooks/useCNPIEProject";
 import { useCNPIERubric } from "@/hooks/useCNPIERubric";
-import { useCNPIEAutoSave, formatLastSaved } from "@/hooks/useCNPIEAutoSave";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
 import { CriterioAccordionHeader } from "../components/CriterioAccordionHeader";
@@ -51,8 +50,6 @@ import {
   Loader2,
   Save,
   Clock,
-  Cloud,
-  CloudOff,
 } from "lucide-react";
 import { DocumentFieldSchema } from "@/types/document-extraction";
 import {
@@ -632,7 +629,7 @@ export default function Etapa1Acelerador12b() {
             observacion_final: dictamenSost?.["Observación Final"] || "",
           },
           puntaje_total: puntajeTotal,
-          puntaje_maximo: 75,
+          puntaje_maximo: 100,
           timestamp: new Date().toISOString(),
         };
 
@@ -662,7 +659,7 @@ export default function Etapa1Acelerador12b() {
 
         toast({
           title: "✅ Análisis completado exitosamente",
-          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 75 posibles. Revisa los detalles por criterio.`,
+          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 100 posibles. Revisa los detalles por criterio.`,
           duration: 5000,
         });
       } else {
@@ -1655,7 +1652,7 @@ export default function Etapa1Acelerador12b() {
                   <p className="text-sm text-gray-600 mb-2">Puntaje Total</p>
                   <p className="text-5xl font-bold text-purple-600">
                     {step2Data.puntaje_total || 0}
-                    <span className="text-2xl text-gray-500">/75</span>
+                    <span className="text-2xl text-gray-500">/100</span>
                   </p>
                   <p className="text-sm text-gray-600 mt-2">Puntos obtenidos</p>
                 </div>
@@ -1786,7 +1783,7 @@ export default function Etapa1Acelerador12b() {
                   (step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
                   (step2Data.originalidad?.indicador_2_2?.puntaje || 0)
                 }
-                maxScore={25}
+                maxScore={30}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 2.1 */}
@@ -1868,7 +1865,7 @@ export default function Etapa1Acelerador12b() {
                   (step2Data.pertinencia?.indicador_3_1?.puntaje || 0) +
                   (step2Data.pertinencia?.indicador_3_2?.puntaje || 0)
                 }
-                maxScore={15}
+                maxScore={10}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 3.1 */}
@@ -1965,7 +1962,7 @@ export default function Etapa1Acelerador12b() {
                   (step2Data.impacto?.indicador_4_1?.puntaje || 0) +
                   (step2Data.impacto?.indicador_4_2?.puntaje || 0)
                 }
-                maxScore={15}
+                maxScore={20}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 4.1 */}
@@ -3129,25 +3126,13 @@ export default function Etapa1Acelerador12b() {
       <div className="grid lg:grid-cols-[1fr_350px] md:grid-cols-1 gap-6">
         {/* Contenido Principal */}
         <div className="space-y-6">
-          {/* Auto-save indicator */}
-          <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
-            {isAutoSaving || saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Guardando...</span>
-              </>
-            ) : lastSaved ? (
-              <>
-                <Cloud className="h-4 w-4 text-green-500" />
-                <span>{formatLastSaved(lastSaved)}</span>
-              </>
-            ) : (
-              <>
-                <CloudOff className="h-4 w-4" />
-                <span>Auto-guardado activado</span>
-              </>
-            )}
-          </div>
+          {/* Save indicator */}
+          {saving && (
+            <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Guardando...</span>
+            </div>
+          )}
           {/* Progress Stepper */}
           <ProgressStepper
             steps={STEPS}
