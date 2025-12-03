@@ -586,7 +586,7 @@ export default function Etapa1Acelerador12c() {
             observacion_final: dictamenSost?.["Observación Final"] || "",
           },
           puntaje_total: puntajeTotal,
-          puntaje_maximo: 75,
+          puntaje_maximo: 100,
           timestamp: new Date().toISOString(),
         };
 
@@ -616,7 +616,7 @@ export default function Etapa1Acelerador12c() {
 
         toast({
           title: "✅ Análisis completado exitosamente",
-          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 75 posibles. Revisa los detalles por criterio.`,
+          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 100 posibles. Revisa los detalles por criterio.`,
           duration: 5000,
         });
       } else {
@@ -1603,7 +1603,7 @@ export default function Etapa1Acelerador12c() {
                   <p className="text-sm text-gray-600 mb-2">Puntaje Total</p>
                   <p className="text-5xl font-bold text-purple-600">
                     {step2Data.puntaje_total || 0}
-                    <span className="text-2xl text-gray-500">/75</span>
+                    <span className="text-2xl text-gray-500">/100</span>
                   </p>
                   <p className="text-sm text-gray-600 mt-2">Puntos obtenidos</p>
                 </div>
