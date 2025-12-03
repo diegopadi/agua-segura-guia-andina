@@ -351,10 +351,25 @@ export default function Etapa1Acelerador1() {
     } finally {
       setSaving(false);
     }
-  }, [currentStep, completedSteps, step1Data, step2Data, step3Data, step4Data, generatedQuestions, step3Answers, improvedResponses, saveAcceleratorData]);
+  }, [
+    currentStep,
+    completedSteps,
+    step1Data,
+    step2Data,
+    step3Data,
+    step4Data,
+    generatedQuestions,
+    step3Answers,
+    improvedResponses,
+    saveAcceleratorData,
+  ]);
 
   // Auto-guardado con debounce
-  const { debouncedSave, isSaving: isAutoSaving, lastSaved } = useCNPIEAutoSave({
+  const {
+    debouncedSave,
+    isSaving: isAutoSaving,
+    lastSaved,
+  } = useCNPIEAutoSave({
     onSave: handleSave,
     debounceMs: 3000,
     enabled: !!proyecto?.id,
@@ -370,7 +385,17 @@ export default function Etapa1Acelerador1() {
     if (proyecto?.id) {
       debouncedSave();
     }
-  }, [step1Data, step2Data, step3Data, step4Data, generatedQuestions, step3Answers, improvedResponses, currentStep, completedSteps]);
+  }, [
+    step1Data,
+    step2Data,
+    step3Data,
+    step4Data,
+    generatedQuestions,
+    step3Answers,
+    improvedResponses,
+    currentStep,
+    completedSteps,
+  ]);
 
   const handleValidate = async () => {
     await handleSave();
@@ -408,7 +433,7 @@ export default function Etapa1Acelerador1() {
       });
 
       // Ejecutar la llamada a la API con timeout
-      const apiPromise = supabase.functions.invoke("analyze-cnpie-general", {
+      const apiPromise = supabase.functions.invoke("analyze-cnpie-general-2A", {
         body: { step1Data },
       });
 

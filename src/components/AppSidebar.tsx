@@ -35,15 +35,15 @@ const mainItems = [
     icon: Home,
   },
   {
-    title: "Proyectos CNPIE 2025",
+    title: "Proyectos CNPIE 2026",
     url: "/proyectos",
     icon: FolderKanban,
   },
-  {
-    title: "Cambiar tipo 🔄",
-    url: "/mini-cambio-proyecto",
-    icon: RefreshCw,
-  },
+  // {
+  //   title: "Cambiar tipo 🔄",
+  //   url: "/mini-cambio-proyecto",
+  //   icon: RefreshCw,
+  // },
   {
     title: "Repositorio",
     url: "/repositorio",
