@@ -295,10 +295,24 @@ export default function Etapa1Acelerador12c() {
         }
       }
       if (savedData.step2_data) {
-        setStep2Data(savedData.step2_data);
-        // Marcar paso 2 como completado si tiene datos
-        if (!autoCompletedSteps.includes(2)) {
-          autoCompletedSteps.push(2);
+        // 🔍 Validar que step2_data tenga la estructura correcta para 2C
+        // Si tiene "impacto" es estructura vieja de 2A, ignorarla
+        const isValidStructure =
+          savedData.step2_data.participacion &&
+          savedData.step2_data.reflexion &&
+          !savedData.step2_data.impacto;
+
+        if (isValidStructure) {
+          console.log("✅ Cargando step2_data válido desde localStorage");
+          setStep2Data(savedData.step2_data);
+          // Marcar paso 2 como completado si tiene datos
+          if (!autoCompletedSteps.includes(2)) {
+            autoCompletedSteps.push(2);
+          }
+        } else {
+          console.log(
+            "⚠️ step2_data con estructura incorrecta, se ignorará. Volver a analizar."
+          );
         }
       }
       if (savedData.step3_data) {
@@ -361,7 +375,18 @@ export default function Etapa1Acelerador12c() {
     } finally {
       setSaving(false);
     }
-  }, [currentStep, completedSteps, step1Data, step2Data, step3Data, step4Data, generatedQuestions, step3Answers, improvedResponses, saveAcceleratorData]);
+  }, [
+    currentStep,
+    completedSteps,
+    step1Data,
+    step2Data,
+    step3Data,
+    step4Data,
+    generatedQuestions,
+    step3Answers,
+    improvedResponses,
+    saveAcceleratorData,
+  ]);
 
   const handleValidate = async () => {
     await handleSave();
@@ -419,178 +444,32 @@ export default function Etapa1Acelerador12c() {
       if (data.success) {
         console.log("🔵 Analysis data completo:", data.analysis);
 
-        // Transformar la estructura con emojis a estructura plana
-        const dictamenInt =
-          data.analysis.intencionalidad?.[
-            "📋 DICTAMEN TÉCNICO: INTENCIONALIDAD (IMPLEMENTACIÓN)"
-          ];
+        // El análisis de 2C ya viene en estructura plana, sin emojis
+        const analysisData = data.analysis;
 
-        const indicador11 =
-          dictamenInt?.["🔹 INDICADOR 1.1: Caracterización del Problema"];
-
-        const indicador12 = dictamenInt?.["🔹 INDICADOR 1.2: Objetivos"];
-
-        // Extraer datos de Originalidad
-        const dictamenOrig =
-          data.analysis.originalidad?.[
-            "📋 DICTAMEN TÉCNICO: ORIGINALIDAD (IMPLEMENTACIÓN)"
-          ];
-
-        const indicador21 =
-          dictamenOrig?.["🔹 INDICADOR 2.1: Metodología/Estrategia"];
-
-        const indicador22 =
-          dictamenOrig?.["🔹 INDICADOR 2.2: Procedimiento y Video"];
-
-        // Extraer datos de Pertinencia (NUEVO en 2B)
-        const dictamenPert =
-          data.analysis.pertinencia?.[
-            "📋 DICTAMEN TÉCNICO: PERTINENCIA (IMPLEMENTACIÓN)"
-          ];
-
-        const indicador31 =
-          dictamenPert?.["🔹 INDICADOR 3.1: Intereses y Necesidades"];
-
-        const indicador32 =
-          dictamenPert?.["🔹 INDICADOR 3.2: Adaptación al Contexto"];
-
-        // Extraer datos de Impacto
-        const dictamenImp =
-          data.analysis.impacto?.[
-            "📋 DICTAMEN TÉCNICO: IMPACTO (IMPLEMENTACIÓN)"
-          ];
-
-        const indicador41 =
-          dictamenImp?.["🔹 INDICADOR 4.1: Resultados de Aprendizaje"];
-
-        const indicador42 =
-          dictamenImp?.["🔹 INDICADOR 4.2: Cambios Sistémicos"];
-
-        // Extraer datos de Sostenibilidad
-        const dictamenSost =
-          data.analysis.sostenibilidad?.[
-            "📋 DICTAMEN TÉCNICO: SOSTENIBILIDAD (IMPLEMENTACIÓN)"
-          ];
-
-        const indicador51 =
-          dictamenSost?.["🔹 INDICADOR 5.1: Estrategias de Viabilidad"];
-
-        const indicador52 =
-          dictamenSost?.["🔹 INDICADOR 5.2: Pertinencia de Bienes y Servicios"];
-
-        // Calcular puntaje total (2B tiene 90 puntos máximos)
+        // Calcular puntaje total (2C tiene 90 puntos máximos)
         const puntajeTotal =
-          (indicador11?.PUNTAJE || 0) +
-          (indicador12?.PUNTAJE || 0) +
-          (indicador21?.PUNTAJE || 0) +
-          (indicador22?.PUNTAJE || 0) +
-          (indicador31?.PUNTAJE || 0) +
-          (indicador32?.PUNTAJE || 0) +
-          (indicador41?.PUNTAJE || 0) +
-          (indicador42?.PUNTAJE || 0) +
-          (indicador51?.PUNTAJE || 0) +
-          (indicador52?.PUNTAJE || 0);
+          (analysisData.intencionalidad?.indicador_1_1?.puntaje || 0) +
+          (analysisData.intencionalidad?.indicador_1_2?.puntaje || 0) +
+          (analysisData.originalidad?.indicador_2_1?.puntaje || 0) +
+          (analysisData.originalidad?.indicador_2_2?.puntaje || 0) +
+          (analysisData.pertinencia?.indicador_3_1?.puntaje || 0) +
+          (analysisData.pertinencia?.indicador_3_2?.puntaje || 0) +
+          (analysisData.participacion?.indicador_4_1?.puntaje || 0) +
+          (analysisData.reflexion?.indicador_5_1?.puntaje || 0) +
+          (analysisData.sostenibilidad?.indicador_6_1?.puntaje || 0) +
+          (analysisData.sostenibilidad?.indicador_6_2?.puntaje || 0);
 
-        // Transformar todos los criterios a estructura plana
+        // Usar directamente la estructura recibida
         const transformedData = {
-          intencionalidad: {
-            indicador_1_1: {
-              puntaje: indicador11?.PUNTAJE || 0,
-              nivel: indicador11?.NIVEL || "N/A",
-              vinculacion_cneb:
-                indicador11?.["Análisis Técnico"]?.["Vinculación CNEB"] || "",
-              evidencia:
-                indicador11?.["Análisis Técnico"]?.[
-                  "Evidencia (Contexto Implementación)"
-                ] || "",
-              causas_consecuencias:
-                indicador11?.["Análisis Técnico"]?.["Causas/Consecuencias"] ||
-                "",
-            },
-            indicador_1_2: {
-              puntaje: indicador12?.PUNTAJE || 0,
-              nivel: indicador12?.NIVEL || "N/A",
-              checklist_smart: {
-                especifico:
-                  indicador12?.["Checklist SMART"]?.["S (Específico)"] === "✅",
-                medible:
-                  indicador12?.["Checklist SMART"]?.["M (Medible)"] === "✅",
-                alcanzable:
-                  indicador12?.["Checklist SMART"]?.["A (Alcanzable)"] === "✅",
-                relevante:
-                  indicador12?.["Checklist SMART"]?.["R (Relevante)"] === "✅",
-                temporal:
-                  indicador12?.["Checklist SMART"]?.["T (Temporal)"] === "✅",
-              },
-              observacion_final: indicador12?.["Observación Final"] || "",
-            },
-          },
-          originalidad: {
-            indicador_2_1: {
-              puntaje: indicador21?.PUNTAJE || 0,
-              nivel: indicador21?.NIVEL || "N/A",
-              analisis: indicador21?.["Análisis"] || "",
-            },
-            indicador_2_2: {
-              puntaje: indicador22?.PUNTAJE || 0,
-              nivel: indicador22?.NIVEL || "N/A",
-              calidad_procedimiento:
-                indicador22?.["Desglose de Evaluación"]?.[
-                  "Calidad del Procedimiento"
-                ] || "",
-              video_detectado:
-                indicador22?.["Desglose de Evaluación"]?.["Video detectado"] ===
-                "✅",
-              puntaje_video:
-                indicador22?.["Desglose de Evaluación"]?.["Puntaje Video"] || 0,
-              observacion: indicador22?.["Observación Final"] || "",
-            },
-          },
-          pertinencia: {
-            indicador_3_1: {
-              puntaje: indicador31?.PUNTAJE || 0,
-              nivel: indicador31?.NIVEL || "N/A",
-              analisis: indicador31?.["Análisis"] || {},
-            },
-            indicador_3_2: {
-              puntaje: indicador32?.PUNTAJE || 0,
-              nivel: indicador32?.NIVEL || "N/A",
-              analisis: indicador32?.["Análisis"] || {},
-            },
-            observacion_final: dictamenPert?.["Observación Final"] || "",
-          },
-          impacto: {
-            indicador_4_1: {
-              puntaje: indicador41?.PUNTAJE || 0,
-              nivel: indicador41?.NIVEL || "N/A",
-              analisis: indicador41?.["Análisis"] || {},
-            },
-            indicador_4_2: {
-              puntaje: indicador42?.PUNTAJE || 0,
-              nivel: indicador42?.NIVEL || "N/A",
-              analisis: indicador42?.["Análisis"] || {},
-            },
-            observacion_final: dictamenImp?.["Observación Final"] || "",
-          },
-          sostenibilidad: {
-            indicador_5_1: {
-              puntaje: indicador51?.PUNTAJE || 0,
-              nivel: indicador51?.NIVEL || "N/A",
-              analisis: indicador51?.["Análisis"] || {},
-            },
-            indicador_5_2: {
-              puntaje: indicador52?.PUNTAJE || 0,
-              nivel: indicador52?.NIVEL || "N/A",
-              analisis: indicador52?.["Análisis"] || {},
-            },
-            observacion_final: dictamenSost?.["Observación Final"] || "",
-          },
+          ...analysisData,
           puntaje_total: puntajeTotal,
-          puntaje_maximo: 100,
+          puntaje_maximo: 90, // 2C tiene 90 puntos máximos
           timestamp: new Date().toISOString(),
         };
 
         console.log("🔵 Puntaje total calculado:", puntajeTotal);
+        console.log("🔵 Datos transformados:", transformedData);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setStep2Data(transformedData as any);
@@ -616,7 +495,7 @@ export default function Etapa1Acelerador12c() {
 
         toast({
           title: "✅ Análisis completado exitosamente",
-          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 100 posibles. Revisa los detalles por criterio.`,
+          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 90 posibles. Revisa los detalles por criterio.`,
           duration: 5000,
         });
       } else {
@@ -1584,6 +1463,32 @@ export default function Etapa1Acelerador12c() {
       );
     }
 
+    console.log("📊 step2Data completo:", step2Data);
+    console.log("📊 Puntaje total:", step2Data.puntaje_total);
+    console.log("📊 Puntaje máximo:", step2Data.puntaje_maximo);
+
+    // Calcular puntaje total sumando todos los indicadores
+    const calcularPuntajeTotal = () => {
+      const puntajes = [
+        step2Data.intencionalidad?.indicador_1_1?.puntaje || 0,
+        step2Data.intencionalidad?.indicador_1_2?.puntaje || 0,
+        step2Data.originalidad?.indicador_2_1?.puntaje || 0,
+        step2Data.originalidad?.indicador_2_2?.puntaje || 0,
+        step2Data.pertinencia?.indicador_3_1?.puntaje || 0,
+        step2Data.pertinencia?.indicador_3_2?.puntaje || 0,
+        step2Data.participacion?.indicador_4_1?.puntaje || 0,
+        step2Data.reflexion?.indicador_5_1?.puntaje || 0,
+        step2Data.sostenibilidad?.indicador_6_1?.puntaje || 0,
+        step2Data.sostenibilidad?.indicador_6_2?.puntaje || 0,
+      ];
+      const total = puntajes.reduce((sum, p) => sum + p, 0);
+      console.log("📊 Puntajes individuales:", puntajes);
+      console.log("📊 Total calculado:", total);
+      return total;
+    };
+
+    const puntajeTotal = calcularPuntajeTotal();
+
     return (
       <div className="space-y-6">
         {/* Sección de Análisis de Consistencia */}
@@ -1602,7 +1507,7 @@ export default function Etapa1Acelerador12c() {
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-2">Puntaje Total</p>
                   <p className="text-5xl font-bold text-purple-600">
-                    {step2Data.puntaje_total || 0}
+                    {puntajeTotal}
                     <span className="text-2xl text-gray-500">/100</span>
                   </p>
                   <p className="text-sm text-gray-600 mt-2">Puntos obtenidos</p>
@@ -1732,7 +1637,7 @@ export default function Etapa1Acelerador12c() {
                   (step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
                   (step2Data.originalidad?.indicador_2_2?.puntaje || 0)
                 }
-                maxScore={25}
+                maxScore={30}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 2.1 */}
@@ -1744,7 +1649,7 @@ export default function Etapa1Acelerador12c() {
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {step2Data.originalidad?.indicador_2_1?.puntaje || 0}{" "}
-                          / 15 pts
+                          / 10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.originalidad?.indicador_2_1?.nivel}
@@ -1798,7 +1703,7 @@ export default function Etapa1Acelerador12c() {
                   (step2Data.pertinencia?.indicador_3_1?.puntaje || 0) +
                   (step2Data.pertinencia?.indicador_3_2?.puntaje || 0)
                 }
-                maxScore={15}
+                maxScore={10}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 3.1 */}
@@ -1810,7 +1715,7 @@ export default function Etapa1Acelerador12c() {
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {step2Data.pertinencia?.indicador_3_1?.puntaje || 0} /
-                          10 pts
+                          5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.pertinencia?.indicador_3_1?.nivel}
@@ -1894,7 +1799,7 @@ export default function Etapa1Acelerador12c() {
                 currentScore={
                   step2Data.participacion?.indicador_4_1?.puntaje || 0
                 }
-                maxScore={10}
+                maxScore={5}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 4.1 */}
@@ -1906,7 +1811,7 @@ export default function Etapa1Acelerador12c() {
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {step2Data.participacion?.indicador_4_1?.puntaje || 0}{" "}
-                          / 10 pts
+                          / 5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.participacion?.indicador_4_1?.nivel}
@@ -1943,7 +1848,7 @@ export default function Etapa1Acelerador12c() {
                 title="5. Reflexión"
                 subtitle="Mecanismos de mejora continua"
                 currentScore={step2Data.reflexion?.indicador_5_1?.puntaje || 0}
-                maxScore={10}
+                maxScore={5}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 5.1 */}
@@ -1954,8 +1859,8 @@ export default function Etapa1Acelerador12c() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.reflexion?.indicador_5_1?.puntaje || 0} /
-                          10 pts
+                          {step2Data.reflexion?.indicador_5_1?.puntaje || 0} / 5
+                          pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.reflexion?.indicador_5_1?.nivel}
@@ -2008,7 +1913,7 @@ export default function Etapa1Acelerador12c() {
                         <Badge variant="outline">
                           {step2Data.sostenibilidad?.indicador_6_1?.puntaje ||
                             0}{" "}
-                          / 5 pts
+                          / 10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.sostenibilidad?.indicador_6_1?.nivel}
@@ -2045,7 +1950,7 @@ export default function Etapa1Acelerador12c() {
                         <Badge variant="outline">
                           {step2Data.sostenibilidad?.indicador_6_2?.puntaje ||
                             0}{" "}
-                          / 10 pts
+                          / 5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.sostenibilidad?.indicador_6_2?.nivel}
