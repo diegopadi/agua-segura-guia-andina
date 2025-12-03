@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useCNPIEProject } from "@/hooks/useCNPIEProject";
 import { useCNPIERubric } from "@/hooks/useCNPIERubric";
-import { useCNPIEAutoSave, formatLastSaved } from "@/hooks/useCNPIEAutoSave";
 import { CNPIEAcceleratorLayout } from "@/components/cnpie/CNPIEAcceleratorLayout";
 import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
 import { CriterioAccordionHeader } from "../components/CriterioAccordionHeader";
@@ -51,8 +50,6 @@ import {
   Loader2,
   Save,
   Clock,
-  Cloud,
-  CloudOff,
 } from "lucide-react";
 import { DocumentFieldSchema } from "@/types/document-extraction";
 import {
@@ -364,25 +361,6 @@ export default function Etapa1Acelerador12b() {
       setSaving(false);
     }
   }, [currentStep, completedSteps, step1Data, step2Data, step3Data, step4Data, generatedQuestions, step3Answers, improvedResponses, saveAcceleratorData]);
-
-  // Auto-guardado con debounce
-  const { debouncedSave, isSaving: isAutoSaving, lastSaved } = useCNPIEAutoSave({
-    onSave: handleSave,
-    debounceMs: 3000,
-    enabled: !!proyecto?.id,
-  });
-
-  // Trigger auto-save on data changes
-  const isInitialMount = useRef(true);
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    if (proyecto?.id) {
-      debouncedSave();
-    }
-  }, [step1Data, step2Data, step3Data, step4Data, generatedQuestions, step3Answers, improvedResponses, currentStep, completedSteps]);
 
   const handleValidate = async () => {
     await handleSave();
@@ -3115,25 +3093,13 @@ export default function Etapa1Acelerador12b() {
       <div className="grid lg:grid-cols-[1fr_350px] md:grid-cols-1 gap-6">
         {/* Contenido Principal */}
         <div className="space-y-6">
-          {/* Auto-save indicator */}
-          <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
-            {isAutoSaving || saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Guardando...</span>
-              </>
-            ) : lastSaved ? (
-              <>
-                <Cloud className="h-4 w-4 text-green-500" />
-                <span>{formatLastSaved(lastSaved)}</span>
-              </>
-            ) : (
-              <>
-                <CloudOff className="h-4 w-4" />
-                <span>Auto-guardado activado</span>
-              </>
-            )}
-          </div>
+          {/* Save indicator */}
+          {saving && (
+            <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Guardando...</span>
+            </div>
+          )}
           {/* Progress Stepper */}
           <ProgressStepper
             steps={STEPS}
