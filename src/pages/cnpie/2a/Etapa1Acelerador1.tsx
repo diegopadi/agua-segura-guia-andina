@@ -1577,7 +1577,7 @@ export default function Etapa1Acelerador1() {
                   <p className="text-sm text-gray-600 mb-2">Puntaje Total</p>
                   <p className="text-5xl font-bold text-purple-600">
                     {step2Data.puntaje_total || 0}
-                    <span className="text-2xl text-gray-500">/75</span>
+                    <span className="text-2xl text-gray-500">/100</span>
                   </p>
                   <p className="text-sm text-gray-600 mt-2">Puntos obtenidos</p>
                 </div>
@@ -1708,7 +1708,7 @@ export default function Etapa1Acelerador1() {
                   (step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
                   (step2Data.originalidad?.indicador_2_2?.puntaje || 0)
                 }
-                maxScore={25}
+                maxScore={30}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 2.1 */}
@@ -1720,7 +1720,7 @@ export default function Etapa1Acelerador1() {
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {step2Data.originalidad?.indicador_2_1?.puntaje || 0}{" "}
-                          / 15 pts
+                          / 10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.originalidad?.indicador_2_1?.nivel}
@@ -1743,7 +1743,7 @@ export default function Etapa1Acelerador1() {
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {step2Data.originalidad?.indicador_2_2?.puntaje || 0}{" "}
-                          / 10 pts
+                          / 20 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.originalidad?.indicador_2_2?.nivel}
@@ -1765,19 +1765,7 @@ export default function Etapa1Acelerador1() {
                           </p>
                         </div>
                       )}
-                      <div className="bg-white p-3 rounded">
-                        <p className="font-semibold mb-2">Video Detectado:</p>
-                        <p className="text-gray-700">
-                          {step2Data.originalidad?.indicador_2_2
-                            ?.video_detectado
-                            ? "✅ Sí"
-                            : "❌ No"}{" "}
-                          - Puntaje:{" "}
-                          {step2Data.originalidad?.indicador_2_2
-                            ?.puntaje_video || 0}{" "}
-                          pts
-                        </p>
-                      </div>
+
                       {step2Data.originalidad?.indicador_2_2?.observacion && (
                         <div className="bg-white p-3 rounded">
                           <p className="font-semibold mb-1">Observación:</p>
@@ -1899,7 +1887,7 @@ export default function Etapa1Acelerador1() {
                   (step2Data.sostenibilidad?.indicador_4_2?.puntaje || 0) +
                   (step2Data.sostenibilidad?.indicador_4_3?.puntaje || 0)
                 }
-                maxScore={15}
+                maxScore={30}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 4.1 */}
