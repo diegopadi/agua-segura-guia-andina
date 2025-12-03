@@ -373,39 +373,6 @@ export default function Etapa1Acelerador12b() {
     saveAcceleratorData,
   ]);
 
-  // Auto-guardado con debounce
-  const {
-    debouncedSave,
-    isSaving: isAutoSaving,
-    lastSaved,
-  } = useCNPIEAutoSave({
-    onSave: handleSave,
-    debounceMs: 3000,
-    enabled: !!proyecto?.id,
-  });
-
-  // Trigger auto-save on data changes
-  const isInitialMount = useRef(true);
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    if (proyecto?.id) {
-      debouncedSave();
-    }
-  }, [
-    step1Data,
-    step2Data,
-    step3Data,
-    step4Data,
-    generatedQuestions,
-    step3Answers,
-    improvedResponses,
-    currentStep,
-    completedSteps,
-  ]);
-
   const handleValidate = async () => {
     await handleSave();
     return await validateAccelerator(1, 1);
