@@ -363,10 +363,25 @@ export default function Etapa1Acelerador12b() {
     } finally {
       setSaving(false);
     }
-  }, [currentStep, completedSteps, step1Data, step2Data, step3Data, step4Data, generatedQuestions, step3Answers, improvedResponses, saveAcceleratorData]);
+  }, [
+    currentStep,
+    completedSteps,
+    step1Data,
+    step2Data,
+    step3Data,
+    step4Data,
+    generatedQuestions,
+    step3Answers,
+    improvedResponses,
+    saveAcceleratorData,
+  ]);
 
   // Auto-guardado con debounce
-  const { debouncedSave, isSaving: isAutoSaving, lastSaved } = useCNPIEAutoSave({
+  const {
+    debouncedSave,
+    isSaving: isAutoSaving,
+    lastSaved,
+  } = useCNPIEAutoSave({
     onSave: handleSave,
     debounceMs: 3000,
     enabled: !!proyecto?.id,
@@ -382,7 +397,17 @@ export default function Etapa1Acelerador12b() {
     if (proyecto?.id) {
       debouncedSave();
     }
-  }, [step1Data, step2Data, step3Data, step4Data, generatedQuestions, step3Answers, improvedResponses, currentStep, completedSteps]);
+  }, [
+    step1Data,
+    step2Data,
+    step3Data,
+    step4Data,
+    generatedQuestions,
+    step3Answers,
+    improvedResponses,
+    currentStep,
+    completedSteps,
+  ]);
 
   const handleValidate = async () => {
     await handleSave();
@@ -1818,18 +1843,7 @@ export default function Etapa1Acelerador12b() {
                           </p>
                         </div>
                       )}
-                      <div className="bg-white p-3 rounded">
-                        <p className="font-semibold mb-2">Video Detectado:</p>
-                        <p className="text-gray-700">
-                          {step2Data.originalidad?.indicador_2_2
-                            ?.video_detectado
-                            ? "✅ Sí"
-                            : "❌ No"}{" "}
-                          - Puntaje:{" "}
-                          {step2Data.originalidad?.indicador_2_2?.puntaje_video}{" "}
-                          pts
-                        </p>
-                      </div>
+
                       {step2Data.originalidad?.indicador_2_2?.observacion && (
                         <div className="bg-white p-3 rounded">
                           <p className="font-semibold mb-1">Observación:</p>
