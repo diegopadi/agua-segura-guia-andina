@@ -607,7 +607,7 @@ export default function Etapa1Acelerador12b() {
             observacion_final: dictamenSost?.["Observación Final"] || "",
           },
           puntaje_total: puntajeTotal,
-          puntaje_maximo: 75,
+          puntaje_maximo: 100,
           timestamp: new Date().toISOString(),
         };
 
@@ -637,7 +637,7 @@ export default function Etapa1Acelerador12b() {
 
         toast({
           title: "✅ Análisis completado exitosamente",
-          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 75 posibles. Revisa los detalles por criterio.`,
+          description: `Tu proyecto obtuvo ${puntajeTotal} puntos de 100 posibles. Revisa los detalles por criterio.`,
           duration: 5000,
         });
       } else {
@@ -1630,7 +1630,7 @@ export default function Etapa1Acelerador12b() {
                   <p className="text-sm text-gray-600 mb-2">Puntaje Total</p>
                   <p className="text-5xl font-bold text-purple-600">
                     {step2Data.puntaje_total || 0}
-                    <span className="text-2xl text-gray-500">/75</span>
+                    <span className="text-2xl text-gray-500">/100</span>
                   </p>
                   <p className="text-sm text-gray-600 mt-2">Puntos obtenidos</p>
                 </div>
@@ -1761,7 +1761,7 @@ export default function Etapa1Acelerador12b() {
                   (step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
                   (step2Data.originalidad?.indicador_2_2?.puntaje || 0)
                 }
-                maxScore={25}
+                maxScore={30}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 2.1 */}
@@ -1854,7 +1854,7 @@ export default function Etapa1Acelerador12b() {
                   (step2Data.pertinencia?.indicador_3_1?.puntaje || 0) +
                   (step2Data.pertinencia?.indicador_3_2?.puntaje || 0)
                 }
-                maxScore={15}
+                maxScore={10}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 3.1 */}
@@ -1951,7 +1951,7 @@ export default function Etapa1Acelerador12b() {
                   (step2Data.impacto?.indicador_4_1?.puntaje || 0) +
                   (step2Data.impacto?.indicador_4_2?.puntaje || 0)
                 }
-                maxScore={15}
+                maxScore={20}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 4.1 */}
