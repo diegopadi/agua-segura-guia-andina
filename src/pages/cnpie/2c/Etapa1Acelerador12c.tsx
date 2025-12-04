@@ -3021,6 +3021,8 @@ export default function Etapa1Acelerador12c() {
                 rubricaOriginalidad,
                 rubricaPertinencia,
                 rubricaSostenibilidad,
+                rubricaParticipacion,
+                rubricaReflexion,
               ].filter(
                 (r): r is NonNullable<typeof r> => r !== null && r !== undefined
               )}
