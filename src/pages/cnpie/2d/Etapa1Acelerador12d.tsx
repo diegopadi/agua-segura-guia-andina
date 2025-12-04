@@ -1780,7 +1780,7 @@ export default function Etapa1Acelerador12d() {
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {step2Data.formulacion?.indicador_1_1?.puntaje || 0} /
-                          10 pts
+                          25 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.formulacion?.indicador_1_1?.nivel}
@@ -1806,7 +1806,7 @@ export default function Etapa1Acelerador12d() {
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {step2Data.formulacion?.indicador_1_2?.puntaje || 0} /
-                          10 pts
+                          5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.formulacion?.indicador_1_2?.nivel}
@@ -1832,7 +1832,7 @@ export default function Etapa1Acelerador12d() {
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {step2Data.formulacion?.indicador_1_3?.puntaje || 0} /
-                          10 pts
+                          5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.formulacion?.indicador_1_3?.nivel}
@@ -1858,7 +1858,7 @@ export default function Etapa1Acelerador12d() {
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {step2Data.formulacion?.indicador_1_4?.puntaje || 0} /
-                          10 pts
+                          5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.formulacion?.indicador_1_4?.nivel}
@@ -1887,7 +1887,7 @@ export default function Etapa1Acelerador12d() {
                 currentScore={
                   step2Data.participacion?.indicador_2_1?.puntaje || 0
                 }
-                maxScore={20}
+                maxScore={10}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 2.1 */}
@@ -2170,28 +2170,28 @@ export default function Etapa1Acelerador12d() {
       {
         key: "formulacion",
         name: "Formulación",
-        maxScore: 40,
+        maxScore: 40, // 1.1: 25pts + 1.2: 5pts + 1.3: 5pts + 1.4: 5pts
         icon: Lightbulb,
         color: "blue",
       },
       {
         key: "participacion",
         name: "Participación",
-        maxScore: 20,
+        maxScore: 10, // 2.1: 10pts
         icon: CheckCircle,
         color: "orange",
       },
       {
         key: "reflexion",
         name: "Reflexión",
-        maxScore: 10,
+        maxScore: 10, // 3.1: 10pts
         icon: Lightbulb,
         color: "indigo",
       },
       {
         key: "consistencia",
         name: "Consistencia",
-        maxScore: 30,
+        maxScore: 40, // 4.1: 15pts + 4.2: 10pts + 4.3: 5pts + 4.4: 10pts
         icon: Clock,
         color: "teal",
       },
