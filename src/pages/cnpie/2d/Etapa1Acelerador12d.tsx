@@ -151,7 +151,8 @@ export default function Etapa1Acelerador12d() {
   const [step2Data, setStep2Data] = useState<AnalysisStep2 | null>(null);
   const [step3Data, setStep3Data] = useState<FormDataStep3 | null>(null);
   const [step4Data, setStep4Data] = useState<FinalAnalysisStep4 | null>(null);
-  const [improvedResponses, setImprovedResponses] = useState<FinalAnalysisStep4 | null>(null);
+  const [improvedResponses, setImprovedResponses] =
+    useState<FinalAnalysisStep4 | null>(null);
 
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -312,7 +313,18 @@ export default function Etapa1Acelerador12d() {
     } finally {
       setSaving(false);
     }
-  }, [currentStep, completedSteps, step1Data, step2Data, step3Data, step4Data, generatedQuestions, step3Answers, improvedResponses, saveAcceleratorData]);
+  }, [
+    currentStep,
+    completedSteps,
+    step1Data,
+    step2Data,
+    step3Data,
+    step4Data,
+    generatedQuestions,
+    step3Answers,
+    improvedResponses,
+    saveAcceleratorData,
+  ]);
 
   const handleValidate = async () => {
     await handleSave();
@@ -384,22 +396,32 @@ export default function Etapa1Acelerador12d() {
             indicador_1_1: {
               puntaje: analysis.formulacion?.indicador_1_1?.puntaje || 0,
               nivel: analysis.formulacion?.indicador_1_1?.nivel || "N/A",
-              analisis: analysis.formulacion?.indicador_1_1?.justificacion || analysis.formulacion?.indicador_1_1?.analisis_problema || "",
+              analisis:
+                analysis.formulacion?.indicador_1_1?.justificacion ||
+                analysis.formulacion?.indicador_1_1?.analisis_problema ||
+                "",
             },
             indicador_1_2: {
               puntaje: analysis.formulacion?.indicador_1_2?.puntaje || 0,
               nivel: analysis.formulacion?.indicador_1_2?.nivel || "N/A",
-              analisis: analysis.formulacion?.indicador_1_2?.justificacion || analysis.formulacion?.indicador_1_2?.analisis_justificacion || "",
+              analisis:
+                analysis.formulacion?.indicador_1_2?.justificacion ||
+                analysis.formulacion?.indicador_1_2?.analisis_justificacion ||
+                "",
             },
             indicador_1_3: {
               puntaje: analysis.formulacion?.indicador_1_3?.puntaje || 0,
               nivel: analysis.formulacion?.indicador_1_3?.nivel || "N/A",
-              analisis: analysis.formulacion?.indicador_1_3?.justificacion || analysis.formulacion?.indicador_1_3?.analisis_preguntas || "",
+              analisis:
+                analysis.formulacion?.indicador_1_3?.justificacion ||
+                analysis.formulacion?.indicador_1_3?.analisis_preguntas ||
+                "",
             },
             indicador_1_4: {
               puntaje: analysis.formulacion?.indicador_1_4?.puntaje || 0,
               nivel: analysis.formulacion?.indicador_1_4?.nivel || "N/A",
-              analisis: analysis.formulacion?.indicador_1_4?.justificacion || "",
+              analisis:
+                analysis.formulacion?.indicador_1_4?.justificacion || "",
             },
             fortalezas: analysis.formulacion?.fortalezas || [],
             areas_mejora: analysis.formulacion?.areas_mejora || [],
@@ -1218,50 +1240,95 @@ export default function Etapa1Acelerador12d() {
                                   <td className="p-1 border-r">
                                     <div className="flex gap-1 justify-center flex-wrap">
                                       {[
-                                        "M",
-                                        "A",
-                                        "M2",
-                                        "J",
-                                        "J2",
-                                        "A2",
-                                        "S",
-                                        "O",
-                                        "N",
-                                        "D",
+                                        {
+                                          key: "M",
+                                          label: "M",
+                                          nombre: "Marzo",
+                                        },
+                                        {
+                                          key: "A",
+                                          label: "A",
+                                          nombre: "Abril",
+                                        },
+                                        {
+                                          key: "M2",
+                                          label: "M",
+                                          nombre: "Mayo",
+                                        },
+                                        {
+                                          key: "J",
+                                          label: "J",
+                                          nombre: "Junio",
+                                        },
+                                        {
+                                          key: "J2",
+                                          label: "J",
+                                          nombre: "Julio",
+                                        },
+                                        {
+                                          key: "A2",
+                                          label: "A",
+                                          nombre: "Agosto",
+                                        },
+                                        {
+                                          key: "S",
+                                          label: "S",
+                                          nombre: "Septiembre",
+                                        },
+                                        {
+                                          key: "O",
+                                          label: "O",
+                                          nombre: "Octubre",
+                                        },
+                                        {
+                                          key: "N",
+                                          label: "N",
+                                          nombre: "Noviembre",
+                                        },
+                                        {
+                                          key: "D",
+                                          label: "D",
+                                          nombre: "Diciembre",
+                                        },
                                       ].map((mes) => (
-                                        <label
-                                          key={mes}
-                                          className="flex items-center gap-1 cursor-pointer"
+                                        <div
+                                          key={mes.key}
+                                          className="relative group"
                                         >
-                                          <input
-                                            type="checkbox"
-                                            checked={
-                                              accion.cronograma[
-                                                mes as keyof typeof accion.cronograma
-                                              ]
-                                            }
-                                            onChange={(e) => {
-                                              const newAcciones = [
-                                                ...step1Data.consistencia
-                                                  .plan_acciones,
-                                              ];
-                                              newAcciones[index].cronograma[
-                                                mes as keyof typeof accion.cronograma
-                                              ] = e.target.checked;
-                                              setStep1Data({
-                                                ...step1Data,
-                                                consistencia: {
-                                                  ...step1Data.consistencia,
-                                                  plan_acciones: newAcciones,
-                                                },
-                                              });
-                                            }}
-                                            className="w-3 h-3"
-                                          />
-                                          <span className="text-[10px]">
-                                            {mes}
+                                          <label className="flex flex-col items-center gap-0.5 cursor-pointer hover:bg-blue-50 p-1 rounded transition-colors">
+                                            <span className="text-[9px] font-medium text-gray-600">
+                                              {mes.label}
+                                            </span>
+                                            <input
+                                              type="checkbox"
+                                              checked={
+                                                accion.cronograma[
+                                                  mes.key as keyof typeof accion.cronograma
+                                                ]
+                                              }
+                                              onChange={(e) => {
+                                                const newAcciones = [
+                                                  ...step1Data.consistencia
+                                                    .plan_acciones,
+                                                ];
+                                                newAcciones[index].cronograma[
+                                                  mes.key as keyof typeof accion.cronograma
+                                                ] = e.target.checked;
+                                                setStep1Data({
+                                                  ...step1Data,
+                                                  consistencia: {
+                                                    ...step1Data.consistencia,
+                                                    plan_acciones: newAcciones,
+                                                  },
+                                                });
+                                              }}
+                                              className="w-4 h-4 rounded border-2 border-gray-300 checked:bg-blue-600 checked:border-blue-600 cursor-pointer"
+                                            />
+                                          </label>
+                                          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                            {mes.nombre}
                                           </span>
-                                        </label>
+                                        </div>
                                       ))}
                                     </div>
                                   </td>
@@ -2689,7 +2756,9 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 1.1 Problema de Investigación</CardTitle>
+                      <CardTitle className="text-lg">
+                        🔹 1.1 Problema de Investigación
+                      </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
@@ -2716,7 +2785,9 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 1.2 Justificación</CardTitle>
+                      <CardTitle className="text-lg">
+                        🔹 1.2 Justificación
+                      </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
@@ -2743,7 +2814,9 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 1.3 Preguntas de Investigación</CardTitle>
+                      <CardTitle className="text-lg">
+                        🔹 1.3 Preguntas de Investigación
+                      </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
@@ -2770,7 +2843,9 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 1.4 Objetivos</CardTitle>
+                      <CardTitle className="text-lg">
+                        🔹 1.4 Objetivos
+                      </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
@@ -2797,13 +2872,16 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 2.1 Actores y Roles</CardTitle>
+                      <CardTitle className="text-lg">
+                        🔹 2.1 Actores y Roles
+                      </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses?.participacion?.respuesta_2_1 || "",
+                            improvedResponses?.participacion?.respuesta_2_1 ||
+                              "",
                             "Respuesta 2.1"
                           )
                         }
@@ -2824,7 +2902,9 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 3.1 Estrategias de Reflexión</CardTitle>
+                      <CardTitle className="text-lg">
+                        🔹 3.1 Estrategias de Reflexión
+                      </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
@@ -2851,13 +2931,16 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 4.1 Procedimiento Metodológico</CardTitle>
+                      <CardTitle className="text-lg">
+                        🔹 4.1 Procedimiento Metodológico
+                      </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses?.consistencia?.respuesta_4_1 || "",
+                            improvedResponses?.consistencia?.respuesta_4_1 ||
+                              "",
                             "Respuesta 4.1"
                           )
                         }
@@ -2878,13 +2961,16 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 4.2 Técnicas e Instrumentos</CardTitle>
+                      <CardTitle className="text-lg">
+                        🔹 4.2 Técnicas e Instrumentos
+                      </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses?.consistencia?.respuesta_4_2 || "",
+                            improvedResponses?.consistencia?.respuesta_4_2 ||
+                              "",
                             "Respuesta 4.2"
                           )
                         }
@@ -2905,13 +2991,16 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 4.3 Plan de Acciones</CardTitle>
+                      <CardTitle className="text-lg">
+                        🔹 4.3 Plan de Acciones
+                      </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses?.consistencia?.respuesta_4_3 || "",
+                            improvedResponses?.consistencia?.respuesta_4_3 ||
+                              "",
                             "Respuesta 4.3"
                           )
                         }
@@ -2932,13 +3021,16 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">🔹 4.4 Bienes y Servicios</CardTitle>
+                      <CardTitle className="text-lg">
+                        🔹 4.4 Bienes y Servicios
+                      </CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
                           copyToClipboard(
-                            improvedResponses?.consistencia?.respuesta_4_4 || "",
+                            improvedResponses?.consistencia?.respuesta_4_4 ||
+                              "",
                             "Respuesta 4.4"
                           )
                         }
