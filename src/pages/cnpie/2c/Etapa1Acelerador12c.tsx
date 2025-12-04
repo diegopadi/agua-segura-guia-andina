@@ -1900,7 +1900,7 @@ export default function Etapa1Acelerador12c() {
                   (step2Data.sostenibilidad?.indicador_6_1?.puntaje || 0) +
                   (step2Data.sostenibilidad?.indicador_6_2?.puntaje || 0)
                 }
-                maxScore={15}
+                maxScore={25}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 5.1 */}
@@ -1950,7 +1950,7 @@ export default function Etapa1Acelerador12c() {
                         <Badge variant="outline">
                           {step2Data.sostenibilidad?.indicador_6_2?.puntaje ||
                             0}{" "}
-                          / 5 pts
+                          / 15 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.sostenibilidad?.indicador_6_2?.nivel}
