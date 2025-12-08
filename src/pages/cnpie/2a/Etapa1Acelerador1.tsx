@@ -54,6 +54,7 @@ import {
   Clock,
   CloudOff,
   Cloud,
+  RefreshCw,
 } from "lucide-react";
 import { DocumentFieldSchema } from "@/types/document-extraction";
 import {
@@ -2908,13 +2909,28 @@ export default function Etapa1Acelerador1() {
             </Card>
 
             {/* Botones de acción */}
-            <div className="flex justify-between items-center pt-6 border-t">
+            <div className="flex flex-wrap justify-between items-center pt-6 border-t gap-3">
               <Button
                 variant="outline"
                 onClick={() => setCurrentStep(3)}
                 size="lg"
               >
                 Volver
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setCurrentStep(2);
+                  toast({
+                    title: "🔄 Nuevo análisis",
+                    description: "Puedes volver a analizar tu proyecto desde el inicio",
+                  });
+                }}
+                size="lg"
+                className="gap-2"
+              >
+                <RefreshCw className="w-5 h-5" />
+                Iniciar Nuevo Análisis
               </Button>
               <Button
                 onClick={() => {
