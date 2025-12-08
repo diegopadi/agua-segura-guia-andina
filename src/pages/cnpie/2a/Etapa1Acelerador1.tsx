@@ -2217,7 +2217,7 @@ export default function Etapa1Acelerador1() {
                         toNum(step2Data?.sostenibilidad?.indicador_4_1?.puntaje) +
                         toNum(step2Data?.sostenibilidad?.indicador_4_2?.puntaje) +
                         toNum(step2Data?.sostenibilidad?.indicador_4_3?.puntaje);
-                    })()} / 90 pts
+                    })()} / 100 pts
                   </p>
                 </div>
                 <div className="text-right">
