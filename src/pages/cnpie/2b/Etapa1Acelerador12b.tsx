@@ -1590,6 +1590,16 @@ export default function Etapa1Acelerador12b() {
 
   // PASO 2: Análisis de IA por ítem
   const renderStep2 = () => {
+    // Helper para extraer número de cualquier formato (ej: "8 / 15 puntos" → 8)
+    const toNumber = (v: unknown): number => {
+      if (typeof v === 'number') return v;
+      if (typeof v === 'string') {
+        const m = v.match(/^(\d+)/);
+        return m ? parseInt(m[1], 10) : 0;
+      }
+      return 0;
+    };
+
     if (!step2Data) {
       return (
         <Alert>
@@ -1599,6 +1609,19 @@ export default function Etapa1Acelerador12b() {
         </Alert>
       );
     }
+
+    // Calcular puntaje total sumando todos los indicadores
+    const puntajeTotal = 
+      toNumber(step2Data.intencionalidad?.indicador_1_1?.puntaje) +
+      toNumber(step2Data.intencionalidad?.indicador_1_2?.puntaje) +
+      toNumber(step2Data.originalidad?.indicador_2_1?.puntaje) +
+      toNumber(step2Data.originalidad?.indicador_2_2?.puntaje) +
+      toNumber(step2Data.pertinencia?.indicador_3_1?.puntaje) +
+      toNumber(step2Data.pertinencia?.indicador_3_2?.puntaje) +
+      toNumber(step2Data.impacto?.indicador_4_1?.puntaje) +
+      toNumber(step2Data.impacto?.indicador_4_2?.puntaje) +
+      toNumber(step2Data.sostenibilidad?.indicador_5_1?.puntaje) +
+      toNumber(step2Data.sostenibilidad?.indicador_5_2?.puntaje);
 
     return (
       <div className="space-y-6">
@@ -1618,7 +1641,7 @@ export default function Etapa1Acelerador12b() {
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-2">Puntaje Total</p>
                   <p className="text-5xl font-bold text-purple-600">
-                    {step2Data.puntaje_total || 0}
+                    {puntajeTotal}
                     <span className="text-2xl text-gray-500">/100</span>
                   </p>
                   <p className="text-sm text-gray-600 mt-2">Puntos obtenidos</p>
@@ -1636,8 +1659,8 @@ export default function Etapa1Acelerador12b() {
                 title="1. Intencionalidad"
                 subtitle="Caracterización del problema y objetivos"
                 currentScore={
-                  (step2Data.intencionalidad?.indicador_1_1?.puntaje || 0) +
-                  (step2Data.intencionalidad?.indicador_1_2?.puntaje || 0)
+                  toNumber(step2Data.intencionalidad?.indicador_1_1?.puntaje) +
+                  toNumber(step2Data.intencionalidad?.indicador_1_2?.puntaje)
                 }
                 maxScore={25}
               >
@@ -1650,9 +1673,7 @@ export default function Etapa1Acelerador12b() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.intencionalidad?.indicador_1_1?.puntaje ||
-                            0}{" "}
-                          / 15 pts
+                          {toNumber(step2Data.intencionalidad?.indicador_1_1?.puntaje)} / 15 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.intencionalidad?.indicador_1_1?.nivel}
@@ -1701,9 +1722,7 @@ export default function Etapa1Acelerador12b() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.intencionalidad?.indicador_1_2?.puntaje ||
-                            0}{" "}
-                          / 10 pts
+                          {toNumber(step2Data.intencionalidad?.indicador_1_2?.puntaje)} / 10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.intencionalidad?.indicador_1_2?.nivel}
@@ -1747,8 +1766,8 @@ export default function Etapa1Acelerador12b() {
                 title="2. Originalidad"
                 subtitle="Metodología y procedimiento"
                 currentScore={
-                  (step2Data.originalidad?.indicador_2_1?.puntaje || 0) +
-                  (step2Data.originalidad?.indicador_2_2?.puntaje || 0)
+                  toNumber(step2Data.originalidad?.indicador_2_1?.puntaje) +
+                  toNumber(step2Data.originalidad?.indicador_2_2?.puntaje)
                 }
                 maxScore={30}
               >
@@ -1761,8 +1780,7 @@ export default function Etapa1Acelerador12b() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.originalidad?.indicador_2_1?.puntaje || 0}{" "}
-                          / 15 pts
+                          {toNumber(step2Data.originalidad?.indicador_2_1?.puntaje)} / 15 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.originalidad?.indicador_2_1?.nivel}
@@ -1784,8 +1802,7 @@ export default function Etapa1Acelerador12b() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.originalidad?.indicador_2_2?.puntaje || 0}{" "}
-                          / 20 pts
+                          {toNumber(step2Data.originalidad?.indicador_2_2?.puntaje)} / 20 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.originalidad?.indicador_2_2?.nivel}
@@ -1829,8 +1846,8 @@ export default function Etapa1Acelerador12b() {
                 title="3. Pertinencia"
                 subtitle="Intereses, necesidades y adaptación al contexto"
                 currentScore={
-                  (step2Data.pertinencia?.indicador_3_1?.puntaje || 0) +
-                  (step2Data.pertinencia?.indicador_3_2?.puntaje || 0)
+                  toNumber(step2Data.pertinencia?.indicador_3_1?.puntaje) +
+                  toNumber(step2Data.pertinencia?.indicador_3_2?.puntaje)
                 }
                 maxScore={10}
               >
@@ -1843,8 +1860,7 @@ export default function Etapa1Acelerador12b() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.pertinencia?.indicador_3_1?.puntaje || 0} /
-                          10 pts
+                          {toNumber(step2Data.pertinencia?.indicador_3_1?.puntaje)} / 10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.pertinencia?.indicador_3_1?.nivel}
@@ -1879,8 +1895,7 @@ export default function Etapa1Acelerador12b() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.pertinencia?.indicador_3_2?.puntaje || 0} /
-                          5 pts
+                          {toNumber(step2Data.pertinencia?.indicador_3_2?.puntaje)} / 5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.pertinencia?.indicador_3_2?.nivel}
@@ -1926,8 +1941,8 @@ export default function Etapa1Acelerador12b() {
                 title="4. Impacto"
                 subtitle="Resultados y cambios sistémicos"
                 currentScore={
-                  (step2Data.impacto?.indicador_4_1?.puntaje || 0) +
-                  (step2Data.impacto?.indicador_4_2?.puntaje || 0)
+                  toNumber(step2Data.impacto?.indicador_4_1?.puntaje) +
+                  toNumber(step2Data.impacto?.indicador_4_2?.puntaje)
                 }
                 maxScore={20}
               >
@@ -1940,8 +1955,7 @@ export default function Etapa1Acelerador12b() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.impacto?.indicador_4_1?.puntaje || 0} / 10
-                          pts
+                          {toNumber(step2Data.impacto?.indicador_4_1?.puntaje)} / 10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.impacto?.indicador_4_1?.nivel}
@@ -1975,8 +1989,7 @@ export default function Etapa1Acelerador12b() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.impacto?.indicador_4_2?.puntaje || 0} / 5
-                          pts
+                          {toNumber(step2Data.impacto?.indicador_4_2?.puntaje)} / 5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.impacto?.indicador_4_2?.nivel}
@@ -2021,8 +2034,8 @@ export default function Etapa1Acelerador12b() {
                 title="5. Sostenibilidad"
                 subtitle="Viabilidad y recursos"
                 currentScore={
-                  (step2Data.sostenibilidad?.indicador_5_1?.puntaje || 0) +
-                  (step2Data.sostenibilidad?.indicador_5_2?.puntaje || 0)
+                  toNumber(step2Data.sostenibilidad?.indicador_5_1?.puntaje) +
+                  toNumber(step2Data.sostenibilidad?.indicador_5_2?.puntaje)
                 }
                 maxScore={15}
               >
@@ -2035,9 +2048,7 @@ export default function Etapa1Acelerador12b() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.sostenibilidad?.indicador_5_1?.puntaje ||
-                            0}{" "}
-                          / 5 pts
+                          {toNumber(step2Data.sostenibilidad?.indicador_5_1?.puntaje)} / 5 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.sostenibilidad?.indicador_5_1?.nivel}
@@ -2072,9 +2083,7 @@ export default function Etapa1Acelerador12b() {
                       </h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.sostenibilidad?.indicador_5_2?.puntaje ||
-                            0}{" "}
-                          / 10 pts
+                          {toNumber(step2Data.sostenibilidad?.indicador_5_2?.puntaje)} / 10 pts
                         </Badge>
                         <Badge className="bg-purple-500">
                           {step2Data.sostenibilidad?.indicador_5_2?.nivel}

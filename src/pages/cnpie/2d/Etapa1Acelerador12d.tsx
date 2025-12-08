@@ -1717,6 +1717,16 @@ export default function Etapa1Acelerador12d() {
 
   // PASO 2: Análisis de IA por ítem
   const renderStep2 = () => {
+    // Helper para extraer número de cualquier formato (ej: "8 / 15 puntos" → 8)
+    const toNumber = (v: unknown): number => {
+      if (typeof v === 'number') return v;
+      if (typeof v === 'string') {
+        const m = v.match(/^(\d+)/);
+        return m ? parseInt(m[1], 10) : 0;
+      }
+      return 0;
+    };
+
     if (!step2Data) {
       return (
         <Alert>
@@ -1726,6 +1736,19 @@ export default function Etapa1Acelerador12d() {
         </Alert>
       );
     }
+
+    // Calcular puntaje total sumando todos los indicadores
+    const puntajeTotal = 
+      toNumber(step2Data.formulacion?.indicador_1_1?.puntaje) +
+      toNumber(step2Data.formulacion?.indicador_1_2?.puntaje) +
+      toNumber(step2Data.formulacion?.indicador_1_3?.puntaje) +
+      toNumber(step2Data.formulacion?.indicador_1_4?.puntaje) +
+      toNumber(step2Data.participacion?.indicador_2_1?.puntaje) +
+      toNumber(step2Data.reflexion?.indicador_3_1?.puntaje) +
+      toNumber(step2Data.consistencia?.indicador_4_1?.puntaje) +
+      toNumber(step2Data.consistencia?.indicador_4_2?.puntaje) +
+      toNumber(step2Data.consistencia?.indicador_4_3?.puntaje) +
+      toNumber(step2Data.consistencia?.indicador_4_4?.puntaje);
 
     return (
       <div className="space-y-6">
@@ -1745,7 +1768,7 @@ export default function Etapa1Acelerador12d() {
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-2">Puntaje Total</p>
                   <p className="text-5xl font-bold text-purple-600">
-                    {step2Data.puntaje_total || 0}
+                    {puntajeTotal}
                     <span className="text-2xl text-gray-500">/100</span>
                   </p>
                   <p className="text-sm text-gray-600 mt-2">Puntos obtenidos</p>
@@ -1763,10 +1786,10 @@ export default function Etapa1Acelerador12d() {
                 title="1. Formulación del Problema y Objetivo"
                 subtitle="Caracterización, justificación, preguntas y objetivos"
                 currentScore={
-                  (step2Data.formulacion?.indicador_1_1?.puntaje || 0) +
-                  (step2Data.formulacion?.indicador_1_2?.puntaje || 0) +
-                  (step2Data.formulacion?.indicador_1_3?.puntaje || 0) +
-                  (step2Data.formulacion?.indicador_1_4?.puntaje || 0)
+                  toNumber(step2Data.formulacion?.indicador_1_1?.puntaje) +
+                  toNumber(step2Data.formulacion?.indicador_1_2?.puntaje) +
+                  toNumber(step2Data.formulacion?.indicador_1_3?.puntaje) +
+                  toNumber(step2Data.formulacion?.indicador_1_4?.puntaje)
                 }
                 maxScore={40}
               >
@@ -1885,7 +1908,7 @@ export default function Etapa1Acelerador12d() {
                 title="2. Participación"
                 subtitle="Actores y roles en la investigación-acción"
                 currentScore={
-                  step2Data.participacion?.indicador_2_1?.puntaje || 0
+                  toNumber(step2Data.participacion?.indicador_2_1?.puntaje)
                 }
                 maxScore={10}
               >
@@ -1925,7 +1948,7 @@ export default function Etapa1Acelerador12d() {
                 iconBgColor="bg-purple-500"
                 title="3. Reflexión"
                 subtitle="Estrategias de reflexión en la investigación-acción"
-                currentScore={step2Data.reflexion?.indicador_3_1?.puntaje || 0}
+                currentScore={toNumber(step2Data.reflexion?.indicador_3_1?.puntaje)}
                 maxScore={10}
               >
                 <AccordionContent className="px-4 pb-4">
@@ -1965,10 +1988,10 @@ export default function Etapa1Acelerador12d() {
                 title="4. Consistencia"
                 subtitle="Coherencia entre teoría, práctica y evidencia"
                 currentScore={
-                  (step2Data.consistencia?.indicador_4_1?.puntaje || 0) +
-                  (step2Data.consistencia?.indicador_4_2?.puntaje || 0) +
-                  (step2Data.consistencia?.indicador_4_3?.puntaje || 0) +
-                  (step2Data.consistencia?.indicador_4_4?.puntaje || 0)
+                  toNumber(step2Data.consistencia?.indicador_4_1?.puntaje) +
+                  toNumber(step2Data.consistencia?.indicador_4_2?.puntaje) +
+                  toNumber(step2Data.consistencia?.indicador_4_3?.puntaje) +
+                  toNumber(step2Data.consistencia?.indicador_4_4?.puntaje)
                 }
                 maxScore={30}
               >
