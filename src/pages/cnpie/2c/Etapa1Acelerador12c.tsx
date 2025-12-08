@@ -2203,7 +2203,7 @@ export default function Etapa1Acelerador12c() {
                         toNum(step2Data?.reflexion?.indicador_5_1?.puntaje) +
                         toNum(step2Data?.sostenibilidad?.indicador_6_1?.puntaje) +
                         toNum(step2Data?.sostenibilidad?.indicador_6_2?.puntaje);
-                    })()} / 80 pts
+                    })()} / 100 pts
                   </p>
                 </div>
                 <div className="text-right">

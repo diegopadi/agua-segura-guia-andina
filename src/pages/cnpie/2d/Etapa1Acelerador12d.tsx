@@ -2306,7 +2306,7 @@ export default function Etapa1Acelerador12d() {
                         toNum(step2Data?.consistencia?.indicador_4_2?.puntaje) +
                         toNum(step2Data?.consistencia?.indicador_4_3?.puntaje) +
                         toNum(step2Data?.consistencia?.indicador_4_4?.puntaje);
-                    })()} / 80 pts
+                    })()} / 100 pts
                   </p>
                 </div>
                 <div className="text-right">
