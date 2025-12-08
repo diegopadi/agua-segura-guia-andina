@@ -8,28 +8,10 @@ import { RepositoryExtractionButton } from "@/components/RepositoryExtractionBut
 import { CriterioAccordionHeader } from "../components/CriterioAccordionHeader";
 import { ProgressStepper } from "../components/ProgressStepper";
 import { QuestionCardWithTextarea } from "../components/QuestionCardWithTextarea";
-import {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  HeadingLevel,
-  AlignmentType,
-} from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -96,13 +78,7 @@ const STEPS = [
 ];
 
 export default function Etapa1Acelerador1() {
-  const {
-    proyecto,
-    saveAcceleratorData,
-    validateAccelerator,
-    getAcceleratorData,
-    getAllData,
-  } = useCNPIEProject("2A");
+  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData } = useCNPIEProject("2A");
 
   const { rubricas, getCriterioByName } = useCNPIERubric("2A");
   const { toast } = useToast();
@@ -196,21 +172,12 @@ export default function Etapa1Acelerador1() {
     puntaje_actual: number;
     puntaje_maximo: number;
   } | null>(null);
-  const [step3Answers, setStep3Answers] = useState<
-    Record<string, Record<string, string>>
-  >({});
+  const [step3Answers, setStep3Answers] = useState<Record<string, Record<string, string>>>({});
 
   // Función para migrar datos antiguos a la nueva estructura
-  const migrateOldDataStructure = (
-    oldData: Partial<FormDataStep1> & Record<string, unknown>
-  ): FormDataStep1 => {
+  const migrateOldDataStructure = (oldData: Partial<FormDataStep1> & Record<string, unknown>): FormDataStep1 => {
     // Si ya tiene la estructura nueva (con intencionalidad, originalidad, etc.), retornar tal cual
-    if (
-      oldData.intencionalidad &&
-      oldData.originalidad &&
-      oldData.impacto &&
-      oldData.sostenibilidad
-    ) {
+    if (oldData.intencionalidad && oldData.originalidad && oldData.impacto && oldData.sostenibilidad) {
       return oldData as FormDataStep1;
     }
 
@@ -219,40 +186,28 @@ export default function Etapa1Acelerador1() {
       intencionalidad: {
         problema_descripcion: (oldData.problema_descripcion as string) || "",
         objetivo_general: (oldData.objetivo_general as string) || "",
-        objetivos_especificos:
-          (oldData.objetivos_especificos as string[]) || [],
+        objetivos_especificos: (oldData.objetivos_especificos as string[]) || [],
         competencias_cneb: (oldData.competencias_cneb as string[]) || [],
         area_curricular: (oldData.area_curricular as string) || "",
       },
       originalidad: {
-        metodologia_descripcion:
-          (oldData.metodologia_descripcion as string) || "",
-        procedimiento_metodologico:
-          (oldData.procedimiento_metodologico as string) || "",
+        metodologia_descripcion: (oldData.metodologia_descripcion as string) || "",
+        procedimiento_metodologico: (oldData.procedimiento_metodologico as string) || "",
         video_url: (oldData.video_url as string) || "",
       },
       impacto: {
         evidencias_descripcion:
-          (oldData.impacto_evidencias as string) ||
-          (oldData.evidencias_descripcion as string) ||
-          "",
+          (oldData.impacto_evidencias as string) || (oldData.evidencias_descripcion as string) || "",
         cambios_practica_docente:
-          (oldData.impacto_cambios as string) ||
-          (oldData.cambios_practica_docente as string) ||
-          "",
-        cambios_gestion_escolar:
-          (oldData.cambios_gestion_escolar as string) || "",
+          (oldData.impacto_cambios as string) || (oldData.cambios_practica_docente as string) || "",
+        cambios_gestion_escolar: (oldData.cambios_gestion_escolar as string) || "",
         cambios_comunidad: (oldData.cambios_comunidad as string) || "",
       },
       sostenibilidad: {
         estrategias_continuidad:
-          (oldData.sostenibilidad_estrategias as string) ||
-          (oldData.estrategias_continuidad as string) ||
-          "",
+          (oldData.sostenibilidad_estrategias as string) || (oldData.estrategias_continuidad as string) || "",
         estrategias_viabilidad:
-          (oldData.sostenibilidad_viabilidad as string) ||
-          (oldData.estrategias_viabilidad as string) ||
-          "",
+          (oldData.sostenibilidad_viabilidad as string) || (oldData.estrategias_viabilidad as string) || "",
         bienes_servicios: (oldData.bienes_servicios as BienServicio[]) || [],
       },
     };
@@ -439,10 +394,7 @@ export default function Etapa1Acelerador1() {
         body: { step1Data },
       });
 
-      const response = (await Promise.race([
-        apiPromise,
-        timeoutPromise,
-      ])) as Awaited<typeof apiPromise>;
+      const response = (await Promise.race([apiPromise, timeoutPromise])) as Awaited<typeof apiPromise>;
       const { data, error } = response;
       console.log("🔵 Data:", data);
 
@@ -456,60 +408,37 @@ export default function Etapa1Acelerador1() {
         console.log("🔵 Analysis data completo:", data.analysis);
 
         // Transformar la estructura con emojis a estructura plana
-        const dictamenInt =
-          data.analysis.intencionalidad?.[
-            "📋 DICTAMEN TÉCNICO: INTENCIONALIDAD (CONSOLIDADOS)"
-          ];
+        const dictamenInt = data.analysis.intencionalidad?.["📋 DICTAMEN TÉCNICO: INTENCIONALIDAD (CONSOLIDADOS)"];
 
-        const indicador11 =
-          dictamenInt?.["🔹 INDICADOR 1.1: Caracterización del Problema"];
+        const indicador11 = dictamenInt?.["🔹 INDICADOR 1.1: Caracterización del Problema"];
 
         const indicador12 = dictamenInt?.["🔹 INDICADOR 1.2: Objetivos"];
 
         // Extraer datos de Originalidad
-        const dictamenOrig =
-          data.analysis.originalidad?.[
-            "📋 DICTAMEN TÉCNICO: ORIGINALIDAD (CONSOLIDADOS)"
-          ];
+        const dictamenOrig = data.analysis.originalidad?.["📋 DICTAMEN TÉCNICO: ORIGINALIDAD (CONSOLIDADOS)"];
 
-        const indicador21 =
-          dictamenOrig?.["🔹 INDICADOR 2.1: Metodología/Estrategia"];
+        const indicador21 = dictamenOrig?.["🔹 INDICADOR 2.1: Metodología/Estrategia"];
 
-        const indicador22 =
-          dictamenOrig?.["🔹 INDICADOR 2.2: Procedimiento y Video"];
+        const indicador22 = dictamenOrig?.["🔹 INDICADOR 2.2: Procedimiento y Video"];
 
         console.log("🔵 INDICADOR 2.2 completo:", indicador22);
-        console.log(
-          "🔵 Desglose de Evaluación:",
-          indicador22?.["Desglose de Evaluación"]
-        );
+        console.log("🔵 Desglose de Evaluación:", indicador22?.["Desglose de Evaluación"]);
 
         // Extraer datos de Impacto
-        const dictamenImp =
-          data.analysis.impacto?.[
-            "📋 DICTAMEN TÉCNICO: IMPACTO (CONSOLIDADOS)"
-          ];
+        const dictamenImp = data.analysis.impacto?.["📋 DICTAMEN TÉCNICO: IMPACTO (CONSOLIDADOS)"];
 
-        const indicador31 =
-          dictamenImp?.["🔹 INDICADOR 3.1: Resultados de Aprendizaje"];
+        const indicador31 = dictamenImp?.["🔹 INDICADOR 3.1: Resultados de Aprendizaje"];
 
-        const indicador32 =
-          dictamenImp?.["🔹 INDICADOR 3.2: Cambios Sistémicos"];
+        const indicador32 = dictamenImp?.["🔹 INDICADOR 3.2: Cambios Sistémicos"];
 
         // Extraer datos de Sostenibilidad
-        const dictamenSost =
-          data.analysis.sostenibilidad?.[
-            "📋 DICTAMEN TÉCNICO: SOSTENIBILIDAD (CONSOLIDADOS)"
-          ];
+        const dictamenSost = data.analysis.sostenibilidad?.["📋 DICTAMEN TÉCNICO: SOSTENIBILIDAD (CONSOLIDADOS)"];
 
-        const indicador41 =
-          dictamenSost?.["🔹 INDICADOR 4.1: Estrategias de Continuidad"];
+        const indicador41 = dictamenSost?.["🔹 INDICADOR 4.1: Estrategias de Continuidad"];
 
-        const indicador42 =
-          dictamenSost?.["🔹 INDICADOR 4.2: Viabilidad y Aliados"];
+        const indicador42 = dictamenSost?.["🔹 INDICADOR 4.2: Viabilidad y Aliados"];
 
-        const indicador43 =
-          dictamenSost?.["🔹 INDICADOR 4.3: Bienes y Servicios"];
+        const indicador43 = dictamenSost?.["🔹 INDICADOR 4.3: Bienes y Servicios"];
 
         // Calcular puntaje total
         const puntajeTotal =
@@ -529,32 +458,19 @@ export default function Etapa1Acelerador1() {
             indicador_1_1: {
               puntaje: indicador11?.PUNTAJE || 0,
               nivel: indicador11?.NIVEL || "N/A",
-              vinculacion_cneb:
-                indicador11?.["Análisis de Criterios"]?.["Vinculación CNEB"] ||
-                "",
-              evidencia:
-                indicador11?.["Análisis de Criterios"]?.[
-                  "Evidencia (Consolidados)"
-                ] || "",
-              justificacion:
-                indicador11?.["Análisis de Criterios"]?.[
-                  "Justificación del Puntaje"
-                ] || "",
+              vinculacion_cneb: indicador11?.["Análisis de Criterios"]?.["Vinculación CNEB"] || "",
+              evidencia: indicador11?.["Análisis de Criterios"]?.["Evidencia (Consolidados)"] || "",
+              justificacion: indicador11?.["Análisis de Criterios"]?.["Justificación del Puntaje"] || "",
             },
             indicador_1_2: {
               puntaje: indicador12?.PUNTAJE || 0,
               nivel: indicador12?.NIVEL || "N/A",
               checklist_smart: {
-                especifico:
-                  indicador12?.["Checklist SMART"]?.["S (Específico)"] === "✅",
-                medible:
-                  indicador12?.["Checklist SMART"]?.["M (Medible)"] === "✅",
-                alcanzable:
-                  indicador12?.["Checklist SMART"]?.["A (Alcanzable)"] === "✅",
-                relevante:
-                  indicador12?.["Checklist SMART"]?.["R (Relevante)"] === "✅",
-                temporal:
-                  indicador12?.["Checklist SMART"]?.["T (Temporal)"] === "✅",
+                especifico: indicador12?.["Checklist SMART"]?.["S (Específico)"] === "✅",
+                medible: indicador12?.["Checklist SMART"]?.["M (Medible)"] === "✅",
+                alcanzable: indicador12?.["Checklist SMART"]?.["A (Alcanzable)"] === "✅",
+                relevante: indicador12?.["Checklist SMART"]?.["R (Relevante)"] === "✅",
+                temporal: indicador12?.["Checklist SMART"]?.["T (Temporal)"] === "✅",
               },
               justificacion: indicador12?.["Justificación del Puntaje"] || "",
             },
@@ -568,15 +484,9 @@ export default function Etapa1Acelerador1() {
             indicador_2_2: {
               puntaje: indicador22?.PUNTAJE || 0,
               nivel: indicador22?.NIVEL || "N/A",
-              calidad_procedimiento:
-                indicador22?.["Desglose de Evaluación"]?.[
-                  "Calidad del Procedimiento"
-                ] || "",
-              video_detectado:
-                indicador22?.["Desglose de Evaluación"]?.["Video detectado"] ===
-                "✅",
-              puntaje_video:
-                indicador22?.["Desglose de Evaluación"]?.["Puntaje Video"] || 0,
+              calidad_procedimiento: indicador22?.["Desglose de Evaluación"]?.["Calidad del Procedimiento"] || "",
+              video_detectado: indicador22?.["Desglose de Evaluación"]?.["Video detectado"] === "✅",
+              puntaje_video: indicador22?.["Desglose de Evaluación"]?.["Puntaje Video"] || 0,
               observacion: indicador22?.["Observación Final"] || "",
             },
           },
@@ -584,14 +494,12 @@ export default function Etapa1Acelerador1() {
             indicador_3_1: {
               puntaje: indicador31?.PUNTAJE || 0,
               nivel: indicador31?.NIVEL || "N/A",
-              analisis_evidencias:
-                indicador31?.["Análisis de Evidencias"] || {},
+              analisis_evidencias: indicador31?.["Análisis de Evidencias"] || {},
             },
             indicador_3_2: {
               puntaje: indicador32?.PUNTAJE || 0,
               nivel: indicador32?.NIVEL || "N/A",
-              analisis_transformacion:
-                indicador32?.["Análisis de Transformación"] || {},
+              analisis_transformacion: indicador32?.["Análisis de Transformación"] || {},
             },
             observacion_final: dictamenImp?.["Observación Final"] || "",
           },
@@ -652,8 +560,7 @@ export default function Etapa1Acelerador1() {
       }
     } catch (error: unknown) {
       console.error("🔴 Error en handleAnalyze:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Error desconocido";
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
       setAnalyzing(false);
       toast({
         title: "Error",
@@ -677,15 +584,7 @@ export default function Etapa1Acelerador1() {
 
     try {
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new Error(
-                "Timeout: La generación de preguntas tardó más de 120 segundos"
-              )
-            ),
-          120000
-        )
+        setTimeout(() => reject(new Error("Timeout: La generación de preguntas tardó más de 120 segundos")), 120000),
       );
 
       const {
@@ -707,13 +606,10 @@ export default function Etapa1Acelerador1() {
           body: JSON.stringify({
             analysisData: step2Data,
           }),
-        }
+        },
       );
 
-      const response = (await Promise.race([
-        requestPromise,
-        timeoutPromise,
-      ])) as Response;
+      const response = (await Promise.race([requestPromise, timeoutPromise])) as Response;
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -744,10 +640,7 @@ export default function Etapa1Acelerador1() {
       }
     } catch (error: unknown) {
       console.error("❌ Error generando preguntas:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "No se pudieron generar las preguntas";
+      const errorMessage = error instanceof Error ? error.message : "No se pudieron generar las preguntas";
       toast({
         title: "Error",
         description: errorMessage,
@@ -773,35 +666,27 @@ export default function Etapa1Acelerador1() {
       // Crear objeto combinado separado por secciones
       const combinedData = {
         intencionalidad: {
-          respuesta_original_1_1:
-            step1Data.intencionalidad?.problema_descripcion || "",
+          respuesta_original_1_1: step1Data.intencionalidad?.problema_descripcion || "",
           nueva_respuesta_1_1: step3Answers.intencionalidad?.respuesta_1 || "",
-          respuesta_original_1_2:
-            step1Data.intencionalidad?.objetivo_general || "",
+          respuesta_original_1_2: step1Data.intencionalidad?.objetivo_general || "",
           nueva_respuesta_1_2: step3Answers.intencionalidad?.respuesta_2 || "",
         },
         originalidad: {
-          respuesta_original_2_1:
-            step1Data.originalidad?.metodologia_descripcion || "",
+          respuesta_original_2_1: step1Data.originalidad?.metodologia_descripcion || "",
           nueva_respuesta_2_1: step3Answers.originalidad?.respuesta_1 || "",
-          respuesta_original_2_2:
-            step1Data.originalidad?.procedimiento_metodologico || "",
+          respuesta_original_2_2: step1Data.originalidad?.procedimiento_metodologico || "",
           nueva_respuesta_2_2: step3Answers.originalidad?.respuesta_2 || "",
         },
         impacto: {
-          respuesta_original_3_1:
-            step1Data.impacto?.evidencias_descripcion || "",
+          respuesta_original_3_1: step1Data.impacto?.evidencias_descripcion || "",
           nueva_respuesta_3_1: step3Answers.impacto?.respuesta_1 || "",
-          respuesta_original_3_2:
-            step1Data.impacto?.cambios_practica_docente || "",
+          respuesta_original_3_2: step1Data.impacto?.cambios_practica_docente || "",
           nueva_respuesta_3_2: step3Answers.impacto?.respuesta_2 || "",
         },
         sostenibilidad: {
-          respuesta_original_4_1:
-            step1Data.sostenibilidad?.estrategias_continuidad || "",
+          respuesta_original_4_1: step1Data.sostenibilidad?.estrategias_continuidad || "",
           nueva_respuesta_4_1: step3Answers.sostenibilidad?.respuesta_1 || "",
-          respuesta_original_4_2:
-            step1Data.sostenibilidad?.estrategias_viabilidad || "",
+          respuesta_original_4_2: step1Data.sostenibilidad?.estrategias_viabilidad || "",
           nueva_respuesta_4_2: step3Answers.sostenibilidad?.respuesta_2 || "",
         },
         timestamp: new Date().toISOString(),
@@ -812,77 +697,41 @@ export default function Etapa1Acelerador1() {
       console.log("1. INTENCIONALIDAD:");
       console.log(
         "   Respuesta Original 1.1:",
-        combinedData.intencionalidad.respuesta_original_1_1.substring(0, 100) +
-          "..."
+        combinedData.intencionalidad.respuesta_original_1_1.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 1.1:",
-        combinedData.intencionalidad.nueva_respuesta_1_1
-      );
+      console.log("   Nueva Respuesta 1.1:", combinedData.intencionalidad.nueva_respuesta_1_1);
       console.log(
         "   Respuesta Original 1.2:",
-        combinedData.intencionalidad.respuesta_original_1_2.substring(0, 100) +
-          "..."
+        combinedData.intencionalidad.respuesta_original_1_2.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 1.2:",
-        combinedData.intencionalidad.nueva_respuesta_1_2
-      );
+      console.log("   Nueva Respuesta 1.2:", combinedData.intencionalidad.nueva_respuesta_1_2);
       console.log("\n2. ORIGINALIDAD:");
       console.log(
         "   Respuesta Original 2.1:",
-        combinedData.originalidad.respuesta_original_2_1.substring(0, 100) +
-          "..."
+        combinedData.originalidad.respuesta_original_2_1.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 2.1:",
-        combinedData.originalidad.nueva_respuesta_2_1
-      );
+      console.log("   Nueva Respuesta 2.1:", combinedData.originalidad.nueva_respuesta_2_1);
       console.log(
         "   Respuesta Original 2.2:",
-        combinedData.originalidad.respuesta_original_2_2.substring(0, 100) +
-          "..."
+        combinedData.originalidad.respuesta_original_2_2.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 2.2:",
-        combinedData.originalidad.nueva_respuesta_2_2
-      );
+      console.log("   Nueva Respuesta 2.2:", combinedData.originalidad.nueva_respuesta_2_2);
       console.log("\n3. IMPACTO:");
-      console.log(
-        "   Respuesta Original 3.1:",
-        combinedData.impacto.respuesta_original_3_1.substring(0, 100) + "..."
-      );
-      console.log(
-        "   Nueva Respuesta 3.1:",
-        combinedData.impacto.nueva_respuesta_3_1
-      );
-      console.log(
-        "   Respuesta Original 3.2:",
-        combinedData.impacto.respuesta_original_3_2.substring(0, 100) + "..."
-      );
-      console.log(
-        "   Nueva Respuesta 3.2:",
-        combinedData.impacto.nueva_respuesta_3_2
-      );
+      console.log("   Respuesta Original 3.1:", combinedData.impacto.respuesta_original_3_1.substring(0, 100) + "...");
+      console.log("   Nueva Respuesta 3.1:", combinedData.impacto.nueva_respuesta_3_1);
+      console.log("   Respuesta Original 3.2:", combinedData.impacto.respuesta_original_3_2.substring(0, 100) + "...");
+      console.log("   Nueva Respuesta 3.2:", combinedData.impacto.nueva_respuesta_3_2);
       console.log("\n4. SOSTENIBILIDAD:");
       console.log(
         "   Respuesta Original 4.1:",
-        combinedData.sostenibilidad.respuesta_original_4_1.substring(0, 100) +
-          "..."
+        combinedData.sostenibilidad.respuesta_original_4_1.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 4.1:",
-        combinedData.sostenibilidad.nueva_respuesta_4_1
-      );
+      console.log("   Nueva Respuesta 4.1:", combinedData.sostenibilidad.nueva_respuesta_4_1);
       console.log(
         "   Respuesta Original 4.2:",
-        combinedData.sostenibilidad.respuesta_original_4_2.substring(0, 100) +
-          "..."
+        combinedData.sostenibilidad.respuesta_original_4_2.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 4.2:",
-        combinedData.sostenibilidad.nueva_respuesta_4_2
-      );
+      console.log("   Nueva Respuesta 4.2:", combinedData.sostenibilidad.nueva_respuesta_4_2);
       console.log("========================================");
       console.log("📤 Objeto completo:", combinedData);
 
@@ -900,24 +749,19 @@ export default function Etapa1Acelerador1() {
         throw new Error("No hay sesión activa");
       }
 
-      const response = await fetch(
-        "https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/sintetisador-cnpie-2A",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-            "x-client-info": "agua-segura-guia-andina",
-          },
-          body: JSON.stringify({ combinedData }),
-        }
-      );
+      const response = await fetch("https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/sintetisador-cnpie-2A", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          "x-client-info": "agua-segura-guia-andina",
+        },
+        body: JSON.stringify({ combinedData }),
+      });
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "");
-        throw new Error(
-          `Error del sintetizador (${response.status}): ${errorText}`
-        );
+        throw new Error(`Error del sintetizador (${response.status}): ${errorText}`);
       }
 
       const data = await response.json();
@@ -946,10 +790,7 @@ export default function Etapa1Acelerador1() {
       });
     } catch (error: unknown) {
       console.error("❌ Error combinando respuestas:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "No se pudieron combinar las respuestas";
+      const errorMessage = error instanceof Error ? error.message : "No se pudieron combinar las respuestas";
       toast({
         title: "Error",
         description: errorMessage,
@@ -993,16 +834,9 @@ export default function Etapa1Acelerador1() {
                 <div className="flex flex-col items-center gap-4">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
                   <div className="text-center">
-                    <h3 className="font-semibold text-lg mb-2">
-                      Analizando tu proyecto con IA
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Evaluando los 4 criterios: Intencionalidad, Originalidad,
-                      Impacto y Sostenibilidad...
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2 italic">
-                      Esto puede tomar hasta 2 minutos
-                    </p>
+                    <h3 className="font-semibold text-lg mb-2">Analizando tu proyecto con IA</h3>
+                    <p className="text-sm text-muted-foreground">Evaluando los criterios</p>
+                    <p className="text-xs text-muted-foreground mt-2 italic">Esto puede tomar hasta 2 minutos</p>
                   </div>
                   <Progress value={undefined} className="w-full" />
                   <p className="text-xs text-muted-foreground text-center">
@@ -1021,9 +855,7 @@ export default function Etapa1Acelerador1() {
               <AccordionItem value="item-1" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-base">
-                      1. {ITEMS_FICHA_2A[0].titulo}
-                    </span>
+                    <span className="font-semibold text-base">1. {ITEMS_FICHA_2A[0].titulo}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
@@ -1071,9 +903,7 @@ export default function Etapa1Acelerador1() {
               <AccordionItem value="item-2" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-base">
-                      2. {ITEMS_FICHA_2A[1].titulo}
-                    </span>
+                    <span className="font-semibold text-base">2. {ITEMS_FICHA_2A[1].titulo}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
@@ -1144,9 +974,7 @@ export default function Etapa1Acelerador1() {
               <AccordionItem value="item-3" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-base">
-                      3. {ITEMS_FICHA_2A[2].titulo}
-                    </span>
+                    <span className="font-semibold text-base">3. {ITEMS_FICHA_2A[2].titulo}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
@@ -1194,9 +1022,7 @@ export default function Etapa1Acelerador1() {
               <AccordionItem value="item-4" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-base">
-                      4. {ITEMS_FICHA_2A[3].titulo}
-                    </span>
+                    <span className="font-semibold text-base">4. {ITEMS_FICHA_2A[3].titulo}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
@@ -1204,9 +1030,7 @@ export default function Etapa1Acelerador1() {
                   <QuestionCardWithTextarea
                     questionNumber={ITEMS_FICHA_2A[3].preguntas[0].numero}
                     questionText={ITEMS_FICHA_2A[3].preguntas[0].texto}
-                    value={
-                      step1Data.sostenibilidad.estrategias_continuidad || ""
-                    }
+                    value={step1Data.sostenibilidad.estrategias_continuidad || ""}
                     onChange={(value) =>
                       setStep1Data({
                         ...step1Data,
@@ -1225,9 +1049,7 @@ export default function Etapa1Acelerador1() {
                   <QuestionCardWithTextarea
                     questionNumber={ITEMS_FICHA_2A[3].preguntas[1].numero}
                     questionText={ITEMS_FICHA_2A[3].preguntas[1].texto}
-                    value={
-                      step1Data.sostenibilidad.estrategias_viabilidad || ""
-                    }
+                    value={step1Data.sostenibilidad.estrategias_viabilidad || ""}
                     onChange={(value) =>
                       setStep1Data({
                         ...step1Data,
@@ -1251,9 +1073,7 @@ export default function Etapa1Acelerador1() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2A[3].preguntas[2].texto}
-                        </p>
+                        <p className="text-sm text-gray-700">{ITEMS_FICHA_2A[3].preguntas[2].texto}</p>
                       </CardContent>
                     </Card>
 
@@ -1263,45 +1083,24 @@ export default function Etapa1Acelerador1() {
                         <table className="w-full border-collapse">
                           <thead>
                             <tr className="bg-blue-500 text-white text-xs">
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">
-                                Componente
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">
-                                Denominación
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 w-25">
-                                Cant.
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 w-30">
-                                P. Unit.
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 w-20">
-                                Subtotal
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[50px]">
-                                Utilidad
-                              </th>
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">Componente</th>
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">Denominación</th>
+                              <th className="p-2 text-left border-r border-blue-400 w-25">Cant.</th>
+                              <th className="p-2 text-left border-r border-blue-400 w-30">P. Unit.</th>
+                              <th className="p-2 text-left border-r border-blue-400 w-20">Subtotal</th>
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[50px]">Utilidad</th>
                               <th className="p-2 w-10"></th>
                             </tr>
                           </thead>
                           <tbody>
-                            {(
-                              step1Data.sostenibilidad.bienes_servicios || []
-                            ).map((bien, index) => (
-                              <tr
-                                key={index}
-                                className="border-b hover:bg-gray-50"
-                              >
+                            {(step1Data.sostenibilidad.bienes_servicios || []).map((bien, index) => (
+                              <tr key={index} className="border-b hover:bg-gray-50">
                                 <td className="p-1 border-r">
                                   <Input
                                     value={bien.componente}
                                     onChange={(e) => {
-                                      const newBienes = [
-                                        ...(step1Data.sostenibilidad
-                                          .bienes_servicios || []),
-                                      ];
-                                      newBienes[index].componente =
-                                        e.target.value;
+                                      const newBienes = [...(step1Data.sostenibilidad.bienes_servicios || [])];
+                                      newBienes[index].componente = e.target.value;
                                       setStep1Data({
                                         ...step1Data,
                                         sostenibilidad: {
@@ -1318,12 +1117,8 @@ export default function Etapa1Acelerador1() {
                                   <Input
                                     value={bien.denominacion}
                                     onChange={(e) => {
-                                      const newBienes = [
-                                        ...(step1Data.sostenibilidad
-                                          .bienes_servicios || []),
-                                      ];
-                                      newBienes[index].denominacion =
-                                        e.target.value;
+                                      const newBienes = [...(step1Data.sostenibilidad.bienes_servicios || [])];
+                                      newBienes[index].denominacion = e.target.value;
                                       setStep1Data({
                                         ...step1Data,
                                         sostenibilidad: {
@@ -1341,15 +1136,10 @@ export default function Etapa1Acelerador1() {
                                     type="number"
                                     value={bien.cantidad}
                                     onChange={(e) => {
-                                      const newBienes = [
-                                        ...(step1Data.sostenibilidad
-                                          .bienes_servicios || []),
-                                      ];
+                                      const newBienes = [...(step1Data.sostenibilidad.bienes_servicios || [])];
                                       const cantidad = parseInt(e.target.value);
                                       newBienes[index].cantidad = cantidad;
-                                      newBienes[index].subtotal =
-                                        cantidad *
-                                        newBienes[index].precio_unitario;
+                                      newBienes[index].subtotal = cantidad * newBienes[index].precio_unitario;
                                       setStep1Data({
                                         ...step1Data,
                                         sostenibilidad: {
@@ -1368,14 +1158,10 @@ export default function Etapa1Acelerador1() {
                                     type="number"
                                     value={bien.precio_unitario}
                                     onChange={(e) => {
-                                      const newBienes = [
-                                        ...(step1Data.sostenibilidad
-                                          .bienes_servicios || []),
-                                      ];
+                                      const newBienes = [...(step1Data.sostenibilidad.bienes_servicios || [])];
                                       const precio = parseFloat(e.target.value);
                                       newBienes[index].precio_unitario = precio;
-                                      newBienes[index].subtotal =
-                                        newBienes[index].cantidad * precio;
+                                      newBienes[index].subtotal = newBienes[index].cantidad * precio;
                                       setStep1Data({
                                         ...step1Data,
                                         sostenibilidad: {
@@ -1402,12 +1188,8 @@ export default function Etapa1Acelerador1() {
                                   <Textarea
                                     value={bien.descripcion_utilidad}
                                     onChange={(e) => {
-                                      const newBienes = [
-                                        ...(step1Data.sostenibilidad
-                                          .bienes_servicios || []),
-                                      ];
-                                      newBienes[index].descripcion_utilidad =
-                                        e.target.value;
+                                      const newBienes = [...(step1Data.sostenibilidad.bienes_servicios || [])];
+                                      newBienes[index].descripcion_utilidad = e.target.value;
                                       setStep1Data({
                                         ...step1Data,
                                         sostenibilidad: {
@@ -1426,10 +1208,9 @@ export default function Etapa1Acelerador1() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      const newBienes = (
-                                        step1Data.sostenibilidad
-                                          .bienes_servicios || []
-                                      ).filter((_, i) => i !== index);
+                                      const newBienes = (step1Data.sostenibilidad.bienes_servicios || []).filter(
+                                        (_, i) => i !== index,
+                                      );
                                       setStep1Data({
                                         ...step1Data,
                                         sostenibilidad: {
@@ -1467,11 +1248,7 @@ export default function Etapa1Acelerador1() {
                             ...step1Data,
                             sostenibilidad: {
                               ...step1Data.sostenibilidad,
-                              bienes_servicios: [
-                                ...(step1Data.sostenibilidad.bienes_servicios ||
-                                  []),
-                                newBien,
-                              ],
+                              bienes_servicios: [...(step1Data.sostenibilidad.bienes_servicios || []), newBien],
                             },
                           });
                         }}
@@ -1481,17 +1258,13 @@ export default function Etapa1Acelerador1() {
                       </Button>
 
                       {/* Total general */}
-                      {(step1Data.sostenibilidad.bienes_servicios || [])
-                        .length > 0 && (
+                      {(step1Data.sostenibilidad.bienes_servicios || []).length > 0 && (
                         <div className="flex justify-end">
                           <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
                             <span className="text-sm font-semibold">
                               Total General: S/{" "}
                               {(step1Data.sostenibilidad.bienes_servicios || [])
-                                .reduce(
-                                  (acc, bien) => acc + (bien.subtotal || 0),
-                                  0
-                                )
+                                .reduce((acc, bien) => acc + (bien.subtotal || 0), 0)
                                 .toFixed(2)}
                             </span>
                           </div>
@@ -1515,22 +1288,11 @@ export default function Etapa1Acelerador1() {
                 })}
               </div>
               <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-2" />
-                  )}
+                <Button variant="outline" onClick={handleSave} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                   Guardar
                 </Button>
-                <Button
-                  onClick={handleAnalyze}
-                  disabled={analyzing || !canProceedToStep2()}
-                >
+                <Button onClick={handleAnalyze} disabled={analyzing || !canProceedToStep2()}>
                   {analyzing ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -1555,8 +1317,8 @@ export default function Etapa1Acelerador1() {
   const renderStep2 = () => {
     // Helper para extraer número de cualquier formato (ej: "8 / 15 puntos" → 8)
     const toNumber = (v: unknown): number => {
-      if (typeof v === 'number') return v;
-      if (typeof v === 'string') {
+      if (typeof v === "number") return v;
+      if (typeof v === "string") {
         const m = v.match(/^(\d+)/);
         return m ? parseInt(m[1], 10) : 0;
       }
@@ -1566,15 +1328,13 @@ export default function Etapa1Acelerador1() {
     if (!step2Data) {
       return (
         <Alert>
-          <AlertDescription>
-            No hay datos de análisis. Regresa al Paso 1 para analizar.
-          </AlertDescription>
+          <AlertDescription>No hay datos de análisis. Regresa al Paso 1 para analizar.</AlertDescription>
         </Alert>
       );
     }
 
     // Calcular puntaje total sumando todos los indicadores
-    const puntajeTotal = 
+    const puntajeTotal =
       toNumber(step2Data.intencionalidad?.indicador_1_1?.puntaje) +
       toNumber(step2Data.intencionalidad?.indicador_1_2?.puntaje) +
       toNumber(step2Data.originalidad?.indicador_2_1?.puntaje) +
@@ -1591,9 +1351,8 @@ export default function Etapa1Acelerador1() {
         <Card className="border-2 border-primary shadow-lg">
           <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
             <CardDescription className="text-base">
-              La IA ha analizado la consistencia de tu propuesta y especifica un
-              resumen preliminar de todas las oportunidades de mejora en función
-              a la rúbrica de evaluación.
+              La IA ha analizado la consistencia de tu propuesta y especifica un resumen preliminar de todas las
+              oportunidades de mejora en función a la rúbrica de evaluación.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -1630,48 +1389,30 @@ export default function Etapa1Acelerador1() {
                   {/* Indicador 1.1 */}
                   <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-blue-900">
-                        1.1 Caracterización del Problema
-                      </h4>
+                      <h4 className="font-semibold text-blue-900">1.1 Caracterización del Problema</h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {toNumber(step2Data.intencionalidad?.indicador_1_1?.puntaje)} / 15 pts
                         </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.intencionalidad?.indicador_1_1?.nivel}
-                        </Badge>
+                        <Badge className="bg-purple-500">{step2Data.intencionalidad?.indicador_1_1?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Vinculación CNEB:</p>
-                        <p className="text-gray-700">
-                          {
-                            step2Data.intencionalidad?.indicador_1_1
-                              ?.vinculacion_cneb
-                          }
-                        </p>
+                        <p className="text-gray-700">{step2Data.intencionalidad?.indicador_1_1?.vinculacion_cneb}</p>
                       </div>
-                      {step2Data.intencionalidad?.indicador_1_1
-                        ?.evidencia_consolidados && (
+                      {step2Data.intencionalidad?.indicador_1_1?.evidencia_consolidados && (
                         <div className="bg-white p-3 rounded">
                           <p className="font-semibold mb-1">Evidencia:</p>
                           <p className="text-gray-700">
-                            {
-                              step2Data.intencionalidad?.indicador_1_1
-                                ?.evidencia_consolidados
-                            }
+                            {step2Data.intencionalidad?.indicador_1_1?.evidencia_consolidados}
                           </p>
                         </div>
                       )}
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Justificación:</p>
-                        <p className="text-gray-700">
-                          {
-                            step2Data.intencionalidad?.indicador_1_1
-                              ?.justificacion
-                          }
-                        </p>
+                        <p className="text-gray-700">{step2Data.intencionalidad?.indicador_1_1?.justificacion}</p>
                       </div>
                     </div>
                   </div>
@@ -1679,41 +1420,31 @@ export default function Etapa1Acelerador1() {
                   {/* Indicador 1.2 */}
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-blue-900">
-                        1.2 Objetivos (SMART)
-                      </h4>
+                      <h4 className="font-semibold text-blue-900">1.2 Objetivos (SMART)</h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {toNumber(step2Data.intencionalidad?.indicador_1_2?.puntaje)} / 10 pts
                         </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.intencionalidad?.indicador_1_2?.nivel}
-                        </Badge>
+                        <Badge className="bg-purple-500">{step2Data.intencionalidad?.indicador_1_2?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-2">Checklist SMART:</p>
                         <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(
-                            step2Data.intencionalidad?.indicador_1_2
-                              ?.checklist_smart || {}
-                          ).map(([key, value]) => (
-                            <div key={key} className="flex items-center gap-2">
-                              <span>{value ? "✅" : "❌"}</span>
-                              <span className="capitalize">{key}</span>
-                            </div>
-                          ))}
+                          {Object.entries(step2Data.intencionalidad?.indicador_1_2?.checklist_smart || {}).map(
+                            ([key, value]) => (
+                              <div key={key} className="flex items-center gap-2">
+                                <span>{value ? "✅" : "❌"}</span>
+                                <span className="capitalize">{key}</span>
+                              </div>
+                            ),
+                          )}
                         </div>
                       </div>
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Justificación:</p>
-                        <p className="text-gray-700">
-                          {
-                            step2Data.intencionalidad?.indicador_1_2
-                              ?.justificacion
-                          }
-                        </p>
+                        <p className="text-gray-700">{step2Data.intencionalidad?.indicador_1_2?.justificacion}</p>
                       </div>
                     </div>
                   </div>
@@ -1737,52 +1468,36 @@ export default function Etapa1Acelerador1() {
                   {/* Indicador 2.1 */}
                   <div className="mb-4 p-4 bg-green-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-green-900">
-                        2.1 Metodología/Estrategia
-                      </h4>
+                      <h4 className="font-semibold text-green-900">2.1 Metodología/Estrategia</h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {toNumber(step2Data.originalidad?.indicador_2_1?.puntaje)} / 10 pts
                         </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.originalidad?.indicador_2_1?.nivel}
-                        </Badge>
+                        <Badge className="bg-purple-500">{step2Data.originalidad?.indicador_2_1?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
-                      <p className="text-gray-700">
-                        {step2Data.originalidad?.indicador_2_1?.analisis}
-                      </p>
+                      <p className="text-gray-700">{step2Data.originalidad?.indicador_2_1?.analisis}</p>
                     </div>
                   </div>
 
                   {/* Indicador 2.2 */}
                   <div className="p-4 bg-green-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-green-900">
-                        2.2 Procedimiento y Video
-                      </h4>
+                      <h4 className="font-semibold text-green-900">2.2 Procedimiento y Video</h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {toNumber(step2Data.originalidad?.indicador_2_2?.puntaje)} / 20 pts
                         </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.originalidad?.indicador_2_2?.nivel}
-                        </Badge>
+                        <Badge className="bg-purple-500">{step2Data.originalidad?.indicador_2_2?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
-                      {step2Data.originalidad?.indicador_2_2
-                        ?.calidad_procedimiento && (
+                      {step2Data.originalidad?.indicador_2_2?.calidad_procedimiento && (
                         <div className="bg-white p-3 rounded">
-                          <p className="font-semibold mb-2">
-                            Calidad del Procedimiento:
-                          </p>
+                          <p className="font-semibold mb-2">Calidad del Procedimiento:</p>
                           <p className="text-gray-700">
-                            {
-                              step2Data.originalidad?.indicador_2_2
-                                ?.calidad_procedimiento
-                            }
+                            {step2Data.originalidad?.indicador_2_2?.calidad_procedimiento}
                           </p>
                         </div>
                       )}
@@ -1790,9 +1505,7 @@ export default function Etapa1Acelerador1() {
                       {step2Data.originalidad?.indicador_2_2?.observacion && (
                         <div className="bg-white p-3 rounded">
                           <p className="font-semibold mb-1">Observación:</p>
-                          <p className="text-gray-700">
-                            {step2Data.originalidad?.indicador_2_2?.observacion}
-                          </p>
+                          <p className="text-gray-700">{step2Data.originalidad?.indicador_2_2?.observacion}</p>
                         </div>
                       )}
                     </div>
@@ -1817,38 +1530,23 @@ export default function Etapa1Acelerador1() {
                   {/* Indicador 3.1 */}
                   <div className="mb-4 p-4 bg-orange-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-orange-900">
-                        3.1 Resultados de Aprendizaje
-                      </h4>
+                      <h4 className="font-semibold text-orange-900">3.1 Resultados de Aprendizaje</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {toNumber(step2Data.impacto?.indicador_3_1?.puntaje)} / 10 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.impacto?.indicador_3_1?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{toNumber(step2Data.impacto?.indicador_3_1?.puntaje)} / 10 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.impacto?.indicador_3_1?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
-                      <p className="font-semibold mb-2">
-                        Análisis de Evidencias:
-                      </p>
+                      <p className="font-semibold mb-2">Análisis de Evidencias:</p>
                       <div className="whitespace-pre-wrap text-gray-700">
-                        {typeof step2Data.impacto?.indicador_3_1
-                          ?.analisis_evidencias === "string"
-                          ? step2Data.impacto?.indicador_3_1
-                              ?.analisis_evidencias
-                          : typeof step2Data.impacto?.indicador_3_1
-                              ?.analisis_evidencias === "object" &&
-                            step2Data.impacto?.indicador_3_1
-                              ?.analisis_evidencias !== null
-                          ? Object.entries(
-                              step2Data.impacto.indicador_3_1
-                                .analisis_evidencias
-                            )
-                              .map(([key, value]) => `${key}: ${value}`)
-                              .join("\n\n")
-                          : "No disponible"}
+                        {typeof step2Data.impacto?.indicador_3_1?.analisis_evidencias === "string"
+                          ? step2Data.impacto?.indicador_3_1?.analisis_evidencias
+                          : typeof step2Data.impacto?.indicador_3_1?.analisis_evidencias === "object" &&
+                              step2Data.impacto?.indicador_3_1?.analisis_evidencias !== null
+                            ? Object.entries(step2Data.impacto.indicador_3_1.analisis_evidencias)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join("\n\n")
+                            : "No disponible"}
                       </div>
                     </div>
                   </div>
@@ -1856,38 +1554,23 @@ export default function Etapa1Acelerador1() {
                   {/* Indicador 3.2 */}
                   <div className="mb-4 p-4 bg-orange-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-orange-900">
-                        3.2 Cambios Sistémicos
-                      </h4>
+                      <h4 className="font-semibold text-orange-900">3.2 Cambios Sistémicos</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {toNumber(step2Data.impacto?.indicador_3_2?.puntaje)} / 5 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.impacto?.indicador_3_2?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{toNumber(step2Data.impacto?.indicador_3_2?.puntaje)} / 5 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.impacto?.indicador_3_2?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
-                      <p className="font-semibold mb-2">
-                        Análisis de Transformación:
-                      </p>
+                      <p className="font-semibold mb-2">Análisis de Transformación:</p>
                       <div className="whitespace-pre-wrap text-gray-700">
-                        {typeof step2Data.impacto?.indicador_3_2
-                          ?.analisis_transformacion === "string"
-                          ? step2Data.impacto?.indicador_3_2
-                              ?.analisis_transformacion
-                          : typeof step2Data.impacto?.indicador_3_2
-                              ?.analisis_transformacion === "object" &&
-                            step2Data.impacto?.indicador_3_2
-                              ?.analisis_transformacion !== null
-                          ? Object.entries(
-                              step2Data.impacto.indicador_3_2
-                                .analisis_transformacion
-                            )
-                              .map(([key, value]) => `${key}: ${value}`)
-                              .join("\n\n")
-                          : "No disponible"}
+                        {typeof step2Data.impacto?.indicador_3_2?.analisis_transformacion === "string"
+                          ? step2Data.impacto?.indicador_3_2?.analisis_transformacion
+                          : typeof step2Data.impacto?.indicador_3_2?.analisis_transformacion === "object" &&
+                              step2Data.impacto?.indicador_3_2?.analisis_transformacion !== null
+                            ? Object.entries(step2Data.impacto.indicador_3_2.analisis_transformacion)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join("\n\n")
+                            : "No disponible"}
                       </div>
                     </div>
                   </div>
@@ -1912,34 +1595,25 @@ export default function Etapa1Acelerador1() {
                   {/* Indicador 4.1 */}
                   <div className="mb-4 p-4 bg-teal-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-teal-900">
-                        4.1 Estrategias de Continuidad
-                      </h4>
+                      <h4 className="font-semibold text-teal-900">4.1 Estrategias de Continuidad</h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {toNumber(step2Data.sostenibilidad?.indicador_4_1?.puntaje)} / 15 pts
                         </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.sostenibilidad?.indicador_4_1?.nivel}
-                        </Badge>
+                        <Badge className="bg-purple-500">{step2Data.sostenibilidad?.indicador_4_1?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
                       <div className="whitespace-pre-wrap text-gray-700">
-                        {typeof step2Data.sostenibilidad?.indicador_4_1
-                          ?.analisis === "string"
+                        {typeof step2Data.sostenibilidad?.indicador_4_1?.analisis === "string"
                           ? step2Data.sostenibilidad?.indicador_4_1?.analisis
-                          : typeof step2Data.sostenibilidad?.indicador_4_1
-                              ?.analisis === "object" &&
-                            step2Data.sostenibilidad?.indicador_4_1
-                              ?.analisis !== null
-                          ? Object.entries(
-                              step2Data.sostenibilidad.indicador_4_1.analisis
-                            )
-                              .map(([key, value]) => `${key}: ${value}`)
-                              .join("\n\n")
-                          : "No disponible"}
+                          : typeof step2Data.sostenibilidad?.indicador_4_1?.analisis === "object" &&
+                              step2Data.sostenibilidad?.indicador_4_1?.analisis !== null
+                            ? Object.entries(step2Data.sostenibilidad.indicador_4_1.analisis)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join("\n\n")
+                            : "No disponible"}
                       </div>
                     </div>
                   </div>
@@ -1947,34 +1621,25 @@ export default function Etapa1Acelerador1() {
                   {/* Indicador 4.2 */}
                   <div className="mb-4 p-4 bg-teal-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-teal-900">
-                        4.2 Viabilidad y Aliados
-                      </h4>
+                      <h4 className="font-semibold text-teal-900">4.2 Viabilidad y Aliados</h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
                           {toNumber(step2Data.sostenibilidad?.indicador_4_2?.puntaje)} / 5 pts
                         </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.sostenibilidad?.indicador_4_2?.nivel}
-                        </Badge>
+                        <Badge className="bg-purple-500">{step2Data.sostenibilidad?.indicador_4_2?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
                       <div className="whitespace-pre-wrap text-gray-700">
-                        {typeof step2Data.sostenibilidad?.indicador_4_2
-                          ?.analisis === "string"
+                        {typeof step2Data.sostenibilidad?.indicador_4_2?.analisis === "string"
                           ? step2Data.sostenibilidad?.indicador_4_2?.analisis
-                          : typeof step2Data.sostenibilidad?.indicador_4_2
-                              ?.analisis === "object" &&
-                            step2Data.sostenibilidad?.indicador_4_2
-                              ?.analisis !== null
-                          ? Object.entries(
-                              step2Data.sostenibilidad.indicador_4_2.analisis
-                            )
-                              .map(([key, value]) => `${key}: ${value}`)
-                              .join("\n\n")
-                          : "No disponible"}
+                          : typeof step2Data.sostenibilidad?.indicador_4_2?.analisis === "object" &&
+                              step2Data.sostenibilidad?.indicador_4_2?.analisis !== null
+                            ? Object.entries(step2Data.sostenibilidad.indicador_4_2.analisis)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join("\n\n")
+                            : "No disponible"}
                       </div>
                     </div>
                   </div>
@@ -1982,36 +1647,25 @@ export default function Etapa1Acelerador1() {
                   {/* Indicador 4.3 */}
                   <div className="mb-4 p-4 bg-teal-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-teal-900">
-                        4.3 Bienes y Servicios
-                      </h4>
+                      <h4 className="font-semibold text-teal-900">4.3 Bienes y Servicios</h4>
                       <div className="flex gap-2">
                         <Badge variant="outline">
-                          {step2Data.sostenibilidad?.indicador_4_3?.puntaje ||
-                            0}{" "}
-                          / 10 pts
+                          {step2Data.sostenibilidad?.indicador_4_3?.puntaje || 0} / 10 pts
                         </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.sostenibilidad?.indicador_4_3?.nivel}
-                        </Badge>
+                        <Badge className="bg-purple-500">{step2Data.sostenibilidad?.indicador_4_3?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="bg-white p-3 rounded text-sm">
                       <p className="font-semibold mb-2">Análisis:</p>
                       <div className="whitespace-pre-wrap text-gray-700">
-                        {typeof step2Data.sostenibilidad?.indicador_4_3
-                          ?.analisis === "string"
+                        {typeof step2Data.sostenibilidad?.indicador_4_3?.analisis === "string"
                           ? step2Data.sostenibilidad?.indicador_4_3?.analisis
-                          : typeof step2Data.sostenibilidad?.indicador_4_3
-                              ?.analisis === "object" &&
-                            step2Data.sostenibilidad?.indicador_4_3
-                              ?.analisis !== null
-                          ? Object.entries(
-                              step2Data.sostenibilidad.indicador_4_3.analisis
-                            )
-                              .map(([key, value]) => `${key}: ${value}`)
-                              .join("\n\n")
-                          : "No disponible"}
+                          : typeof step2Data.sostenibilidad?.indicador_4_3?.analisis === "object" &&
+                              step2Data.sostenibilidad?.indicador_4_3?.analisis !== null
+                            ? Object.entries(step2Data.sostenibilidad.indicador_4_3.analisis)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join("\n\n")
+                            : "No disponible"}
                       </div>
                     </div>
                   </div>
@@ -2021,20 +1675,10 @@ export default function Etapa1Acelerador1() {
 
             {/* Botones de navegación */}
             <div className="flex justify-between mt-6 pt-4 border-t">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentStep(1)}
-                size="lg"
-                disabled={generatingQuestions}
-              >
+              <Button variant="outline" onClick={() => setCurrentStep(1)} size="lg" disabled={generatingQuestions}>
                 Volver a Editar
               </Button>
-              <Button
-                onClick={handleGenerateQuestions}
-                size="lg"
-                className="gap-2"
-                disabled={generatingQuestions}
-              >
+              <Button onClick={handleGenerateQuestions} size="lg" className="gap-2" disabled={generatingQuestions}>
                 {generatingQuestions ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -2090,8 +1734,7 @@ export default function Etapa1Acelerador1() {
           );
         case "impacto":
           return (
-            (step2Data.impacto?.indicador_3_1?.puntaje || 0) +
-              (step2Data.impacto?.indicador_3_2?.puntaje || 0) ===
+            (step2Data.impacto?.indicador_3_1?.puntaje || 0) + (step2Data.impacto?.indicador_3_2?.puntaje || 0) ===
             maxScore
           );
         case "sostenibilidad":
@@ -2138,9 +1781,7 @@ export default function Etapa1Acelerador1() {
     ];
 
     // Filtrar criterios que NO tienen puntaje completo
-    const criteriosConPreguntas = criterios.filter(
-      (criterio) => !hasFullScore(criterio.key, criterio.maxScore)
-    );
+    const criteriosConPreguntas = criterios.filter((criterio) => !hasFullScore(criterio.key, criterio.maxScore));
 
     // Si todos tienen puntaje completo, mostrar mensaje y pasar directamente al paso 4
     if (criteriosConPreguntas.length === 0) {
@@ -2152,27 +1793,18 @@ export default function Etapa1Acelerador1() {
                 <CheckCircle className="w-6 h-6" />
                 ¡Excelente trabajo!
               </CardTitle>
-              <CardDescription>
-                Has obtenido el puntaje máximo en todos los criterios
-              </CardDescription>
+              <CardDescription>Has obtenido el puntaje máximo en todos los criterios</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
                 <div className="bg-green-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto">
                   <CheckCircle className="w-16 h-16 text-green-600" />
                 </div>
-                <p className="text-lg">
-                  No necesitas responder preguntas complementarias.
-                </p>
+                <p className="text-lg">No necesitas responder preguntas complementarias.</p>
                 <p className="text-muted-foreground">
-                  Tu proyecto ha alcanzado la máxima calificación en el análisis
-                  inicial.
+                  Tu proyecto ha alcanzado la máxima calificación en el análisis inicial.
                 </p>
-                <Button
-                  onClick={() => setCurrentStep(4)}
-                  size="lg"
-                  className="mt-6 gap-2"
-                >
+                <Button onClick={() => setCurrentStep(4)} size="lg" className="mt-6 gap-2">
                   Ver Resultado Final
                   <CheckCircle className="w-5 h-5" />
                 </Button>
@@ -2192,8 +1824,7 @@ export default function Etapa1Acelerador1() {
               Preguntas Complementarias
             </CardTitle>
             <CardDescription>
-              Responde estas preguntas para mejorar tu puntaje en las áreas
-              identificadas
+              Responde estas preguntas para mejorar tu puntaje en las áreas identificadas
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -2205,14 +1836,15 @@ export default function Etapa1Acelerador1() {
                   <p className="text-2xl font-bold text-purple-900">
                     {(() => {
                       const toNum = (val: unknown): number => {
-                        if (typeof val === 'number') return val;
-                        if (typeof val === 'string') {
+                        if (typeof val === "number") return val;
+                        if (typeof val === "string") {
                           const match = val.match(/(\d+)/);
                           return match ? parseInt(match[1], 10) : 0;
                         }
                         return 0;
                       };
-                      return toNum(step2Data?.intencionalidad?.indicador_1_1?.puntaje) +
+                      return (
+                        toNum(step2Data?.intencionalidad?.indicador_1_1?.puntaje) +
                         toNum(step2Data?.intencionalidad?.indicador_1_2?.puntaje) +
                         toNum(step2Data?.originalidad?.indicador_2_1?.puntaje) +
                         toNum(step2Data?.originalidad?.indicador_2_2?.puntaje) +
@@ -2220,15 +1852,15 @@ export default function Etapa1Acelerador1() {
                         toNum(step2Data?.impacto?.indicador_3_2?.puntaje) +
                         toNum(step2Data?.sostenibilidad?.indicador_4_1?.puntaje) +
                         toNum(step2Data?.sostenibilidad?.indicador_4_2?.puntaje) +
-                        toNum(step2Data?.sostenibilidad?.indicador_4_3?.puntaje);
-                    })()} / 100 pts
+                        toNum(step2Data?.sostenibilidad?.indicador_4_3?.puntaje)
+                      );
+                    })()}{" "}
+                    / 100 pts
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Áreas a mejorar</p>
-                  <p className="text-2xl font-bold text-purple-900">
-                    {criteriosConPreguntas.length}
-                  </p>
+                  <p className="text-2xl font-bold text-purple-900">{criteriosConPreguntas.length}</p>
                 </div>
               </div>
             </div>
@@ -2236,11 +1868,7 @@ export default function Etapa1Acelerador1() {
             <Accordion type="multiple" className="w-full">
               {criteriosConPreguntas.map((criterio) => {
                 const questions = generatedQuestions[criterio.key];
-                if (
-                  !questions ||
-                  !questions.preguntas ||
-                  questions.preguntas.length === 0
-                ) {
+                if (!questions || !questions.preguntas || questions.preguntas.length === 0) {
                   return null;
                 }
 
@@ -2253,19 +1881,13 @@ export default function Etapa1Acelerador1() {
                 };
 
                 return (
-                  <AccordionItem
-                    key={criterio.key}
-                    value={criterio.key}
-                    className="border rounded-lg mb-4"
-                  >
+                  <AccordionItem key={criterio.key} value={criterio.key} className="border rounded-lg mb-4">
                     <AccordionTrigger className="px-4 hover:no-underline">
                       <div className="flex items-center justify-between w-full pr-4">
                         <div className="flex items-center gap-3">
                           <div
                             className={`${
-                              colorClasses[
-                                criterio.color as keyof typeof colorClasses
-                              ]
+                              colorClasses[criterio.color as keyof typeof colorClasses]
                             } text-white rounded-lg p-2`}
                           >
                             <Icon className="w-5 h-5" />
@@ -2274,36 +1896,25 @@ export default function Etapa1Acelerador1() {
                             <p className="font-semibold">{criterio.name}</p>
                             <p className="text-sm text-gray-500">
                               {questions.preguntas.length} pregunta
-                              {questions.preguntas.length > 1 ? "s" : ""} para
-                              mejorar
+                              {questions.preguntas.length > 1 ? "s" : ""} para mejorar
                             </p>
                           </div>
                         </div>
                         <Badge variant="outline">
-                          {criterio.key === "intencionalidad" &&
-                          step2Data?.intencionalidad
-                            ? (step2Data.intencionalidad.indicador_1_1
-                                ?.puntaje || 0) +
-                              (step2Data.intencionalidad.indicador_1_2
-                                ?.puntaje || 0)
-                            : criterio.key === "originalidad" &&
-                              step2Data?.originalidad
-                            ? (step2Data.originalidad.indicador_2_1?.puntaje ||
-                                0) +
-                              (step2Data.originalidad.indicador_2_2?.puntaje ||
-                                0)
-                            : criterio.key === "impacto" && step2Data?.impacto
-                            ? (step2Data.impacto.indicador_3_1?.puntaje || 0) +
-                              (step2Data.impacto.indicador_3_2?.puntaje || 0)
-                            : criterio.key === "sostenibilidad" &&
-                              step2Data?.sostenibilidad
-                            ? (step2Data.sostenibilidad.indicador_4_1
-                                ?.puntaje || 0) +
-                              (step2Data.sostenibilidad.indicador_4_2
-                                ?.puntaje || 0) +
-                              (step2Data.sostenibilidad.indicador_4_3
-                                ?.puntaje || 0)
-                            : 0}{" "}
+                          {criterio.key === "intencionalidad" && step2Data?.intencionalidad
+                            ? (step2Data.intencionalidad.indicador_1_1?.puntaje || 0) +
+                              (step2Data.intencionalidad.indicador_1_2?.puntaje || 0)
+                            : criterio.key === "originalidad" && step2Data?.originalidad
+                              ? (step2Data.originalidad.indicador_2_1?.puntaje || 0) +
+                                (step2Data.originalidad.indicador_2_2?.puntaje || 0)
+                              : criterio.key === "impacto" && step2Data?.impacto
+                                ? (step2Data.impacto.indicador_3_1?.puntaje || 0) +
+                                  (step2Data.impacto.indicador_3_2?.puntaje || 0)
+                                : criterio.key === "sostenibilidad" && step2Data?.sostenibilidad
+                                  ? (step2Data.sostenibilidad.indicador_4_1?.puntaje || 0) +
+                                    (step2Data.sostenibilidad.indicador_4_2?.puntaje || 0) +
+                                    (step2Data.sostenibilidad.indicador_4_3?.puntaje || 0)
+                                  : 0}{" "}
                           / {criterio.maxScore} pts
                         </Badge>
                       </div>
@@ -2313,49 +1924,37 @@ export default function Etapa1Acelerador1() {
                       {questions.introduccion && (
                         <Alert className="bg-purple-50 border-purple-200">
                           <MessageSquare className="w-4 h-4" />
-                          <AlertDescription>
-                            {questions.introduccion}
-                          </AlertDescription>
+                          <AlertDescription>{questions.introduccion}</AlertDescription>
                         </Alert>
                       )}
 
                       {/* Preguntas */}
-                      {questions.preguntas.map(
-                        (pregunta: string, idx: number) => (
-                          <div key={idx} className="space-y-3">
-                            <Card className="bg-purple-50 border-purple-200">
-                              <CardHeader className="pb-3">
-                                <CardTitle className="text-sm font-medium text-purple-900">
-                                  Pregunta {idx + 1}
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                                  {pregunta}
-                                </p>
-                              </CardContent>
-                            </Card>
-                            <Textarea
-                              placeholder="Escribe tu respuesta aquí..."
-                              className="min-h-[120px]"
-                              value={
-                                step3Answers[criterio.key]?.[
-                                  `respuesta_${idx + 1}`
-                                ] || ""
-                              }
-                              onChange={(e) => {
-                                setStep3Answers((prev) => ({
-                                  ...prev,
-                                  [criterio.key]: {
-                                    ...(prev[criterio.key] || {}),
-                                    [`respuesta_${idx + 1}`]: e.target.value,
-                                  },
-                                }));
-                              }}
-                            />
-                          </div>
-                        )
-                      )}
+                      {questions.preguntas.map((pregunta: string, idx: number) => (
+                        <div key={idx} className="space-y-3">
+                          <Card className="bg-purple-50 border-purple-200">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm font-medium text-purple-900">Pregunta {idx + 1}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{pregunta}</p>
+                            </CardContent>
+                          </Card>
+                          <Textarea
+                            placeholder="Escribe tu respuesta aquí..."
+                            className="min-h-[120px]"
+                            value={step3Answers[criterio.key]?.[`respuesta_${idx + 1}`] || ""}
+                            onChange={(e) => {
+                              setStep3Answers((prev) => ({
+                                ...prev,
+                                [criterio.key]: {
+                                  ...(prev[criterio.key] || {}),
+                                  [`respuesta_${idx + 1}`]: e.target.value,
+                                },
+                              }));
+                            }}
+                          />
+                        </div>
+                      ))}
                     </AccordionContent>
                   </AccordionItem>
                 );
@@ -2372,12 +1971,8 @@ export default function Etapa1Acelerador1() {
                 <div className="flex flex-col items-center gap-4">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
                   <div className="text-center">
-                    <h3 className="font-semibold text-lg mb-2">
-                      Analizando con IA
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Mejorando tus respuestas complementarias...
-                    </p>
+                    <h3 className="font-semibold text-lg mb-2">Analizando con IA</h3>
+                    <p className="text-sm text-muted-foreground">Mejorando tus respuestas complementarias...</p>
                   </div>
                   <Progress className="w-full" />
                 </div>
@@ -2390,12 +1985,7 @@ export default function Etapa1Acelerador1() {
           <Button variant="outline" onClick={() => setCurrentStep(2)} size="lg">
             Anterior
           </Button>
-          <Button
-            onClick={handleEvaluateStep3Answers}
-            disabled={evaluatingStep3}
-            size="lg"
-            className="gap-2"
-          >
+          <Button onClick={handleEvaluateStep3Answers} disabled={evaluatingStep3} size="lg" className="gap-2">
             {evaluatingStep3 ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -2481,9 +2071,7 @@ export default function Etapa1Acelerador1() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.intencionalidad?.respuesta_1_1 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.intencionalidad?.respuesta_1_1 || "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
@@ -2492,9 +2080,7 @@ export default function Etapa1Acelerador1() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.intencionalidad?.respuesta_1_2 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.intencionalidad?.respuesta_1_2 || "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
 
@@ -2510,9 +2096,7 @@ export default function Etapa1Acelerador1() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.originalidad?.respuesta_2_1 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.originalidad?.respuesta_2_1 || "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
@@ -2521,9 +2105,7 @@ export default function Etapa1Acelerador1() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.originalidad?.respuesta_2_2 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.originalidad?.respuesta_2_2 || "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
 
@@ -2539,9 +2121,7 @@ export default function Etapa1Acelerador1() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.impacto?.respuesta_3_1 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.impacto?.respuesta_3_1 || "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
@@ -2550,9 +2130,7 @@ export default function Etapa1Acelerador1() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.impacto?.respuesta_3_2 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.impacto?.respuesta_3_2 || "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
 
@@ -2568,9 +2146,7 @@ export default function Etapa1Acelerador1() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.sostenibilidad?.respuesta_4_1 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.sostenibilidad?.respuesta_4_1 || "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
@@ -2579,9 +2155,7 @@ export default function Etapa1Acelerador1() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.sostenibilidad?.respuesta_4_2 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.sostenibilidad?.respuesta_4_2 || "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
 
@@ -2604,10 +2178,7 @@ export default function Etapa1Acelerador1() {
 
         // Generar y descargar el archivo
         const blob = await Packer.toBlob(doc);
-        const fileName = `CNPIE_2A_${proyecto.id.replace(
-          /[^a-z0-9]/gi,
-          "_"
-        )}_${new Date().getTime()}.docx`;
+        const fileName = `CNPIE_2A_${proyecto.id.replace(/[^a-z0-9]/gi, "_")}_${new Date().getTime()}.docx`;
         saveAs(blob, fileName);
 
         toast({
@@ -2633,9 +2204,7 @@ export default function Etapa1Acelerador1() {
                 <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
                 Generando Respuestas Mejoradas
               </CardTitle>
-              <CardDescription className="text-base">
-                La IA está procesando tus respuestas...
-              </CardDescription>
+              <CardDescription className="text-base">La IA está procesando tus respuestas...</CardDescription>
             </CardHeader>
           </Card>
         </div>
@@ -2645,35 +2214,27 @@ export default function Etapa1Acelerador1() {
     // Reconstruir el objeto combinado para mostrar
     const combinedDataForDisplay = {
       intencionalidad: {
-        respuesta_original_1_1:
-          step1Data?.intencionalidad?.problema_descripcion || "",
+        respuesta_original_1_1: step1Data?.intencionalidad?.problema_descripcion || "",
         nueva_respuesta_1_1: step3Answers?.intencionalidad?.respuesta_1 || "",
-        respuesta_original_1_2:
-          step1Data?.intencionalidad?.objetivo_general || "",
+        respuesta_original_1_2: step1Data?.intencionalidad?.objetivo_general || "",
         nueva_respuesta_1_2: step3Answers?.intencionalidad?.respuesta_2 || "",
       },
       originalidad: {
-        respuesta_original_2_1:
-          step1Data?.originalidad?.metodologia_descripcion || "",
+        respuesta_original_2_1: step1Data?.originalidad?.metodologia_descripcion || "",
         nueva_respuesta_2_1: step3Answers?.originalidad?.respuesta_1 || "",
-        respuesta_original_2_2:
-          step1Data?.originalidad?.procedimiento_metodologico || "",
+        respuesta_original_2_2: step1Data?.originalidad?.procedimiento_metodologico || "",
         nueva_respuesta_2_2: step3Answers?.originalidad?.respuesta_2 || "",
       },
       impacto: {
-        respuesta_original_3_1:
-          step1Data?.impacto?.evidencias_descripcion || "",
+        respuesta_original_3_1: step1Data?.impacto?.evidencias_descripcion || "",
         nueva_respuesta_3_1: step3Answers?.impacto?.respuesta_1 || "",
-        respuesta_original_3_2:
-          step1Data?.impacto?.cambios_practica_docente || "",
+        respuesta_original_3_2: step1Data?.impacto?.cambios_practica_docente || "",
         nueva_respuesta_3_2: step3Answers?.impacto?.respuesta_2 || "",
       },
       sostenibilidad: {
-        respuesta_original_4_1:
-          step1Data?.sostenibilidad?.estrategias_continuidad || "",
+        respuesta_original_4_1: step1Data?.sostenibilidad?.estrategias_continuidad || "",
         nueva_respuesta_4_1: step3Answers?.sostenibilidad?.respuesta_1 || "",
-        respuesta_original_4_2:
-          step1Data?.sostenibilidad?.estrategias_viabilidad || "",
+        respuesta_original_4_2: step1Data?.sostenibilidad?.estrategias_viabilidad || "",
         nueva_respuesta_4_2: step3Answers?.sostenibilidad?.respuesta_2 || "",
       },
     };
@@ -2689,16 +2250,10 @@ export default function Etapa1Acelerador1() {
                   Respuestas Mejoradas - Listas para Copiar
                 </CardTitle>
                 <CardDescription className="text-base mt-2">
-                  La IA ha integrado tus respuestas originales con la
-                  información complementaria del coaching
+                  La IA ha integrado tus respuestas originales con la información complementaria del coaching
                 </CardDescription>
               </div>
-              <Button
-                onClick={generateDOCX}
-                size="lg"
-                className="gap-2"
-                variant="default"
-              >
+              <Button onClick={generateDOCX} size="lg" className="gap-2" variant="default">
                 <Download className="w-5 h-5" />
                 Descargar Word
               </Button>
@@ -2717,11 +2272,7 @@ export default function Etapa1Acelerador1() {
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.intencionalidad?.respuesta_1_1 ||
-                              "",
-                            "Respuesta 1.1"
-                          )
+                          copyToClipboard(improvedResponses.intencionalidad?.respuesta_1_1 || "", "Respuesta 1.1")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2730,9 +2281,7 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.intencionalidad?.respuesta_1_1}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses.intencionalidad?.respuesta_1_1}</p>
                   </CardContent>
                 </Card>
 
@@ -2740,18 +2289,12 @@ export default function Etapa1Acelerador1() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 1.2 Objetivos
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 1.2 Objetivos</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.intencionalidad?.respuesta_1_2 ||
-                              "",
-                            "Respuesta 1.2"
-                          )
+                          copyToClipboard(improvedResponses.intencionalidad?.respuesta_1_2 || "", "Respuesta 1.2")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2760,9 +2303,7 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.intencionalidad?.respuesta_1_2}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses.intencionalidad?.respuesta_1_2}</p>
                   </CardContent>
                 </Card>
 
@@ -2770,17 +2311,12 @@ export default function Etapa1Acelerador1() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 2.1 Metodología
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 2.1 Metodología</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.originalidad?.respuesta_2_1 || "",
-                            "Respuesta 2.1"
-                          )
+                          copyToClipboard(improvedResponses.originalidad?.respuesta_2_1 || "", "Respuesta 2.1")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2789,9 +2325,7 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.originalidad?.respuesta_2_1}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses.originalidad?.respuesta_2_1}</p>
                   </CardContent>
                 </Card>
 
@@ -2799,17 +2333,12 @@ export default function Etapa1Acelerador1() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 2.2 Procedimiento
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 2.2 Procedimiento</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.originalidad?.respuesta_2_2 || "",
-                            "Respuesta 2.2"
-                          )
+                          copyToClipboard(improvedResponses.originalidad?.respuesta_2_2 || "", "Respuesta 2.2")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2818,9 +2347,7 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.originalidad?.respuesta_2_2}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses.originalidad?.respuesta_2_2}</p>
                   </CardContent>
                 </Card>
 
@@ -2828,18 +2355,11 @@ export default function Etapa1Acelerador1() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 3.1 Resultados
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 3.1 Resultados</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.impacto?.respuesta_3_1 || "",
-                            "Respuesta 3.1"
-                          )
-                        }
+                        onClick={() => copyToClipboard(improvedResponses.impacto?.respuesta_3_1 || "", "Respuesta 3.1")}
                       >
                         <Download className="w-4 h-4 mr-2" />
                         Copiar
@@ -2847,9 +2367,7 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.impacto?.respuesta_3_1}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses.impacto?.respuesta_3_1}</p>
                   </CardContent>
                 </Card>
 
@@ -2857,18 +2375,11 @@ export default function Etapa1Acelerador1() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 3.2 Cambios Sistémicos
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 3.2 Cambios Sistémicos</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.impacto?.respuesta_3_2 || "",
-                            "Respuesta 3.2"
-                          )
-                        }
+                        onClick={() => copyToClipboard(improvedResponses.impacto?.respuesta_3_2 || "", "Respuesta 3.2")}
                       >
                         <Download className="w-4 h-4 mr-2" />
                         Copiar
@@ -2876,9 +2387,7 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.impacto?.respuesta_3_2}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses.impacto?.respuesta_3_2}</p>
                   </CardContent>
                 </Card>
 
@@ -2886,18 +2395,12 @@ export default function Etapa1Acelerador1() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 4.1 Continuidad
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 4.1 Continuidad</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.sostenibilidad?.respuesta_4_1 ||
-                              "",
-                            "Respuesta 4.1"
-                          )
+                          copyToClipboard(improvedResponses.sostenibilidad?.respuesta_4_1 || "", "Respuesta 4.1")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2906,9 +2409,7 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.sostenibilidad?.respuesta_4_1}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses.sostenibilidad?.respuesta_4_1}</p>
                   </CardContent>
                 </Card>
 
@@ -2916,18 +2417,12 @@ export default function Etapa1Acelerador1() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 4.2 Viabilidad
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 4.2 Viabilidad</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses.sostenibilidad?.respuesta_4_2 ||
-                              "",
-                            "Respuesta 4.2"
-                          )
+                          copyToClipboard(improvedResponses.sostenibilidad?.respuesta_4_2 || "", "Respuesta 4.2")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2936,9 +2431,7 @@ export default function Etapa1Acelerador1() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses.sostenibilidad?.respuesta_4_2}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses.sostenibilidad?.respuesta_4_2}</p>
                   </CardContent>
                 </Card>
               </CardContent>
@@ -2946,11 +2439,7 @@ export default function Etapa1Acelerador1() {
 
             {/* Botones de acción */}
             <div className="flex flex-wrap justify-between items-center pt-6 border-t gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentStep(3)}
-                size="lg"
-              >
+              <Button variant="outline" onClick={() => setCurrentStep(3)} size="lg">
                 Volver
               </Button>
               <Button
@@ -2972,8 +2461,7 @@ export default function Etapa1Acelerador1() {
                 onClick={() => {
                   toast({
                     title: "💾 Listo",
-                    description:
-                      "Todas las respuestas están disponibles para copiar",
+                    description: "Todas las respuestas están disponibles para copiar",
                   });
                 }}
                 size="lg"
@@ -2990,11 +2478,7 @@ export default function Etapa1Acelerador1() {
   };
 
   if (!proyecto) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        Cargando...
-      </div>
-    );
+    return <div className="flex items-center justify-center h-screen">Cargando...</div>;
   }
 
   return (
@@ -3048,20 +2532,10 @@ export default function Etapa1Acelerador1() {
             <CNPIERubricViewer
               rubricas={
                 rubricaIntencionalidad
-                  ? [
-                      rubricaIntencionalidad,
-                      rubricaOriginalidad,
-                      rubricaImpacto,
-                      rubricaSostenibilidad,
-                    ]
+                  ? [rubricaIntencionalidad, rubricaOriginalidad, rubricaImpacto, rubricaSostenibilidad]
                   : []
               }
-              destacarCriterios={[
-                "Intencionalidad",
-                "Originalidad",
-                "Impacto",
-                "Sostenibilidad",
-              ]}
+              destacarCriterios={["Intencionalidad", "Originalidad", "Impacto", "Sostenibilidad"]}
             />
           </div>
         </div>

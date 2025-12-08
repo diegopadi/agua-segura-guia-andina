@@ -6,28 +6,10 @@ import { CNPIERubricViewer } from "@/components/cnpie/CNPIERubricViewer";
 import { CriterioAccordionHeader } from "../components/CriterioAccordionHeader";
 import { ProgressStepper } from "../components/ProgressStepper";
 import { QuestionCardWithTextarea } from "../components/QuestionCardWithTextarea";
-import {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  HeadingLevel,
-  AlignmentType,
-} from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -100,13 +82,7 @@ const STEPS = [
 ];
 
 export default function Etapa1Acelerador12d() {
-  const {
-    proyecto,
-    saveAcceleratorData,
-    validateAccelerator,
-    getAcceleratorData,
-    getAllData,
-  } = useCNPIEProject("2D");
+  const { proyecto, saveAcceleratorData, validateAccelerator, getAcceleratorData, getAllData } = useCNPIEProject("2D");
 
   const { rubricas, getCriterioByName } = useCNPIERubric("2D");
   const { toast } = useToast();
@@ -152,8 +128,7 @@ export default function Etapa1Acelerador12d() {
   const [step2Data, setStep2Data] = useState<AnalysisStep2 | null>(null);
   const [step3Data, setStep3Data] = useState<FormDataStep3 | null>(null);
   const [step4Data, setStep4Data] = useState<FinalAnalysisStep4 | null>(null);
-  const [improvedResponses, setImprovedResponses] =
-    useState<FinalAnalysisStep4 | null>(null);
+  const [improvedResponses, setImprovedResponses] = useState<FinalAnalysisStep4 | null>(null);
 
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -179,21 +154,12 @@ export default function Etapa1Acelerador12d() {
     puntaje_actual: number;
     puntaje_maximo: number;
   } | null>(null);
-  const [step3Answers, setStep3Answers] = useState<
-    Record<string, Record<string, string>>
-  >({});
+  const [step3Answers, setStep3Answers] = useState<Record<string, Record<string, string>>>({});
 
   // Función para migrar datos antiguos a la nueva estructura (2D no necesita migración)
-  const migrateOldDataStructure = (
-    oldData: Partial<FormDataStep1_2D> & Record<string, unknown>
-  ): FormDataStep1_2D => {
+  const migrateOldDataStructure = (oldData: Partial<FormDataStep1_2D> & Record<string, unknown>): FormDataStep1_2D => {
     // Si ya tiene la estructura 2D, retornar tal cual
-    if (
-      oldData.formulacion &&
-      oldData.participacion &&
-      oldData.reflexion &&
-      oldData.consistencia
-    ) {
+    if (oldData.formulacion && oldData.participacion && oldData.reflexion && oldData.consistencia) {
       return oldData as FormDataStep1_2D;
     }
 
@@ -373,10 +339,7 @@ export default function Etapa1Acelerador12d() {
         body: step1Data,
       });
 
-      const response = (await Promise.race([
-        apiPromise,
-        timeoutPromise,
-      ])) as Awaited<typeof apiPromise>;
+      const response = (await Promise.race([apiPromise, timeoutPromise])) as Awaited<typeof apiPromise>;
       const { data, error } = response;
       console.log("🔵 Data:", data);
 
@@ -422,8 +385,7 @@ export default function Etapa1Acelerador12d() {
             indicador_1_4: {
               puntaje: analysis.formulacion?.indicador_1_4?.puntaje || 0,
               nivel: analysis.formulacion?.indicador_1_4?.nivel || "N/A",
-              analisis:
-                analysis.formulacion?.indicador_1_4?.justificacion || "",
+              analisis: analysis.formulacion?.indicador_1_4?.justificacion || "",
             },
             fortalezas: analysis.formulacion?.fortalezas || [],
             areas_mejora: analysis.formulacion?.areas_mejora || [],
@@ -511,8 +473,7 @@ export default function Etapa1Acelerador12d() {
       }
     } catch (error: unknown) {
       console.error("🔴 Error en handleAnalyze:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Error desconocido";
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
       setAnalyzing(false);
       toast({
         title: "Error",
@@ -536,15 +497,7 @@ export default function Etapa1Acelerador12d() {
 
     try {
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new Error(
-                "Timeout: La generación de preguntas tardó más de 120 segundos"
-              )
-            ),
-          120000
-        )
+        setTimeout(() => reject(new Error("Timeout: La generación de preguntas tardó más de 120 segundos")), 120000),
       );
 
       const {
@@ -566,13 +519,10 @@ export default function Etapa1Acelerador12d() {
           body: JSON.stringify({
             analysisData: step2Data,
           }),
-        }
+        },
       );
 
-      const response = (await Promise.race([
-        requestPromise,
-        timeoutPromise,
-      ])) as Response;
+      const response = (await Promise.race([requestPromise, timeoutPromise])) as Response;
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -603,10 +553,7 @@ export default function Etapa1Acelerador12d() {
       }
     } catch (error: unknown) {
       console.error("❌ Error generando preguntas:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "No se pudieron generar las preguntas";
+      const errorMessage = error instanceof Error ? error.message : "No se pudieron generar las preguntas";
       toast({
         title: "Error",
         description: errorMessage,
@@ -632,13 +579,11 @@ export default function Etapa1Acelerador12d() {
       // Crear objeto combinado separado por secciones (2D: Formulación, Participación, Reflexión, Consistencia)
       const combinedData = {
         formulacion: {
-          respuesta_original_1_1:
-            step1Data.formulacion.problema_causas_consecuencias || "",
+          respuesta_original_1_1: step1Data.formulacion.problema_causas_consecuencias || "",
           nueva_respuesta_1_1: step3Answers.formulacion?.respuesta_1 || "",
           respuesta_original_1_2: step1Data.formulacion.justificacion || "",
           nueva_respuesta_1_2: step3Answers.formulacion?.respuesta_2 || "",
-          respuesta_original_1_3:
-            step1Data.formulacion.preguntas_investigacion || "",
+          respuesta_original_1_3: step1Data.formulacion.preguntas_investigacion || "",
           nueva_respuesta_1_3: step3Answers.formulacion?.respuesta_3 || "",
           respuesta_original_1_4: step1Data.formulacion.objetivos || "",
           nueva_respuesta_1_4: step3Answers.formulacion?.respuesta_4 || "",
@@ -648,21 +593,16 @@ export default function Etapa1Acelerador12d() {
           nueva_respuesta_2_1: step3Answers.participacion?.respuesta_1 || "",
         },
         reflexion: {
-          respuesta_original_3_1:
-            step1Data.reflexion.estrategias_reflexion || "",
+          respuesta_original_3_1: step1Data.reflexion.estrategias_reflexion || "",
           nueva_respuesta_3_1: step3Answers.reflexion?.respuesta_1 || "",
         },
         consistencia: {
-          respuesta_original_4_1:
-            step1Data.consistencia.procedimiento_metodologico || "",
+          respuesta_original_4_1: step1Data.consistencia.procedimiento_metodologico || "",
           nueva_respuesta_4_1: step3Answers.consistencia?.respuesta_1 || "",
-          respuesta_original_4_2:
-            step1Data.consistencia.tecnicas_instrumentos || "",
+          respuesta_original_4_2: step1Data.consistencia.tecnicas_instrumentos || "",
           nueva_respuesta_4_2: step3Answers.consistencia?.respuesta_2 || "",
           respuesta_original_4_3:
-            step1Data.consistencia.plan_acciones
-              ?.map((a) => `${a.objetivo}: ${a.acciones}`)
-              .join(", ") || "",
+            step1Data.consistencia.plan_acciones?.map((a) => `${a.objetivo}: ${a.acciones}`).join(", ") || "",
           nueva_respuesta_4_3: step3Answers.consistencia?.respuesta_3 || "",
           respuesta_original_4_4:
             step1Data.consistencia.bienes_servicios
@@ -678,96 +618,57 @@ export default function Etapa1Acelerador12d() {
       console.log("1. FORMULACIÓN:");
       console.log(
         "   Respuesta Original 1.1:",
-        combinedData.formulacion.respuesta_original_1_1.substring(0, 100) +
-          "..."
+        combinedData.formulacion.respuesta_original_1_1.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 1.1:",
-        combinedData.formulacion.nueva_respuesta_1_1
-      );
+      console.log("   Nueva Respuesta 1.1:", combinedData.formulacion.nueva_respuesta_1_1);
       console.log(
         "   Respuesta Original 1.2:",
-        combinedData.formulacion.respuesta_original_1_2.substring(0, 100) +
-          "..."
+        combinedData.formulacion.respuesta_original_1_2.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 1.2:",
-        combinedData.formulacion.nueva_respuesta_1_2
-      );
+      console.log("   Nueva Respuesta 1.2:", combinedData.formulacion.nueva_respuesta_1_2);
       console.log(
         "   Respuesta Original 1.3:",
-        combinedData.formulacion.respuesta_original_1_3.substring(0, 100) +
-          "..."
+        combinedData.formulacion.respuesta_original_1_3.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 1.3:",
-        combinedData.formulacion.nueva_respuesta_1_3
-      );
+      console.log("   Nueva Respuesta 1.3:", combinedData.formulacion.nueva_respuesta_1_3);
       console.log(
         "   Respuesta Original 1.4:",
-        combinedData.formulacion.respuesta_original_1_4.substring(0, 100) +
-          "..."
+        combinedData.formulacion.respuesta_original_1_4.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 1.4:",
-        combinedData.formulacion.nueva_respuesta_1_4
-      );
+      console.log("   Nueva Respuesta 1.4:", combinedData.formulacion.nueva_respuesta_1_4);
       console.log("\n2. PARTICIPACIÓN:");
       console.log(
         "   Respuesta Original 2.1:",
-        combinedData.participacion.respuesta_original_2_1.substring(0, 100) +
-          "..."
+        combinedData.participacion.respuesta_original_2_1.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 2.1:",
-        combinedData.participacion.nueva_respuesta_2_1
-      );
+      console.log("   Nueva Respuesta 2.1:", combinedData.participacion.nueva_respuesta_2_1);
       console.log("\n3. REFLEXIÓN:");
       console.log(
         "   Respuesta Original 3.1:",
-        combinedData.reflexion.respuesta_original_3_1.substring(0, 100) + "..."
+        combinedData.reflexion.respuesta_original_3_1.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 3.1:",
-        combinedData.reflexion.nueva_respuesta_3_1
-      );
+      console.log("   Nueva Respuesta 3.1:", combinedData.reflexion.nueva_respuesta_3_1);
       console.log("\n4. CONSISTENCIA:");
       console.log(
         "   Respuesta Original 4.1:",
-        combinedData.consistencia.respuesta_original_4_1.substring(0, 100) +
-          "..."
+        combinedData.consistencia.respuesta_original_4_1.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 4.1:",
-        combinedData.consistencia.nueva_respuesta_4_1
-      );
+      console.log("   Nueva Respuesta 4.1:", combinedData.consistencia.nueva_respuesta_4_1);
       console.log(
         "   Respuesta Original 4.2:",
-        combinedData.consistencia.respuesta_original_4_2.substring(0, 100) +
-          "..."
+        combinedData.consistencia.respuesta_original_4_2.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 4.2:",
-        combinedData.consistencia.nueva_respuesta_4_2
-      );
+      console.log("   Nueva Respuesta 4.2:", combinedData.consistencia.nueva_respuesta_4_2);
       console.log(
         "   Respuesta Original 4.3:",
-        combinedData.consistencia.respuesta_original_4_3.substring(0, 100) +
-          "..."
+        combinedData.consistencia.respuesta_original_4_3.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 4.3:",
-        combinedData.consistencia.nueva_respuesta_4_3
-      );
+      console.log("   Nueva Respuesta 4.3:", combinedData.consistencia.nueva_respuesta_4_3);
       console.log(
         "   Respuesta Original 4.4:",
-        combinedData.consistencia.respuesta_original_4_4.substring(0, 100) +
-          "..."
+        combinedData.consistencia.respuesta_original_4_4.substring(0, 100) + "...",
       );
-      console.log(
-        "   Nueva Respuesta 4.4:",
-        combinedData.consistencia.nueva_respuesta_4_4
-      );
+      console.log("   Nueva Respuesta 4.4:", combinedData.consistencia.nueva_respuesta_4_4);
       console.log("========================================");
       console.log("📤 Objeto completo:", combinedData);
 
@@ -785,24 +686,19 @@ export default function Etapa1Acelerador12d() {
         throw new Error("No hay sesión activa");
       }
 
-      const response = await fetch(
-        "https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/sintetisador-cnpie-2D",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-            "x-client-info": "agua-segura-guia-andina",
-          },
-          body: JSON.stringify({ combinedData }),
-        }
-      );
+      const response = await fetch("https://ihgfqdmcndcyzzsbliyp.supabase.co/functions/v1/sintetisador-cnpie-2D", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          "x-client-info": "agua-segura-guia-andina",
+        },
+        body: JSON.stringify({ combinedData }),
+      });
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "");
-        throw new Error(
-          `Error del sintetizador (${response.status}): ${errorText}`
-        );
+        throw new Error(`Error del sintetizador (${response.status}): ${errorText}`);
       }
 
       const data = await response.json();
@@ -831,10 +727,7 @@ export default function Etapa1Acelerador12d() {
       });
     } catch (error: unknown) {
       console.error("❌ Error combinando respuestas:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "No se pudieron combinar las respuestas";
+      const errorMessage = error instanceof Error ? error.message : "No se pudieron combinar las respuestas";
       toast({
         title: "Error",
         description: errorMessage,
@@ -878,16 +771,9 @@ export default function Etapa1Acelerador12d() {
                 <div className="flex flex-col items-center gap-4">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
                   <div className="text-center">
-                    <h3 className="font-semibold text-lg mb-2">
-                      Analizando tu proyecto con IA
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Evaluando los 4 criterios: Intencionalidad, Participación,
-                      Reflexión y Consistencia...
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2 italic">
-                      Esto puede tomar hasta 2 minutos
-                    </p>
+                    <h3 className="font-semibold text-lg mb-2">Analizando tu proyecto con IA</h3>
+                    <p className="text-sm text-muted-foreground">Evaluando los criterios</p>
+                    <p className="text-xs text-muted-foreground mt-2 italic">Esto puede tomar hasta 2 minutos</p>
                   </div>
                   <Progress value={undefined} className="w-full" />
                   <p className="text-xs text-muted-foreground text-center">
@@ -906,9 +792,7 @@ export default function Etapa1Acelerador12d() {
               <AccordionItem value="item-1" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-base">
-                      1. {ITEMS_FICHA_2D[0].titulo}
-                    </span>
+                    <span className="font-semibold text-base">1. {ITEMS_FICHA_2D[0].titulo}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
@@ -928,9 +812,7 @@ export default function Etapa1Acelerador12d() {
                     }
                     placeholder="Caracteriza el problema educativo que aborda tu investigación-acción..."
                     minHeight="min-h-[200px]"
-                    maxLength={
-                      ANEXO_2D_LIMITS.formulacion.problema_causas_consecuencias
-                    }
+                    maxLength={ANEXO_2D_LIMITS.formulacion.problema_causas_consecuencias}
                   />
 
                   {/* Pregunta 1.2 */}
@@ -968,9 +850,7 @@ export default function Etapa1Acelerador12d() {
                     }
                     placeholder="Plantea las preguntas de investigación..."
                     minHeight="min-h-[120px]"
-                    maxLength={
-                      ANEXO_2D_LIMITS.formulacion.preguntas_investigacion
-                    }
+                    maxLength={ANEXO_2D_LIMITS.formulacion.preguntas_investigacion}
                   />
 
                   {/* Pregunta 1.4 */}
@@ -998,9 +878,7 @@ export default function Etapa1Acelerador12d() {
               <AccordionItem value="item-2" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-base">
-                      2. {ITEMS_FICHA_2D[1].titulo}
-                    </span>
+                    <span className="font-semibold text-base">2. {ITEMS_FICHA_2D[1].titulo}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
@@ -1029,9 +907,7 @@ export default function Etapa1Acelerador12d() {
               <AccordionItem value="item-3" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-base">
-                      3. {ITEMS_FICHA_2D[2].titulo}
-                    </span>
+                    <span className="font-semibold text-base">3. {ITEMS_FICHA_2D[2].titulo}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
@@ -1060,9 +936,7 @@ export default function Etapa1Acelerador12d() {
               <AccordionItem value="item-4" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-base">
-                      4. {ITEMS_FICHA_2D[3].titulo}
-                    </span>
+                    <span className="font-semibold text-base">4. {ITEMS_FICHA_2D[3].titulo}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-6">
@@ -1082,9 +956,7 @@ export default function Etapa1Acelerador12d() {
                     }
                     placeholder="Describe el procedimiento metodológico de tu investigación-acción..."
                     minHeight="min-h-[200px]"
-                    maxLength={
-                      ANEXO_2D_LIMITS.consistencia.procedimiento_metodologico
-                    }
+                    maxLength={ANEXO_2D_LIMITS.consistencia.procedimiento_metodologico}
                   />
 
                   {/* Pregunta 4.2 */}
@@ -1103,9 +975,7 @@ export default function Etapa1Acelerador12d() {
                     }
                     placeholder="Describe las técnicas e instrumentos utilizados..."
                     minHeight="min-h-[150px]"
-                    maxLength={
-                      ANEXO_2D_LIMITS.consistencia.tecnicas_instrumentos
-                    }
+                    maxLength={ANEXO_2D_LIMITS.consistencia.tecnicas_instrumentos}
                   />
 
                   {/* Pregunta 4.3: Matriz de Acciones */}
@@ -1117,9 +987,7 @@ export default function Etapa1Acelerador12d() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2D[3].preguntas[2].texto}
-                        </p>
+                        <p className="text-sm text-gray-700">{ITEMS_FICHA_2D[3].preguntas[2].texto}</p>
                       </CardContent>
                     </Card>
 
@@ -1129,240 +997,195 @@ export default function Etapa1Acelerador12d() {
                         <table className="w-full border-collapse">
                           <thead>
                             <tr className="bg-blue-500 text-white text-xs">
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[150px]">
-                                Objetivo
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[200px]">
-                                Acciones
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[150px]">
-                                Recursos
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">
-                                Responsable
-                              </th>
-                              <th className="p-2 text-center border-r border-blue-400 min-w-[200px]">
-                                Cronograma
-                              </th>
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[150px]">Objetivo</th>
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[200px]">Acciones</th>
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[150px]">Recursos</th>
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">Responsable</th>
+                              <th className="p-2 text-center border-r border-blue-400 min-w-[200px]">Cronograma</th>
                               <th className="p-2 w-10"></th>
                             </tr>
                           </thead>
                           <tbody>
-                            {step1Data.consistencia.plan_acciones.map(
-                              (accion, index) => (
-                                <tr
-                                  key={index}
-                                  className="border-b hover:bg-gray-50"
-                                >
-                                  <td className="p-1 border-r">
-                                    <Textarea
-                                      value={accion.objetivo}
-                                      onChange={(e) => {
-                                        const newAcciones = [
-                                          ...step1Data.consistencia
-                                            .plan_acciones,
-                                        ];
-                                        newAcciones[index].objetivo =
-                                          e.target.value;
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            plan_acciones: newAcciones,
-                                          },
-                                        });
-                                      }}
-                                      placeholder="Objetivo..."
-                                      className="text-xs min-h-[60px] resize-none border-0 focus-visible:ring-1"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Textarea
-                                      value={accion.acciones}
-                                      onChange={(e) => {
-                                        const newAcciones = [
-                                          ...step1Data.consistencia
-                                            .plan_acciones,
-                                        ];
-                                        newAcciones[index].acciones =
-                                          e.target.value;
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            plan_acciones: newAcciones,
-                                          },
-                                        });
-                                      }}
-                                      placeholder="Acciones..."
-                                      className="text-xs min-h-[60px] resize-none border-0 focus-visible:ring-1"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Textarea
-                                      value={accion.recursos}
-                                      onChange={(e) => {
-                                        const newAcciones = [
-                                          ...step1Data.consistencia
-                                            .plan_acciones,
-                                        ];
-                                        newAcciones[index].recursos =
-                                          e.target.value;
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            plan_acciones: newAcciones,
-                                          },
-                                        });
-                                      }}
-                                      placeholder="Recursos..."
-                                      className="text-xs min-h-[60px] resize-none border-0 focus-visible:ring-1"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Input
-                                      value={accion.responsable}
-                                      onChange={(e) => {
-                                        const newAcciones = [
-                                          ...step1Data.consistencia
-                                            .plan_acciones,
-                                        ];
-                                        newAcciones[index].responsable =
-                                          e.target.value;
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            plan_acciones: newAcciones,
-                                          },
-                                        });
-                                      }}
-                                      placeholder="Responsable"
-                                      className="text-xs h-8 border-0 focus-visible:ring-1"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <div className="flex gap-1 justify-center flex-wrap">
-                                      {[
-                                        {
-                                          key: "M",
-                                          label: "M",
-                                          nombre: "Marzo",
+                            {step1Data.consistencia.plan_acciones.map((accion, index) => (
+                              <tr key={index} className="border-b hover:bg-gray-50">
+                                <td className="p-1 border-r">
+                                  <Textarea
+                                    value={accion.objetivo}
+                                    onChange={(e) => {
+                                      const newAcciones = [...step1Data.consistencia.plan_acciones];
+                                      newAcciones[index].objetivo = e.target.value;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          plan_acciones: newAcciones,
                                         },
-                                        {
-                                          key: "A",
-                                          label: "A",
-                                          nombre: "Abril",
+                                      });
+                                    }}
+                                    placeholder="Objetivo..."
+                                    className="text-xs min-h-[60px] resize-none border-0 focus-visible:ring-1"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Textarea
+                                    value={accion.acciones}
+                                    onChange={(e) => {
+                                      const newAcciones = [...step1Data.consistencia.plan_acciones];
+                                      newAcciones[index].acciones = e.target.value;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          plan_acciones: newAcciones,
                                         },
-                                        {
-                                          key: "M2",
-                                          label: "M",
-                                          nombre: "Mayo",
+                                      });
+                                    }}
+                                    placeholder="Acciones..."
+                                    className="text-xs min-h-[60px] resize-none border-0 focus-visible:ring-1"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Textarea
+                                    value={accion.recursos}
+                                    onChange={(e) => {
+                                      const newAcciones = [...step1Data.consistencia.plan_acciones];
+                                      newAcciones[index].recursos = e.target.value;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          plan_acciones: newAcciones,
                                         },
-                                        {
-                                          key: "J",
-                                          label: "J",
-                                          nombre: "Junio",
+                                      });
+                                    }}
+                                    placeholder="Recursos..."
+                                    className="text-xs min-h-[60px] resize-none border-0 focus-visible:ring-1"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Input
+                                    value={accion.responsable}
+                                    onChange={(e) => {
+                                      const newAcciones = [...step1Data.consistencia.plan_acciones];
+                                      newAcciones[index].responsable = e.target.value;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          plan_acciones: newAcciones,
                                         },
-                                        {
-                                          key: "J2",
-                                          label: "J",
-                                          nombre: "Julio",
+                                      });
+                                    }}
+                                    placeholder="Responsable"
+                                    className="text-xs h-8 border-0 focus-visible:ring-1"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <div className="flex gap-1 justify-center flex-wrap">
+                                    {[
+                                      {
+                                        key: "M",
+                                        label: "M",
+                                        nombre: "Marzo",
+                                      },
+                                      {
+                                        key: "A",
+                                        label: "A",
+                                        nombre: "Abril",
+                                      },
+                                      {
+                                        key: "M2",
+                                        label: "M",
+                                        nombre: "Mayo",
+                                      },
+                                      {
+                                        key: "J",
+                                        label: "J",
+                                        nombre: "Junio",
+                                      },
+                                      {
+                                        key: "J2",
+                                        label: "J",
+                                        nombre: "Julio",
+                                      },
+                                      {
+                                        key: "A2",
+                                        label: "A",
+                                        nombre: "Agosto",
+                                      },
+                                      {
+                                        key: "S",
+                                        label: "S",
+                                        nombre: "Septiembre",
+                                      },
+                                      {
+                                        key: "O",
+                                        label: "O",
+                                        nombre: "Octubre",
+                                      },
+                                      {
+                                        key: "N",
+                                        label: "N",
+                                        nombre: "Noviembre",
+                                      },
+                                      {
+                                        key: "D",
+                                        label: "D",
+                                        nombre: "Diciembre",
+                                      },
+                                    ].map((mes) => (
+                                      <div key={mes.key} className="relative group">
+                                        <label className="flex flex-col items-center gap-0.5 cursor-pointer hover:bg-blue-50 p-1 rounded transition-colors">
+                                          <span className="text-[9px] font-medium text-gray-600">{mes.label}</span>
+                                          <input
+                                            type="checkbox"
+                                            checked={accion.cronograma[mes.key as keyof typeof accion.cronograma]}
+                                            onChange={(e) => {
+                                              const newAcciones = [...step1Data.consistencia.plan_acciones];
+                                              newAcciones[index].cronograma[mes.key as keyof typeof accion.cronograma] =
+                                                e.target.checked;
+                                              setStep1Data({
+                                                ...step1Data,
+                                                consistencia: {
+                                                  ...step1Data.consistencia,
+                                                  plan_acciones: newAcciones,
+                                                },
+                                              });
+                                            }}
+                                            className="w-4 h-4 rounded border-2 border-gray-300 checked:bg-blue-600 checked:border-blue-600 cursor-pointer"
+                                          />
+                                        </label>
+                                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                          {mes.nombre}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="p-1 text-center">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newAcciones = step1Data.consistencia.plan_acciones.filter(
+                                        (_, i) => i !== index,
+                                      );
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          plan_acciones: newAcciones,
                                         },
-                                        {
-                                          key: "A2",
-                                          label: "A",
-                                          nombre: "Agosto",
-                                        },
-                                        {
-                                          key: "S",
-                                          label: "S",
-                                          nombre: "Septiembre",
-                                        },
-                                        {
-                                          key: "O",
-                                          label: "O",
-                                          nombre: "Octubre",
-                                        },
-                                        {
-                                          key: "N",
-                                          label: "N",
-                                          nombre: "Noviembre",
-                                        },
-                                        {
-                                          key: "D",
-                                          label: "D",
-                                          nombre: "Diciembre",
-                                        },
-                                      ].map((mes) => (
-                                        <div
-                                          key={mes.key}
-                                          className="relative group"
-                                        >
-                                          <label className="flex flex-col items-center gap-0.5 cursor-pointer hover:bg-blue-50 p-1 rounded transition-colors">
-                                            <span className="text-[9px] font-medium text-gray-600">
-                                              {mes.label}
-                                            </span>
-                                            <input
-                                              type="checkbox"
-                                              checked={
-                                                accion.cronograma[
-                                                  mes.key as keyof typeof accion.cronograma
-                                                ]
-                                              }
-                                              onChange={(e) => {
-                                                const newAcciones = [
-                                                  ...step1Data.consistencia
-                                                    .plan_acciones,
-                                                ];
-                                                newAcciones[index].cronograma[
-                                                  mes.key as keyof typeof accion.cronograma
-                                                ] = e.target.checked;
-                                                setStep1Data({
-                                                  ...step1Data,
-                                                  consistencia: {
-                                                    ...step1Data.consistencia,
-                                                    plan_acciones: newAcciones,
-                                                  },
-                                                });
-                                              }}
-                                              className="w-4 h-4 rounded border-2 border-gray-300 checked:bg-blue-600 checked:border-blue-600 cursor-pointer"
-                                            />
-                                          </label>
-                                          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                                            {mes.nombre}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </td>
-                                  <td className="p-1 text-center">
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        const newAcciones =
-                                          step1Data.consistencia.plan_acciones.filter(
-                                            (_, i) => i !== index
-                                          );
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            plan_acciones: newAcciones,
-                                          },
-                                        });
-                                      }}
-                                      className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    >
-                                      ×
-                                    </Button>
-                                  </td>
-                                </tr>
-                              )
-                            )}
+                                      });
+                                    }}
+                                    className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    ×
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
                       </div>
@@ -1417,9 +1240,7 @@ export default function Etapa1Acelerador12d() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-gray-700">
-                          {ITEMS_FICHA_2D[3].preguntas[3].texto}
-                        </p>
+                        <p className="text-sm text-gray-700">{ITEMS_FICHA_2D[3].preguntas[3].texto}</p>
                       </CardContent>
                     </Card>
 
@@ -1429,193 +1250,149 @@ export default function Etapa1Acelerador12d() {
                         <table className="w-full border-collapse">
                           <thead>
                             <tr className="bg-blue-500 text-white text-xs">
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">
-                                Componente
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">
-                                Denominación
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 w-25">
-                                Cant.
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 w-30">
-                                P. Unit.
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 w-20">
-                                Subtotal
-                              </th>
-                              <th className="p-2 text-left border-r border-blue-400 min-w-[50px]">
-                                Utilidad
-                              </th>
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">Componente</th>
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[100px]">Denominación</th>
+                              <th className="p-2 text-left border-r border-blue-400 w-25">Cant.</th>
+                              <th className="p-2 text-left border-r border-blue-400 w-30">P. Unit.</th>
+                              <th className="p-2 text-left border-r border-blue-400 w-20">Subtotal</th>
+                              <th className="p-2 text-left border-r border-blue-400 min-w-[50px]">Utilidad</th>
                               <th className="p-2 w-10"></th>
                             </tr>
                           </thead>
                           <tbody>
-                            {step1Data.consistencia.bienes_servicios.map(
-                              (bien, index) => (
-                                <tr
-                                  key={index}
-                                  className="border-b hover:bg-gray-50"
-                                >
-                                  <td className="p-1 border-r">
-                                    <Input
-                                      value={bien.componente}
-                                      onChange={(e) => {
-                                        const newBienes = [
-                                          ...step1Data.consistencia
-                                            .bienes_servicios,
-                                        ];
-                                        newBienes[index].componente =
-                                          e.target.value;
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            bienes_servicios: newBienes,
-                                          },
-                                        });
-                                      }}
-                                      placeholder="Equipamiento"
-                                      className="text-xs h-8 border-0 focus-visible:ring-1"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Input
-                                      value={bien.denominacion}
-                                      onChange={(e) => {
-                                        const newBienes = [
-                                          ...step1Data.consistencia
-                                            .bienes_servicios,
-                                        ];
-                                        newBienes[index].denominacion =
-                                          e.target.value;
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            bienes_servicios: newBienes,
-                                          },
-                                        });
-                                      }}
-                                      placeholder="Nombre"
-                                      className="text-xs h-8 border-0 focus-visible:ring-1"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Input
-                                      type="number"
-                                      value={bien.cantidad}
-                                      onChange={(e) => {
-                                        const newBienes = [
-                                          ...step1Data.consistencia
-                                            .bienes_servicios,
-                                        ];
-                                        const cantidad = parseInt(
-                                          e.target.value
-                                        );
-                                        newBienes[index].cantidad = cantidad;
-                                        newBienes[index].subtotal =
-                                          cantidad *
-                                          newBienes[index].precio_unitario;
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            bienes_servicios: newBienes,
-                                          },
-                                        });
-                                      }}
-                                      placeholder="0"
-                                      className="text-xs h-8 border-0 focus-visible:ring-1 text-center"
-                                      min="0"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Input
-                                      type="number"
-                                      value={bien.precio_unitario}
-                                      onChange={(e) => {
-                                        const newBienes = [
-                                          ...step1Data.consistencia
-                                            .bienes_servicios,
-                                        ];
-                                        const precio = parseFloat(
-                                          e.target.value
-                                        );
-                                        newBienes[index].precio_unitario =
-                                          precio;
-                                        newBienes[index].subtotal =
-                                          newBienes[index].cantidad * precio;
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            bienes_servicios: newBienes,
-                                          },
-                                        });
-                                      }}
-                                      placeholder="0.00"
-                                      className="text-xs h-8 border-0 focus-visible:ring-1 text-right"
-                                      step="0.01"
-                                      min="0"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r bg-gray-50">
-                                    <Input
-                                      type="number"
-                                      value={bien.subtotal.toFixed(2)}
-                                      readOnly
-                                      className="text-xs h-8 border-0 bg-transparent text-right font-medium"
-                                    />
-                                  </td>
-                                  <td className="p-1 border-r">
-                                    <Textarea
-                                      value={bien.descripcion_utilidad}
-                                      onChange={(e) => {
-                                        const newBienes = [
-                                          ...step1Data.consistencia
-                                            .bienes_servicios,
-                                        ];
-                                        newBienes[index].descripcion_utilidad =
-                                          e.target.value;
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            bienes_servicios: newBienes,
-                                          },
-                                        });
-                                      }}
-                                      placeholder="Utilidad..."
-                                      className="text-xs min-h-[50px] resize-none border-0 focus-visible:ring-1"
-                                    />
-                                  </td>
-                                  <td className="p-1 text-center">
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        const newBienes =
-                                          step1Data.consistencia.bienes_servicios.filter(
-                                            (_, i) => i !== index
-                                          );
-                                        setStep1Data({
-                                          ...step1Data,
-                                          consistencia: {
-                                            ...step1Data.consistencia,
-                                            bienes_servicios: newBienes,
-                                          },
-                                        });
-                                      }}
-                                      className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    >
-                                      ×
-                                    </Button>
-                                  </td>
-                                </tr>
-                              )
-                            )}
+                            {step1Data.consistencia.bienes_servicios.map((bien, index) => (
+                              <tr key={index} className="border-b hover:bg-gray-50">
+                                <td className="p-1 border-r">
+                                  <Input
+                                    value={bien.componente}
+                                    onChange={(e) => {
+                                      const newBienes = [...step1Data.consistencia.bienes_servicios];
+                                      newBienes[index].componente = e.target.value;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          bienes_servicios: newBienes,
+                                        },
+                                      });
+                                    }}
+                                    placeholder="Equipamiento"
+                                    className="text-xs h-8 border-0 focus-visible:ring-1"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Input
+                                    value={bien.denominacion}
+                                    onChange={(e) => {
+                                      const newBienes = [...step1Data.consistencia.bienes_servicios];
+                                      newBienes[index].denominacion = e.target.value;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          bienes_servicios: newBienes,
+                                        },
+                                      });
+                                    }}
+                                    placeholder="Nombre"
+                                    className="text-xs h-8 border-0 focus-visible:ring-1"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Input
+                                    type="number"
+                                    value={bien.cantidad}
+                                    onChange={(e) => {
+                                      const newBienes = [...step1Data.consistencia.bienes_servicios];
+                                      const cantidad = parseInt(e.target.value);
+                                      newBienes[index].cantidad = cantidad;
+                                      newBienes[index].subtotal = cantidad * newBienes[index].precio_unitario;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          bienes_servicios: newBienes,
+                                        },
+                                      });
+                                    }}
+                                    placeholder="0"
+                                    className="text-xs h-8 border-0 focus-visible:ring-1 text-center"
+                                    min="0"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Input
+                                    type="number"
+                                    value={bien.precio_unitario}
+                                    onChange={(e) => {
+                                      const newBienes = [...step1Data.consistencia.bienes_servicios];
+                                      const precio = parseFloat(e.target.value);
+                                      newBienes[index].precio_unitario = precio;
+                                      newBienes[index].subtotal = newBienes[index].cantidad * precio;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          bienes_servicios: newBienes,
+                                        },
+                                      });
+                                    }}
+                                    placeholder="0.00"
+                                    className="text-xs h-8 border-0 focus-visible:ring-1 text-right"
+                                    step="0.01"
+                                    min="0"
+                                  />
+                                </td>
+                                <td className="p-1 border-r bg-gray-50">
+                                  <Input
+                                    type="number"
+                                    value={bien.subtotal.toFixed(2)}
+                                    readOnly
+                                    className="text-xs h-8 border-0 bg-transparent text-right font-medium"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <Textarea
+                                    value={bien.descripcion_utilidad}
+                                    onChange={(e) => {
+                                      const newBienes = [...step1Data.consistencia.bienes_servicios];
+                                      newBienes[index].descripcion_utilidad = e.target.value;
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          bienes_servicios: newBienes,
+                                        },
+                                      });
+                                    }}
+                                    placeholder="Utilidad..."
+                                    className="text-xs min-h-[50px] resize-none border-0 focus-visible:ring-1"
+                                  />
+                                </td>
+                                <td className="p-1 text-center">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newBienes = step1Data.consistencia.bienes_servicios.filter(
+                                        (_, i) => i !== index,
+                                      );
+                                      setStep1Data({
+                                        ...step1Data,
+                                        consistencia: {
+                                          ...step1Data.consistencia,
+                                          bienes_servicios: newBienes,
+                                        },
+                                      });
+                                    }}
+                                    className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    ×
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
                       </div>
@@ -1638,10 +1415,7 @@ export default function Etapa1Acelerador12d() {
                             ...step1Data,
                             consistencia: {
                               ...step1Data.consistencia,
-                              bienes_servicios: [
-                                ...step1Data.consistencia.bienes_servicios,
-                                newBien,
-                              ],
+                              bienes_servicios: [...step1Data.consistencia.bienes_servicios, newBien],
                             },
                           });
                         }}
@@ -1657,10 +1431,7 @@ export default function Etapa1Acelerador12d() {
                             <span className="text-sm font-semibold">
                               Total General: S/{" "}
                               {step1Data.consistencia.bienes_servicios
-                                .reduce(
-                                  (acc, bien) => acc + (bien.subtotal || 0),
-                                  0
-                                )
+                                .reduce((acc, bien) => acc + (bien.subtotal || 0), 0)
                                 .toFixed(2)}
                             </span>
                           </div>
@@ -1684,22 +1455,11 @@ export default function Etapa1Acelerador12d() {
                 })}
               </div>
               <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-2" />
-                  )}
+                <Button variant="outline" onClick={handleSave} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                   Guardar
                 </Button>
-                <Button
-                  onClick={handleAnalyze}
-                  disabled={analyzing || !canProceedToStep2()}
-                >
+                <Button onClick={handleAnalyze} disabled={analyzing || !canProceedToStep2()}>
                   {analyzing ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -1724,8 +1484,8 @@ export default function Etapa1Acelerador12d() {
   const renderStep2 = () => {
     // Helper para extraer número de cualquier formato (ej: "8 / 15 puntos" → 8)
     const toNumber = (v: unknown): number => {
-      if (typeof v === 'number') return v;
-      if (typeof v === 'string') {
+      if (typeof v === "number") return v;
+      if (typeof v === "string") {
         const m = v.match(/^(\d+)/);
         return m ? parseInt(m[1], 10) : 0;
       }
@@ -1735,15 +1495,13 @@ export default function Etapa1Acelerador12d() {
     if (!step2Data) {
       return (
         <Alert>
-          <AlertDescription>
-            No hay datos de análisis. Regresa al Paso 1 para analizar.
-          </AlertDescription>
+          <AlertDescription>No hay datos de análisis. Regresa al Paso 1 para analizar.</AlertDescription>
         </Alert>
       );
     }
 
     // Calcular puntaje total sumando todos los indicadores
-    const puntajeTotal = 
+    const puntajeTotal =
       toNumber(step2Data.formulacion?.indicador_1_1?.puntaje) +
       toNumber(step2Data.formulacion?.indicador_1_2?.puntaje) +
       toNumber(step2Data.formulacion?.indicador_1_3?.puntaje) +
@@ -1761,9 +1519,8 @@ export default function Etapa1Acelerador12d() {
         <Card className="border-2 border-primary shadow-lg">
           <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
             <CardDescription className="text-base">
-              La IA ha analizado la consistencia de tu propuesta y especifica un
-              resumen preliminar de todas las oportunidades de mejora en función
-              a la rúbrica de evaluación.
+              La IA ha analizado la consistencia de tu propuesta y especifica un resumen preliminar de todas las
+              oportunidades de mejora en función a la rúbrica de evaluación.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -1802,25 +1559,16 @@ export default function Etapa1Acelerador12d() {
                   {/* Indicador 1.1 */}
                   <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-blue-900">
-                        1.1 Problema y Causas/Consecuencias
-                      </h4>
+                      <h4 className="font-semibold text-blue-900">1.1 Problema y Causas/Consecuencias</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.formulacion?.indicador_1_1?.puntaje || 0} /
-                          25 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.formulacion?.indicador_1_1?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{step2Data.formulacion?.indicador_1_1?.puntaje || 0} / 25 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.formulacion?.indicador_1_1?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Análisis:</p>
-                        <p className="text-gray-700">
-                          {step2Data.formulacion?.indicador_1_1?.analisis}
-                        </p>
+                        <p className="text-gray-700">{step2Data.formulacion?.indicador_1_1?.analisis}</p>
                       </div>
                     </div>
                   </div>
@@ -1828,25 +1576,16 @@ export default function Etapa1Acelerador12d() {
                   {/* Indicador 1.2 */}
                   <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-blue-900">
-                        1.2 Justificación
-                      </h4>
+                      <h4 className="font-semibold text-blue-900">1.2 Justificación</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.formulacion?.indicador_1_2?.puntaje || 0} /
-                          5 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.formulacion?.indicador_1_2?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{step2Data.formulacion?.indicador_1_2?.puntaje || 0} / 5 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.formulacion?.indicador_1_2?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Análisis:</p>
-                        <p className="text-gray-700">
-                          {step2Data.formulacion?.indicador_1_2?.analisis}
-                        </p>
+                        <p className="text-gray-700">{step2Data.formulacion?.indicador_1_2?.analisis}</p>
                       </div>
                     </div>
                   </div>
@@ -1854,25 +1593,16 @@ export default function Etapa1Acelerador12d() {
                   {/* Indicador 1.3 */}
                   <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-blue-900">
-                        1.3 Preguntas de Investigación
-                      </h4>
+                      <h4 className="font-semibold text-blue-900">1.3 Preguntas de Investigación</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.formulacion?.indicador_1_3?.puntaje || 0} /
-                          5 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.formulacion?.indicador_1_3?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{step2Data.formulacion?.indicador_1_3?.puntaje || 0} / 5 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.formulacion?.indicador_1_3?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Análisis:</p>
-                        <p className="text-gray-700">
-                          {step2Data.formulacion?.indicador_1_3?.analisis}
-                        </p>
+                        <p className="text-gray-700">{step2Data.formulacion?.indicador_1_3?.analisis}</p>
                       </div>
                     </div>
                   </div>
@@ -1880,25 +1610,16 @@ export default function Etapa1Acelerador12d() {
                   {/* Indicador 1.4 */}
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-blue-900">
-                        1.4 Objetivos
-                      </h4>
+                      <h4 className="font-semibold text-blue-900">1.4 Objetivos</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.formulacion?.indicador_1_4?.puntaje || 0} /
-                          5 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.formulacion?.indicador_1_4?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{step2Data.formulacion?.indicador_1_4?.puntaje || 0} / 5 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.formulacion?.indicador_1_4?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Análisis:</p>
-                        <p className="text-gray-700">
-                          {step2Data.formulacion?.indicador_1_4?.analisis}
-                        </p>
+                        <p className="text-gray-700">{step2Data.formulacion?.indicador_1_4?.analisis}</p>
                       </div>
                     </div>
                   </div>
@@ -1912,34 +1633,23 @@ export default function Etapa1Acelerador12d() {
                 iconBgColor="bg-green-500"
                 title="2. Participación"
                 subtitle="Actores y roles en la investigación-acción"
-                currentScore={
-                  toNumber(step2Data.participacion?.indicador_2_1?.puntaje)
-                }
+                currentScore={toNumber(step2Data.participacion?.indicador_2_1?.puntaje)}
                 maxScore={10}
               >
                 <AccordionContent className="px-4 pb-4">
                   {/* Indicador 2.1 */}
                   <div className="p-4 bg-green-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-green-900">
-                        2.1 Actores y Roles
-                      </h4>
+                      <h4 className="font-semibold text-green-900">2.1 Actores y Roles</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.participacion?.indicador_2_1?.puntaje || 0}{" "}
-                          / 20 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.participacion?.indicador_2_1?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{step2Data.participacion?.indicador_2_1?.puntaje || 0} / 20 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.participacion?.indicador_2_1?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Análisis:</p>
-                        <p className="text-gray-700">
-                          {step2Data.participacion?.indicador_2_1?.analisis}
-                        </p>
+                        <p className="text-gray-700">{step2Data.participacion?.indicador_2_1?.analisis}</p>
                       </div>
                     </div>
                   </div>
@@ -1960,25 +1670,16 @@ export default function Etapa1Acelerador12d() {
                   {/* Indicador 3.1 */}
                   <div className="p-4 bg-purple-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-purple-900">
-                        3.1 Estrategias de Reflexión
-                      </h4>
+                      <h4 className="font-semibold text-purple-900">3.1 Estrategias de Reflexión</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.reflexion?.indicador_3_1?.puntaje || 0} /
-                          10 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.reflexion?.indicador_3_1?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{step2Data.reflexion?.indicador_3_1?.puntaje || 0} / 10 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.reflexion?.indicador_3_1?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Análisis:</p>
-                        <p className="text-gray-700">
-                          {step2Data.reflexion?.indicador_3_1?.analisis}
-                        </p>
+                        <p className="text-gray-700">{step2Data.reflexion?.indicador_3_1?.analisis}</p>
                       </div>
                     </div>
                   </div>
@@ -2004,25 +1705,16 @@ export default function Etapa1Acelerador12d() {
                   {/* Indicador 4.1 */}
                   <div className="mb-4 p-4 bg-orange-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-orange-900">
-                        4.1 Consistencia Teórica
-                      </h4>
+                      <h4 className="font-semibold text-orange-900">4.1 Consistencia Teórica</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.consistencia?.indicador_4_1?.puntaje || 0}{" "}
-                          / 10 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.consistencia?.indicador_4_1?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{step2Data.consistencia?.indicador_4_1?.puntaje || 0} / 10 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.consistencia?.indicador_4_1?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Análisis:</p>
-                        <p className="text-gray-700">
-                          {step2Data.consistencia?.indicador_4_1?.analisis}
-                        </p>
+                        <p className="text-gray-700">{step2Data.consistencia?.indicador_4_1?.analisis}</p>
                       </div>
                     </div>
                   </div>
@@ -2030,25 +1722,16 @@ export default function Etapa1Acelerador12d() {
                   {/* Indicador 4.2 */}
                   <div className="mb-4 p-4 bg-orange-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-orange-900">
-                        4.2 Consistencia Metodológica
-                      </h4>
+                      <h4 className="font-semibold text-orange-900">4.2 Consistencia Metodológica</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.consistencia?.indicador_4_2?.puntaje || 0}{" "}
-                          / 5 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.consistencia?.indicador_4_2?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{step2Data.consistencia?.indicador_4_2?.puntaje || 0} / 5 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.consistencia?.indicador_4_2?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Análisis:</p>
-                        <p className="text-gray-700">
-                          {step2Data.consistencia?.indicador_4_2?.analisis}
-                        </p>
+                        <p className="text-gray-700">{step2Data.consistencia?.indicador_4_2?.analisis}</p>
                       </div>
                     </div>
                   </div>
@@ -2056,25 +1739,16 @@ export default function Etapa1Acelerador12d() {
                   {/* Indicador 4.3 */}
                   <div className="mb-4 p-4 bg-orange-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-orange-900">
-                        4.3 Consistencia Práctica
-                      </h4>
+                      <h4 className="font-semibold text-orange-900">4.3 Consistencia Práctica</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.consistencia?.indicador_4_3?.puntaje || 0}{" "}
-                          / 10 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.consistencia?.indicador_4_3?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{step2Data.consistencia?.indicador_4_3?.puntaje || 0} / 10 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.consistencia?.indicador_4_3?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Análisis:</p>
-                        <p className="text-gray-700">
-                          {step2Data.consistencia?.indicador_4_3?.analisis}
-                        </p>
+                        <p className="text-gray-700">{step2Data.consistencia?.indicador_4_3?.analisis}</p>
                       </div>
                     </div>
                   </div>
@@ -2082,25 +1756,16 @@ export default function Etapa1Acelerador12d() {
                   {/* Indicador 4.4 */}
                   <div className="p-4 bg-orange-50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-orange-900">
-                        4.4 Consistencia Evidencial
-                      </h4>
+                      <h4 className="font-semibold text-orange-900">4.4 Consistencia Evidencial</h4>
                       <div className="flex gap-2">
-                        <Badge variant="outline">
-                          {step2Data.consistencia?.indicador_4_4?.puntaje || 0}{" "}
-                          / 5 pts
-                        </Badge>
-                        <Badge className="bg-purple-500">
-                          {step2Data.consistencia?.indicador_4_4?.nivel}
-                        </Badge>
+                        <Badge variant="outline">{step2Data.consistencia?.indicador_4_4?.puntaje || 0} / 5 pts</Badge>
+                        <Badge className="bg-purple-500">{step2Data.consistencia?.indicador_4_4?.nivel}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-3 rounded">
                         <p className="font-semibold mb-1">Análisis:</p>
-                        <p className="text-gray-700">
-                          {step2Data.consistencia?.indicador_4_4?.analisis}
-                        </p>
+                        <p className="text-gray-700">{step2Data.consistencia?.indicador_4_4?.analisis}</p>
                       </div>
                     </div>
                   </div>
@@ -2110,20 +1775,10 @@ export default function Etapa1Acelerador12d() {
 
             {/* Botones de navegación */}
             <div className="flex justify-between mt-6 pt-4 border-t">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentStep(1)}
-                size="lg"
-                disabled={generatingQuestions}
-              >
+              <Button variant="outline" onClick={() => setCurrentStep(1)} size="lg" disabled={generatingQuestions}>
                 Volver a Editar
               </Button>
-              <Button
-                onClick={handleGenerateQuestions}
-                size="lg"
-                className="gap-2"
-                disabled={generatingQuestions}
-              >
+              <Button onClick={handleGenerateQuestions} size="lg" className="gap-2" disabled={generatingQuestions}>
                 {generatingQuestions ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -2174,13 +1829,9 @@ export default function Etapa1Acelerador12d() {
             maxScore
           );
         case "participacion":
-          return (
-            (step2Data.participacion?.indicador_2_1?.puntaje || 0) === maxScore
-          );
+          return (step2Data.participacion?.indicador_2_1?.puntaje || 0) === maxScore;
         case "reflexion":
-          return (
-            (step2Data.reflexion?.indicador_3_1?.puntaje || 0) === maxScore
-          );
+          return (step2Data.reflexion?.indicador_3_1?.puntaje || 0) === maxScore;
         case "consistencia":
           return (
             (step2Data.consistencia?.indicador_4_1?.puntaje || 0) +
@@ -2226,9 +1877,7 @@ export default function Etapa1Acelerador12d() {
     ];
 
     // Filtrar criterios que NO tienen puntaje completo
-    const criteriosConPreguntas = criterios.filter(
-      (criterio) => !hasFullScore(criterio.key, criterio.maxScore)
-    );
+    const criteriosConPreguntas = criterios.filter((criterio) => !hasFullScore(criterio.key, criterio.maxScore));
 
     // Si todos tienen puntaje completo, mostrar mensaje y pasar directamente al paso 4
     if (criteriosConPreguntas.length === 0) {
@@ -2240,27 +1889,18 @@ export default function Etapa1Acelerador12d() {
                 <CheckCircle className="w-6 h-6" />
                 ¡Excelente trabajo!
               </CardTitle>
-              <CardDescription>
-                Has obtenido el puntaje máximo en todos los criterios
-              </CardDescription>
+              <CardDescription>Has obtenido el puntaje máximo en todos los criterios</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
                 <div className="bg-green-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto">
                   <CheckCircle className="w-16 h-16 text-green-600" />
                 </div>
-                <p className="text-lg">
-                  No necesitas responder preguntas complementarias.
-                </p>
+                <p className="text-lg">No necesitas responder preguntas complementarias.</p>
                 <p className="text-muted-foreground">
-                  Tu proyecto ha alcanzado la máxima calificación en el análisis
-                  inicial.
+                  Tu proyecto ha alcanzado la máxima calificación en el análisis inicial.
                 </p>
-                <Button
-                  onClick={() => setCurrentStep(4)}
-                  size="lg"
-                  className="mt-6 gap-2"
-                >
+                <Button onClick={() => setCurrentStep(4)} size="lg" className="mt-6 gap-2">
                   Ver Resultado Final
                   <CheckCircle className="w-5 h-5" />
                 </Button>
@@ -2280,8 +1920,7 @@ export default function Etapa1Acelerador12d() {
               Preguntas Complementarias
             </CardTitle>
             <CardDescription>
-              Responde estas preguntas para mejorar tu puntaje en las áreas
-              identificadas
+              Responde estas preguntas para mejorar tu puntaje en las áreas identificadas
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -2293,14 +1932,15 @@ export default function Etapa1Acelerador12d() {
                   <p className="text-2xl font-bold text-purple-900">
                     {(() => {
                       const toNum = (val: unknown): number => {
-                        if (typeof val === 'number') return val;
-                        if (typeof val === 'string') {
+                        if (typeof val === "number") return val;
+                        if (typeof val === "string") {
                           const match = val.match(/(\d+)/);
                           return match ? parseInt(match[1], 10) : 0;
                         }
                         return 0;
                       };
-                      return toNum(step2Data?.formulacion?.indicador_1_1?.puntaje) +
+                      return (
+                        toNum(step2Data?.formulacion?.indicador_1_1?.puntaje) +
                         toNum(step2Data?.formulacion?.indicador_1_2?.puntaje) +
                         toNum(step2Data?.formulacion?.indicador_1_3?.puntaje) +
                         toNum(step2Data?.formulacion?.indicador_1_4?.puntaje) +
@@ -2309,15 +1949,15 @@ export default function Etapa1Acelerador12d() {
                         toNum(step2Data?.consistencia?.indicador_4_1?.puntaje) +
                         toNum(step2Data?.consistencia?.indicador_4_2?.puntaje) +
                         toNum(step2Data?.consistencia?.indicador_4_3?.puntaje) +
-                        toNum(step2Data?.consistencia?.indicador_4_4?.puntaje);
-                    })()} / 100 pts
+                        toNum(step2Data?.consistencia?.indicador_4_4?.puntaje)
+                      );
+                    })()}{" "}
+                    / 100 pts
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Áreas a mejorar</p>
-                  <p className="text-2xl font-bold text-purple-900">
-                    {criteriosConPreguntas.length}
-                  </p>
+                  <p className="text-2xl font-bold text-purple-900">{criteriosConPreguntas.length}</p>
                 </div>
               </div>
             </div>
@@ -2325,11 +1965,7 @@ export default function Etapa1Acelerador12d() {
             <Accordion type="multiple" className="w-full">
               {criteriosConPreguntas.map((criterio) => {
                 const questions = generatedQuestions[criterio.key];
-                if (
-                  !questions ||
-                  !questions.preguntas ||
-                  questions.preguntas.length === 0
-                ) {
+                if (!questions || !questions.preguntas || questions.preguntas.length === 0) {
                   return null;
                 }
 
@@ -2342,19 +1978,13 @@ export default function Etapa1Acelerador12d() {
                 };
 
                 return (
-                  <AccordionItem
-                    key={criterio.key}
-                    value={criterio.key}
-                    className="border rounded-lg mb-4"
-                  >
+                  <AccordionItem key={criterio.key} value={criterio.key} className="border rounded-lg mb-4">
                     <AccordionTrigger className="px-4 hover:no-underline">
                       <div className="flex items-center justify-between w-full pr-4">
                         <div className="flex items-center gap-3">
                           <div
                             className={`${
-                              colorClasses[
-                                criterio.color as keyof typeof colorClasses
-                              ]
+                              colorClasses[criterio.color as keyof typeof colorClasses]
                             } text-white rounded-lg p-2`}
                           >
                             <Icon className="w-5 h-5" />
@@ -2363,40 +1993,26 @@ export default function Etapa1Acelerador12d() {
                             <p className="font-semibold">{criterio.name}</p>
                             <p className="text-sm text-gray-500">
                               {questions.preguntas.length} pregunta
-                              {questions.preguntas.length > 1 ? "s" : ""} para
-                              mejorar
+                              {questions.preguntas.length > 1 ? "s" : ""} para mejorar
                             </p>
                           </div>
                         </div>
                         <Badge variant="outline">
-                          {criterio.key === "formulacion" &&
-                          step2Data?.formulacion
-                            ? (step2Data.formulacion.indicador_1_1?.puntaje ||
-                                0) +
-                              (step2Data.formulacion.indicador_1_2?.puntaje ||
-                                0) +
-                              (step2Data.formulacion.indicador_1_3?.puntaje ||
-                                0) +
-                              (step2Data.formulacion.indicador_1_4?.puntaje ||
-                                0)
-                            : criterio.key === "participacion" &&
-                              step2Data?.participacion
-                            ? step2Data.participacion.indicador_2_1?.puntaje ||
-                              0
-                            : criterio.key === "reflexion" &&
-                              step2Data?.reflexion
-                            ? step2Data.reflexion.indicador_3_1?.puntaje || 0
-                            : criterio.key === "consistencia" &&
-                              step2Data?.consistencia
-                            ? (step2Data.consistencia.indicador_4_1?.puntaje ||
-                                0) +
-                              (step2Data.consistencia.indicador_4_2?.puntaje ||
-                                0) +
-                              (step2Data.consistencia.indicador_4_3?.puntaje ||
-                                0) +
-                              (step2Data.consistencia.indicador_4_4?.puntaje ||
-                                0)
-                            : 0}{" "}
+                          {criterio.key === "formulacion" && step2Data?.formulacion
+                            ? (step2Data.formulacion.indicador_1_1?.puntaje || 0) +
+                              (step2Data.formulacion.indicador_1_2?.puntaje || 0) +
+                              (step2Data.formulacion.indicador_1_3?.puntaje || 0) +
+                              (step2Data.formulacion.indicador_1_4?.puntaje || 0)
+                            : criterio.key === "participacion" && step2Data?.participacion
+                              ? step2Data.participacion.indicador_2_1?.puntaje || 0
+                              : criterio.key === "reflexion" && step2Data?.reflexion
+                                ? step2Data.reflexion.indicador_3_1?.puntaje || 0
+                                : criterio.key === "consistencia" && step2Data?.consistencia
+                                  ? (step2Data.consistencia.indicador_4_1?.puntaje || 0) +
+                                    (step2Data.consistencia.indicador_4_2?.puntaje || 0) +
+                                    (step2Data.consistencia.indicador_4_3?.puntaje || 0) +
+                                    (step2Data.consistencia.indicador_4_4?.puntaje || 0)
+                                  : 0}{" "}
                           / {criterio.maxScore} pts
                         </Badge>
                       </div>
@@ -2406,49 +2022,37 @@ export default function Etapa1Acelerador12d() {
                       {questions.introduccion && (
                         <Alert className="bg-purple-50 border-purple-200">
                           <MessageSquare className="w-4 h-4" />
-                          <AlertDescription>
-                            {questions.introduccion}
-                          </AlertDescription>
+                          <AlertDescription>{questions.introduccion}</AlertDescription>
                         </Alert>
                       )}
 
                       {/* Preguntas */}
-                      {questions.preguntas.map(
-                        (pregunta: string, idx: number) => (
-                          <div key={idx} className="space-y-3">
-                            <Card className="bg-purple-50 border-purple-200">
-                              <CardHeader className="pb-3">
-                                <CardTitle className="text-sm font-medium text-purple-900">
-                                  Pregunta {idx + 1}
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                                  {pregunta}
-                                </p>
-                              </CardContent>
-                            </Card>
-                            <Textarea
-                              placeholder="Escribe tu respuesta aquí..."
-                              className="min-h-[120px]"
-                              value={
-                                step3Answers[criterio.key]?.[
-                                  `respuesta_${idx + 1}`
-                                ] || ""
-                              }
-                              onChange={(e) => {
-                                setStep3Answers((prev) => ({
-                                  ...prev,
-                                  [criterio.key]: {
-                                    ...(prev[criterio.key] || {}),
-                                    [`respuesta_${idx + 1}`]: e.target.value,
-                                  },
-                                }));
-                              }}
-                            />
-                          </div>
-                        )
-                      )}
+                      {questions.preguntas.map((pregunta: string, idx: number) => (
+                        <div key={idx} className="space-y-3">
+                          <Card className="bg-purple-50 border-purple-200">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm font-medium text-purple-900">Pregunta {idx + 1}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{pregunta}</p>
+                            </CardContent>
+                          </Card>
+                          <Textarea
+                            placeholder="Escribe tu respuesta aquí..."
+                            className="min-h-[120px]"
+                            value={step3Answers[criterio.key]?.[`respuesta_${idx + 1}`] || ""}
+                            onChange={(e) => {
+                              setStep3Answers((prev) => ({
+                                ...prev,
+                                [criterio.key]: {
+                                  ...(prev[criterio.key] || {}),
+                                  [`respuesta_${idx + 1}`]: e.target.value,
+                                },
+                              }));
+                            }}
+                          />
+                        </div>
+                      ))}
                     </AccordionContent>
                   </AccordionItem>
                 );
@@ -2465,12 +2069,8 @@ export default function Etapa1Acelerador12d() {
                 <div className="flex flex-col items-center gap-4">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
                   <div className="text-center">
-                    <h3 className="font-semibold text-lg mb-2">
-                      Analizando con IA
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Mejorando tus respuestas complementarias...
-                    </p>
+                    <h3 className="font-semibold text-lg mb-2">Analizando con IA</h3>
+                    <p className="text-sm text-muted-foreground">Mejorando tus respuestas complementarias...</p>
                   </div>
                   <Progress className="w-full" />
                 </div>
@@ -2483,12 +2083,7 @@ export default function Etapa1Acelerador12d() {
           <Button variant="outline" onClick={() => setCurrentStep(2)} size="lg">
             Anterior
           </Button>
-          <Button
-            onClick={handleEvaluateStep3Answers}
-            disabled={evaluatingStep3}
-            size="lg"
-            className="gap-2"
-          >
+          <Button onClick={handleEvaluateStep3Answers} disabled={evaluatingStep3} size="lg" className="gap-2">
             {evaluatingStep3 ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -2574,9 +2169,7 @@ export default function Etapa1Acelerador12d() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.formulacion?.respuesta_1_1 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.formulacion?.respuesta_1_1 || "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
@@ -2585,9 +2178,7 @@ export default function Etapa1Acelerador12d() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.formulacion?.respuesta_1_2 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.formulacion?.respuesta_1_2 || "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
@@ -2596,9 +2187,7 @@ export default function Etapa1Acelerador12d() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.formulacion?.respuesta_1_3 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.formulacion?.respuesta_1_3 || "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
@@ -2607,9 +2196,7 @@ export default function Etapa1Acelerador12d() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.formulacion?.respuesta_1_4 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.formulacion?.respuesta_1_4 || "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
 
@@ -2625,9 +2212,7 @@ export default function Etapa1Acelerador12d() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.participacion?.respuesta_2_1 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.participacion?.respuesta_2_1 || "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
 
@@ -2643,9 +2228,7 @@ export default function Etapa1Acelerador12d() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.reflexion?.respuesta_3_1 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.reflexion?.respuesta_3_1 || "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
 
@@ -2661,9 +2244,7 @@ export default function Etapa1Acelerador12d() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.consistencia?.respuesta_4_1 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.consistencia?.respuesta_4_1 || "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
@@ -2672,9 +2253,7 @@ export default function Etapa1Acelerador12d() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.consistencia?.respuesta_4_2 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.consistencia?.respuesta_4_2 || "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
@@ -2683,9 +2262,7 @@ export default function Etapa1Acelerador12d() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.consistencia?.respuesta_4_3 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.consistencia?.respuesta_4_3 || "(Sin respuesta)",
                   spacing: { after: 200 },
                 }),
                 new Paragraph({
@@ -2694,9 +2271,7 @@ export default function Etapa1Acelerador12d() {
                   spacing: { before: 200, after: 100 },
                 }),
                 new Paragraph({
-                  text:
-                    improvedResponses.consistencia?.respuesta_4_4 ||
-                    "(Sin respuesta)",
+                  text: improvedResponses.consistencia?.respuesta_4_4 || "(Sin respuesta)",
                   spacing: { after: 300 },
                 }),
 
@@ -2719,10 +2294,7 @@ export default function Etapa1Acelerador12d() {
 
         // Generar y descargar el archivo
         const blob = await Packer.toBlob(doc);
-        const fileName = `CNPIE_2D_${proyecto.id.replace(
-          /[^a-z0-9]/gi,
-          "_"
-        )}_${new Date().getTime()}.docx`;
+        const fileName = `CNPIE_2D_${proyecto.id.replace(/[^a-z0-9]/gi, "_")}_${new Date().getTime()}.docx`;
         saveAs(blob, fileName);
 
         toast({
@@ -2748,9 +2320,7 @@ export default function Etapa1Acelerador12d() {
                 <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
                 Generando Respuestas Mejoradas
               </CardTitle>
-              <CardDescription className="text-base">
-                La IA está procesando tus respuestas...
-              </CardDescription>
+              <CardDescription className="text-base">La IA está procesando tus respuestas...</CardDescription>
             </CardHeader>
           </Card>
         </div>
@@ -2760,13 +2330,11 @@ export default function Etapa1Acelerador12d() {
     // Reconstruir el objeto combinado para mostrar (estructura 2D)
     const combinedDataForDisplay = {
       formulacion: {
-        respuesta_original_1_1:
-          step1Data?.formulacion?.problema_causas_consecuencias || "",
+        respuesta_original_1_1: step1Data?.formulacion?.problema_causas_consecuencias || "",
         nueva_respuesta_1_1: step3Answers?.formulacion?.respuesta_1_1 || "",
         respuesta_original_1_2: step1Data?.formulacion?.justificacion || "",
         nueva_respuesta_1_2: step3Answers?.formulacion?.respuesta_1_2 || "",
-        respuesta_original_1_3:
-          step1Data?.formulacion?.preguntas_investigacion || "",
+        respuesta_original_1_3: step1Data?.formulacion?.preguntas_investigacion || "",
         nueva_respuesta_1_3: step3Answers?.formulacion?.respuesta_1_3 || "",
         respuesta_original_1_4: step1Data?.formulacion?.objetivos || "",
         nueva_respuesta_1_4: step3Answers?.formulacion?.respuesta_1_4 || "",
@@ -2776,26 +2344,19 @@ export default function Etapa1Acelerador12d() {
         nueva_respuesta_2_1: step3Answers?.participacion?.respuesta_2_1 || "",
       },
       reflexion: {
-        respuesta_original_3_1:
-          step1Data?.reflexion?.estrategias_reflexion || "",
+        respuesta_original_3_1: step1Data?.reflexion?.estrategias_reflexion || "",
         nueva_respuesta_3_1: step3Answers?.reflexion?.respuesta_3_1 || "",
       },
       consistencia: {
-        respuesta_original_4_1:
-          step1Data?.consistencia?.procedimiento_metodologico || "",
+        respuesta_original_4_1: step1Data?.consistencia?.procedimiento_metodologico || "",
         nueva_respuesta_4_1: step3Answers?.consistencia?.respuesta_4_1 || "",
-        respuesta_original_4_2:
-          step1Data?.consistencia?.tecnicas_instrumentos || "",
+        respuesta_original_4_2: step1Data?.consistencia?.tecnicas_instrumentos || "",
         nueva_respuesta_4_2: step3Answers?.consistencia?.respuesta_4_2 || "",
         respuesta_original_4_3:
-          step1Data?.consistencia?.plan_acciones
-            ?.map((a) => `${a.objetivo}: ${a.acciones}`)
-            .join(", ") || "",
+          step1Data?.consistencia?.plan_acciones?.map((a) => `${a.objetivo}: ${a.acciones}`).join(", ") || "",
         nueva_respuesta_4_3: step3Answers?.consistencia?.respuesta_4_3 || "",
         respuesta_original_4_4:
-          step1Data?.consistencia?.bienes_servicios
-            ?.map((b) => b.descripcion_utilidad)
-            .join(", ") || "",
+          step1Data?.consistencia?.bienes_servicios?.map((b) => b.descripcion_utilidad).join(", ") || "",
         nueva_respuesta_4_4: step3Answers?.consistencia?.respuesta_4_4 || "",
       },
     };
@@ -2811,16 +2372,10 @@ export default function Etapa1Acelerador12d() {
                   Respuestas Mejoradas - Listas para Copiar
                 </CardTitle>
                 <CardDescription className="text-base mt-2">
-                  La IA ha integrado tus respuestas originales con la
-                  información complementaria del coaching
+                  La IA ha integrado tus respuestas originales con la información complementaria del coaching
                 </CardDescription>
               </div>
-              <Button
-                onClick={generateDOCX}
-                size="lg"
-                className="gap-2"
-                variant="default"
-              >
+              <Button onClick={generateDOCX} size="lg" className="gap-2" variant="default">
                 <Download className="w-5 h-5" />
                 Descargar Word
               </Button>
@@ -2834,17 +2389,12 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 1.1 Problema de Investigación
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 1.1 Problema de Investigación</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses?.formulacion?.respuesta_1_1 || "",
-                            "Respuesta 1.1"
-                          )
+                          copyToClipboard(improvedResponses?.formulacion?.respuesta_1_1 || "", "Respuesta 1.1")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2853,9 +2403,7 @@ export default function Etapa1Acelerador12d() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses?.formulacion?.respuesta_1_1}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses?.formulacion?.respuesta_1_1}</p>
                   </CardContent>
                 </Card>
 
@@ -2863,17 +2411,12 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 1.2 Justificación
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 1.2 Justificación</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses?.formulacion?.respuesta_1_2 || "",
-                            "Respuesta 1.2"
-                          )
+                          copyToClipboard(improvedResponses?.formulacion?.respuesta_1_2 || "", "Respuesta 1.2")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2882,9 +2425,7 @@ export default function Etapa1Acelerador12d() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses?.formulacion?.respuesta_1_2}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses?.formulacion?.respuesta_1_2}</p>
                   </CardContent>
                 </Card>
 
@@ -2892,17 +2433,12 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 1.3 Preguntas de Investigación
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 1.3 Preguntas de Investigación</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses?.formulacion?.respuesta_1_3 || "",
-                            "Respuesta 1.3"
-                          )
+                          copyToClipboard(improvedResponses?.formulacion?.respuesta_1_3 || "", "Respuesta 1.3")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2911,9 +2447,7 @@ export default function Etapa1Acelerador12d() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses?.formulacion?.respuesta_1_3}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses?.formulacion?.respuesta_1_3}</p>
                   </CardContent>
                 </Card>
 
@@ -2921,17 +2455,12 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 1.4 Objetivos
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 1.4 Objetivos</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses?.formulacion?.respuesta_1_4 || "",
-                            "Respuesta 1.4"
-                          )
+                          copyToClipboard(improvedResponses?.formulacion?.respuesta_1_4 || "", "Respuesta 1.4")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2940,9 +2469,7 @@ export default function Etapa1Acelerador12d() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses?.formulacion?.respuesta_1_4}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses?.formulacion?.respuesta_1_4}</p>
                   </CardContent>
                 </Card>
 
@@ -2950,18 +2477,12 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 2.1 Actores y Roles
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 2.1 Actores y Roles</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses?.participacion?.respuesta_2_1 ||
-                              "",
-                            "Respuesta 2.1"
-                          )
+                          copyToClipboard(improvedResponses?.participacion?.respuesta_2_1 || "", "Respuesta 2.1")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2970,9 +2491,7 @@ export default function Etapa1Acelerador12d() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses?.participacion?.respuesta_2_1}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses?.participacion?.respuesta_2_1}</p>
                   </CardContent>
                 </Card>
 
@@ -2980,17 +2499,12 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 3.1 Estrategias de Reflexión
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 3.1 Estrategias de Reflexión</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses?.reflexion?.respuesta_3_1 || "",
-                            "Respuesta 3.1"
-                          )
+                          copyToClipboard(improvedResponses?.reflexion?.respuesta_3_1 || "", "Respuesta 3.1")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -2999,9 +2513,7 @@ export default function Etapa1Acelerador12d() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses?.reflexion?.respuesta_3_1}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses?.reflexion?.respuesta_3_1}</p>
                   </CardContent>
                 </Card>
 
@@ -3009,18 +2521,12 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 4.1 Procedimiento Metodológico
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 4.1 Procedimiento Metodológico</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses?.consistencia?.respuesta_4_1 ||
-                              "",
-                            "Respuesta 4.1"
-                          )
+                          copyToClipboard(improvedResponses?.consistencia?.respuesta_4_1 || "", "Respuesta 4.1")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -3029,9 +2535,7 @@ export default function Etapa1Acelerador12d() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses?.consistencia?.respuesta_4_1}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses?.consistencia?.respuesta_4_1}</p>
                   </CardContent>
                 </Card>
 
@@ -3039,18 +2543,12 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 4.2 Técnicas e Instrumentos
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 4.2 Técnicas e Instrumentos</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses?.consistencia?.respuesta_4_2 ||
-                              "",
-                            "Respuesta 4.2"
-                          )
+                          copyToClipboard(improvedResponses?.consistencia?.respuesta_4_2 || "", "Respuesta 4.2")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -3059,9 +2557,7 @@ export default function Etapa1Acelerador12d() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses?.consistencia?.respuesta_4_2}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses?.consistencia?.respuesta_4_2}</p>
                   </CardContent>
                 </Card>
 
@@ -3069,18 +2565,12 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 4.3 Plan de Acciones
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 4.3 Plan de Acciones</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses?.consistencia?.respuesta_4_3 ||
-                              "",
-                            "Respuesta 4.3"
-                          )
+                          copyToClipboard(improvedResponses?.consistencia?.respuesta_4_3 || "", "Respuesta 4.3")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -3089,9 +2579,7 @@ export default function Etapa1Acelerador12d() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses?.consistencia?.respuesta_4_3}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses?.consistencia?.respuesta_4_3}</p>
                   </CardContent>
                 </Card>
 
@@ -3099,18 +2587,12 @@ export default function Etapa1Acelerador12d() {
                 <Card className="bg-white">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">
-                        🔹 4.4 Bienes y Servicios
-                      </CardTitle>
+                      <CardTitle className="text-lg">🔹 4.4 Bienes y Servicios</CardTitle>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(
-                            improvedResponses?.consistencia?.respuesta_4_4 ||
-                              "",
-                            "Respuesta 4.4"
-                          )
+                          copyToClipboard(improvedResponses?.consistencia?.respuesta_4_4 || "", "Respuesta 4.4")
                         }
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -3119,9 +2601,7 @@ export default function Etapa1Acelerador12d() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {improvedResponses?.consistencia?.respuesta_4_4}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{improvedResponses?.consistencia?.respuesta_4_4}</p>
                   </CardContent>
                 </Card>
               </CardContent>
@@ -3129,11 +2609,7 @@ export default function Etapa1Acelerador12d() {
 
             {/* Botones de acción */}
             <div className="flex flex-wrap justify-between items-center pt-6 border-t gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentStep(3)}
-                size="lg"
-              >
+              <Button variant="outline" onClick={() => setCurrentStep(3)} size="lg">
                 Volver
               </Button>
               <Button
@@ -3155,8 +2631,7 @@ export default function Etapa1Acelerador12d() {
                 onClick={() => {
                   toast({
                     title: "💾 Listo",
-                    description:
-                      "Todas las respuestas están disponibles para copiar",
+                    description: "Todas las respuestas están disponibles para copiar",
                   });
                 }}
                 size="lg"
@@ -3173,11 +2648,7 @@ export default function Etapa1Acelerador12d() {
   };
 
   if (!proyecto) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        Cargando...
-      </div>
-    );
+    return <div className="flex items-center justify-center h-screen">Cargando...</div>;
   }
 
   return (
@@ -3218,12 +2689,7 @@ export default function Etapa1Acelerador12d() {
           <div className="sticky top-4">
             <CNPIERubricViewer
               rubricas={rubricas}
-              destacarCriterios={[
-                "Intencionalidad",
-                "Participación",
-                "Reflexión",
-                "Consistencia",
-              ]}
+              destacarCriterios={["Intencionalidad", "Participación", "Reflexión", "Consistencia"]}
             />
           </div>
         </div>
