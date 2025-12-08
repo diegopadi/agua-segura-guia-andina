@@ -1263,18 +1263,18 @@ export default function Etapa1Acelerador12c() {
     );
   };
 
+  // Helper para extraer número de cualquier formato (ej: "8 / 15 puntos" → 8)
+  const toNumber = (v: unknown): number => {
+    if (typeof v === "number") return v;
+    if (typeof v === "string") {
+      const m = v.match(/^(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    }
+    return 0;
+  };
+
   // PASO 2: Análisis de IA por ítem
   const renderStep2 = () => {
-    // Helper para extraer número de cualquier formato (ej: "8 / 15 puntos" → 8)
-    const toNumber = (v: unknown): number => {
-      if (typeof v === "number") return v;
-      if (typeof v === "string") {
-        const m = v.match(/^(\d+)/);
-        return m ? parseInt(m[1], 10) : 0;
-      }
-      return 0;
-    };
-
     if (!step2Data) {
       return (
         <Alert>
@@ -1892,7 +1892,9 @@ export default function Etapa1Acelerador12c() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Áreas a mejorar</p>
-                  <p className="text-2xl font-bold text-purple-900">{criteriosConPreguntas.length}</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {criteriosConPreguntas.filter((c) => generatedQuestions[c.key]?.preguntas?.length > 0).length}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1934,21 +1936,21 @@ export default function Etapa1Acelerador12c() {
                         </div>
                         <Badge variant="outline">
                           {criterio.key === "intencionalidad" && step2Data?.intencionalidad
-                            ? (step2Data.intencionalidad.indicador_1_1?.puntaje || 0) +
-                              (step2Data.intencionalidad.indicador_1_2?.puntaje || 0)
+                            ? toNumber(step2Data.intencionalidad.indicador_1_1?.puntaje) +
+                              toNumber(step2Data.intencionalidad.indicador_1_2?.puntaje)
                             : criterio.key === "originalidad" && step2Data?.originalidad
-                              ? (step2Data.originalidad.indicador_2_1?.puntaje || 0) +
-                                (step2Data.originalidad.indicador_2_2?.puntaje || 0)
+                              ? toNumber(step2Data.originalidad.indicador_2_1?.puntaje) +
+                                toNumber(step2Data.originalidad.indicador_2_2?.puntaje)
                               : criterio.key === "pertinencia" && step2Data?.pertinencia
-                                ? (step2Data.pertinencia.indicador_3_1?.puntaje || 0) +
-                                  (step2Data.pertinencia.indicador_3_2?.puntaje || 0)
+                                ? toNumber(step2Data.pertinencia.indicador_3_1?.puntaje) +
+                                  toNumber(step2Data.pertinencia.indicador_3_2?.puntaje)
                                 : criterio.key === "participacion" && step2Data?.participacion
-                                  ? step2Data.participacion.indicador_4_1?.puntaje || 0
+                                  ? toNumber(step2Data.participacion.indicador_4_1?.puntaje)
                                   : criterio.key === "reflexion" && step2Data?.reflexion
-                                    ? step2Data.reflexion.indicador_5_1?.puntaje || 0
+                                    ? toNumber(step2Data.reflexion.indicador_5_1?.puntaje)
                                     : criterio.key === "sostenibilidad" && step2Data?.sostenibilidad
-                                      ? (step2Data.sostenibilidad.indicador_6_1?.puntaje || 0) +
-                                        (step2Data.sostenibilidad.indicador_6_2?.puntaje || 0)
+                                      ? toNumber(step2Data.sostenibilidad.indicador_6_1?.puntaje) +
+                                        toNumber(step2Data.sostenibilidad.indicador_6_2?.puntaje)
                                       : 0}{" "}
                           / {criterio.maxScore} pts
                         </Badge>

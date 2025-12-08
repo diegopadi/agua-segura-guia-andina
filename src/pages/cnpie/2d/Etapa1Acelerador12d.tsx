@@ -1480,18 +1480,18 @@ export default function Etapa1Acelerador12d() {
     );
   };
 
+  // Helper para extraer número de cualquier formato (ej: "8 / 15 puntos" → 8)
+  const toNumber = (v: unknown): number => {
+    if (typeof v === "number") return v;
+    if (typeof v === "string") {
+      const m = v.match(/^(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    }
+    return 0;
+  };
+
   // PASO 2: Análisis de IA por ítem
   const renderStep2 = () => {
-    // Helper para extraer número de cualquier formato (ej: "8 / 15 puntos" → 8)
-    const toNumber = (v: unknown): number => {
-      if (typeof v === "number") return v;
-      if (typeof v === "string") {
-        const m = v.match(/^(\d+)/);
-        return m ? parseInt(m[1], 10) : 0;
-      }
-      return 0;
-    };
-
     if (!step2Data) {
       return (
         <Alert>
@@ -1957,7 +1957,9 @@ export default function Etapa1Acelerador12d() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Áreas a mejorar</p>
-                  <p className="text-2xl font-bold text-purple-900">{criteriosConPreguntas.length}</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {criteriosConPreguntas.filter((c) => generatedQuestions[c.key]?.preguntas?.length > 0).length}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1999,19 +2001,19 @@ export default function Etapa1Acelerador12d() {
                         </div>
                         <Badge variant="outline">
                           {criterio.key === "formulacion" && step2Data?.formulacion
-                            ? (step2Data.formulacion.indicador_1_1?.puntaje || 0) +
-                              (step2Data.formulacion.indicador_1_2?.puntaje || 0) +
-                              (step2Data.formulacion.indicador_1_3?.puntaje || 0) +
-                              (step2Data.formulacion.indicador_1_4?.puntaje || 0)
+                            ? toNumber(step2Data.formulacion.indicador_1_1?.puntaje) +
+                              toNumber(step2Data.formulacion.indicador_1_2?.puntaje) +
+                              toNumber(step2Data.formulacion.indicador_1_3?.puntaje) +
+                              toNumber(step2Data.formulacion.indicador_1_4?.puntaje)
                             : criterio.key === "participacion" && step2Data?.participacion
-                              ? step2Data.participacion.indicador_2_1?.puntaje || 0
+                              ? toNumber(step2Data.participacion.indicador_2_1?.puntaje)
                               : criterio.key === "reflexion" && step2Data?.reflexion
-                                ? step2Data.reflexion.indicador_3_1?.puntaje || 0
+                                ? toNumber(step2Data.reflexion.indicador_3_1?.puntaje)
                                 : criterio.key === "consistencia" && step2Data?.consistencia
-                                  ? (step2Data.consistencia.indicador_4_1?.puntaje || 0) +
-                                    (step2Data.consistencia.indicador_4_2?.puntaje || 0) +
-                                    (step2Data.consistencia.indicador_4_3?.puntaje || 0) +
-                                    (step2Data.consistencia.indicador_4_4?.puntaje || 0)
+                                  ? toNumber(step2Data.consistencia.indicador_4_1?.puntaje) +
+                                    toNumber(step2Data.consistencia.indicador_4_2?.puntaje) +
+                                    toNumber(step2Data.consistencia.indicador_4_3?.puntaje) +
+                                    toNumber(step2Data.consistencia.indicador_4_4?.puntaje)
                                   : 0}{" "}
                           / {criterio.maxScore} pts
                         </Badge>
