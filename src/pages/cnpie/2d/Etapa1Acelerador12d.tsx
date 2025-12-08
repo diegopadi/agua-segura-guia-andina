@@ -2286,8 +2286,26 @@ export default function Etapa1Acelerador12d() {
                 <div>
                   <p className="text-sm text-gray-600">Puntaje Actual</p>
                   <p className="text-2xl font-bold text-purple-900">
-                    {generatedQuestions.puntaje_actual} /{" "}
-                    {generatedQuestions.puntaje_maximo} pts
+                    {(() => {
+                      const toNum = (val: unknown): number => {
+                        if (typeof val === 'number') return val;
+                        if (typeof val === 'string') {
+                          const match = val.match(/(\d+)/);
+                          return match ? parseInt(match[1], 10) : 0;
+                        }
+                        return 0;
+                      };
+                      return toNum(step2Data?.formulacion?.indicador_1_1?.puntaje) +
+                        toNum(step2Data?.formulacion?.indicador_1_2?.puntaje) +
+                        toNum(step2Data?.formulacion?.indicador_1_3?.puntaje) +
+                        toNum(step2Data?.formulacion?.indicador_1_4?.puntaje) +
+                        toNum(step2Data?.participacion?.indicador_2_1?.puntaje) +
+                        toNum(step2Data?.reflexion?.indicador_3_1?.puntaje) +
+                        toNum(step2Data?.consistencia?.indicador_4_1?.puntaje) +
+                        toNum(step2Data?.consistencia?.indicador_4_2?.puntaje) +
+                        toNum(step2Data?.consistencia?.indicador_4_3?.puntaje) +
+                        toNum(step2Data?.consistencia?.indicador_4_4?.puntaje);
+                    })()} / 80 pts
                   </p>
                 </div>
                 <div className="text-right">
