@@ -175,6 +175,7 @@ export default function Etapa1Acelerador1() {
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generatingQuestions, setGeneratingQuestions] = useState(false);
+  const [evaluatingStep3, setEvaluatingStep3] = useState(false);
   const [generatedQuestions, setGeneratedQuestions] = useState<{
     intencionalidad?: {
       titulo: string;
@@ -767,6 +768,7 @@ export default function Etapa1Acelerador1() {
       return;
     }
 
+    setEvaluatingStep3(true);
     try {
       // Crear objeto combinado separado por secciones
       const combinedData = {
@@ -953,6 +955,8 @@ export default function Etapa1Acelerador1() {
         description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setEvaluatingStep3(false);
     }
   };
 
@@ -2360,17 +2364,49 @@ export default function Etapa1Acelerador1() {
           </CardContent>
         </Card>
 
+        {/* Overlay de evaluación Step 3 */}
+        {evaluatingStep3 && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <Card className="w-96">
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <div className="text-center">
+                    <h3 className="font-semibold text-lg mb-2">
+                      Analizando con IA
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Mejorando tus respuestas complementarias...
+                    </p>
+                  </div>
+                  <Progress className="w-full" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <div className="flex justify-between">
           <Button variant="outline" onClick={() => setCurrentStep(2)} size="lg">
             Anterior
           </Button>
           <Button
             onClick={handleEvaluateStep3Answers}
+            disabled={evaluatingStep3}
             size="lg"
             className="gap-2"
           >
-            Evaluar y Ver Resultado
-            <CheckCircle className="w-5 h-5" />
+            {evaluatingStep3 ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Evaluando...
+              </>
+            ) : (
+              <>
+                Evaluar y Ver Resultado
+                <CheckCircle className="w-5 h-5" />
+              </>
+            )}
           </Button>
         </div>
       </div>
