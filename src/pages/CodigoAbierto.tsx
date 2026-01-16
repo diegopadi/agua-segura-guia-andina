@@ -3,38 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { WaterLogo } from "@/components/WaterLogo";
-import { 
-  Globe, 
-  Clock, 
-  Sparkles, 
-  Award, 
-  Code, 
-  FileCode, 
-  Palette, 
-  Database, 
-  Github, 
-  Terminal, 
-  Scale, 
-  CheckCircle, 
-  ArrowRight, 
-  ExternalLink,
-  Copy,
-  Check,
-  Droplets,
-  Users,
-  BookOpen,
-  TrendingUp
-} from "lucide-react";
+import { Globe, Clock, Sparkles, Award, Code, FileCode, Palette, Database, Github, Terminal, Scale, CheckCircle, ArrowRight, ExternalLink, Copy, Check, Droplets, Users, BookOpen, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
-
 const CodigoAbierto = () => {
   const [copied, setCopied] = useState(false);
-
   const copyToClipboard = async () => {
     const commands = `git clone https://github.com/diegopadi/agua-segura-guia-andina
 bun install
 bun run dev`;
-    
     try {
       await navigator.clipboard.writeText(commands);
       setCopied(true);
@@ -44,36 +20,34 @@ bun run dev`;
       toast.error("Error al copiar");
     }
   };
-
-  const techStack = [
-    { name: "React + Vite", icon: Code, description: "UI moderna y rápida" },
-    { name: "TypeScript", icon: FileCode, description: "Tipado estático" },
-    { name: "Tailwind + shadcn/ui", icon: Palette, description: "Diseño consistente" },
-    { name: "Supabase", icon: Database, description: "PostgreSQL + Auth" },
-  ];
-
-  const roadmapItems = [
-    { 
-      title: "Automatización Pedagógica", 
-      status: "completed", 
-      description: "Aceleradores IA para planificación docente"
-    },
-    { 
-      title: "Integración CNPIE", 
-      status: "completed", 
-      description: "Postulación al Concurso Nacional 2026"
-    },
-  ];
-
-  const categories = [
-    "Proyectos Consolidados",
-    "Proyectos En Proceso", 
-    "Proyectos Promisorios",
-    "Investigación-Acción"
-  ];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+  const techStack = [{
+    name: "React + Vite",
+    icon: Code,
+    description: "UI moderna y rápida"
+  }, {
+    name: "TypeScript",
+    icon: FileCode,
+    description: "Tipado estático"
+  }, {
+    name: "Tailwind + shadcn/ui",
+    icon: Palette,
+    description: "Diseño consistente"
+  }, {
+    name: "Supabase",
+    icon: Database,
+    description: "PostgreSQL + Auth"
+  }];
+  const roadmapItems = [{
+    title: "Automatización Pedagógica",
+    status: "completed",
+    description: "Aceleradores IA para planificación docente"
+  }, {
+    title: "Integración CNPIE",
+    status: "completed",
+    description: "Postulación al Concurso Nacional 2026"
+  }];
+  const categories = ["Proyectos Consolidados", "Proyectos En Proceso", "Proyectos Promisorios", "Investigación-Acción"];
+  return <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {/* Header Navigation */}
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -92,11 +66,7 @@ bun run dev`;
 
       <main className="container mx-auto px-4 py-8 space-y-12">
         {/* Hero Section */}
-        <section 
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-accent p-8 md:p-12 text-primary-foreground"
-          role="region"
-          aria-labelledby="hero-title"
-        >
+        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-accent p-8 md:p-12 text-primary-foreground" role="region" aria-labelledby="hero-title">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAzMHYySDI0di0yaDEyek0zNiAyNnYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
           
           <div className="relative z-10 max-w-4xl">
@@ -202,15 +172,10 @@ bun run dev`;
               </p>
               
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {categories.map((category, index) => (
-                  <div 
-                    key={index}
-                    className="p-4 rounded-lg bg-muted/50 border text-center"
-                  >
+                {categories.map((category, index) => <div key={index} className="p-4 rounded-lg bg-muted/50 border text-center">
                     <BookOpen className="h-5 w-5 mx-auto mb-2 text-primary" aria-hidden="true" />
                     <p className="text-sm font-medium">{category}</p>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </CardContent>
           </Card>
@@ -224,15 +189,13 @@ bun run dev`;
           </h2>
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {techStack.map((tech, index) => (
-              <Card key={index} className="text-center hover:shadow-md transition-shadow">
+            {techStack.map((tech, index) => <Card key={index} className="text-center hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <tech.icon className="h-10 w-10 mx-auto mb-3 text-primary" aria-hidden="true" />
                   <h3 className="font-semibold mb-1">{tech.name}</h3>
                   <p className="text-sm text-muted-foreground">{tech.description}</p>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
           </div>
         </section>
 
@@ -247,18 +210,8 @@ bun run dev`;
                     Quick Start
                   </CardTitle>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={copyToClipboard}
-                  className="text-slate-300 hover:text-white hover:bg-slate-800"
-                  aria-label="Copiar comandos al portapapeles"
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4 mr-2" aria-hidden="true" />
-                  ) : (
-                    <Copy className="h-4 w-4 mr-2" aria-hidden="true" />
-                  )}
+                <Button variant="ghost" size="sm" onClick={copyToClipboard} className="text-slate-300 hover:text-white hover:bg-slate-800" aria-label="Copiar comandos al portapapeles">
+                  {copied ? <Check className="h-4 w-4 mr-2" aria-hidden="true" /> : <Copy className="h-4 w-4 mr-2" aria-hidden="true" />}
                   {copied ? "Copiado" : "Copiar"}
                 </Button>
               </div>
@@ -318,43 +271,15 @@ bun run dev`;
             {/* Timeline line */}
             <div className="absolute top-8 left-0 right-0 h-1 bg-muted hidden md:block" aria-hidden="true" />
             
-            <div className="grid md:grid-cols-3 gap-6">
-              {roadmapItems.map((item, index) => (
-                <Card 
-                  key={index} 
-                  className={`relative ${
-                    item.status === 'completed' ? 'border-secondary' :
-                    item.status === 'in-progress' ? 'border-primary ring-2 ring-primary/20' :
-                    'border-muted'
-                  }`}
-                >
+            <div className="grid md:grid-cols-3 gap-6 mx-0">
+              {roadmapItems.map((item, index) => <Card key={index} className={`relative ${item.status === 'completed' ? 'border-secondary' : item.status === 'in-progress' ? 'border-primary ring-2 ring-primary/20' : 'border-muted'}`}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-3">
-                      <div 
-                        className={`p-2 rounded-full ${
-                          item.status === 'completed' ? 'bg-secondary text-secondary-foreground' :
-                          item.status === 'in-progress' ? 'bg-primary text-primary-foreground animate-pulse' :
-                          'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {item.status === 'completed' ? (
-                          <CheckCircle className="h-5 w-5" aria-hidden="true" />
-                        ) : item.status === 'in-progress' ? (
-                          <Droplets className="h-5 w-5" aria-hidden="true" />
-                        ) : (
-                          <ArrowRight className="h-5 w-5" aria-hidden="true" />
-                        )}
+                      <div className={`p-2 rounded-full ${item.status === 'completed' ? 'bg-secondary text-secondary-foreground' : item.status === 'in-progress' ? 'bg-primary text-primary-foreground animate-pulse' : 'bg-muted text-muted-foreground'}`}>
+                        {item.status === 'completed' ? <CheckCircle className="h-5 w-5" aria-hidden="true" /> : item.status === 'in-progress' ? <Droplets className="h-5 w-5" aria-hidden="true" /> : <ArrowRight className="h-5 w-5" aria-hidden="true" />}
                       </div>
-                      <Badge 
-                        variant={
-                          item.status === 'completed' ? 'default' :
-                          item.status === 'in-progress' ? 'secondary' :
-                          'outline'
-                        }
-                        className={item.status === 'completed' ? 'bg-secondary' : ''}
-                      >
-                        {item.status === 'completed' ? 'Completado' :
-                         item.status === 'in-progress' ? 'En curso' : 'Planificado'}
+                      <Badge variant={item.status === 'completed' ? 'default' : item.status === 'in-progress' ? 'secondary' : 'outline'} className={item.status === 'completed' ? 'bg-secondary' : ''}>
+                        {item.status === 'completed' ? 'Completado' : item.status === 'in-progress' ? 'En curso' : 'Planificado'}
                       </Badge>
                     </div>
                     <CardTitle className="text-lg mt-2">{item.title}</CardTitle>
@@ -362,18 +287,13 @@ bun run dev`;
                   <CardContent>
                     <p className="text-sm text-muted-foreground">{item.description}</p>
                   </CardContent>
-                </Card>
-              ))}
+                </Card>)}
             </div>
           </div>
         </section>
 
         {/* Main CTA */}
-        <section 
-          className="text-center py-12 px-6 rounded-2xl bg-gradient-to-br from-muted/50 to-muted"
-          role="region"
-          aria-labelledby="cta-title"
-        >
+        <section className="text-center py-12 px-6 rounded-2xl bg-gradient-to-br from-muted/50 to-muted" role="region" aria-labelledby="cta-title">
           <Users className="h-12 w-12 mx-auto mb-4 text-primary" aria-hidden="true" />
           <h2 id="cta-title" className="text-2xl font-bold mb-4">
             Únete a la comunidad
@@ -383,17 +303,8 @@ bun run dev`;
             para tu región. Juntos construimos soberanía tecnológica.
           </p>
           
-          <Button 
-            asChild 
-            size="lg" 
-            className="text-lg px-8"
-          >
-            <a 
-              href="https://github.com/diegopadi/agua-segura-guia-andina" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2"
-            >
+          <Button asChild size="lg" className="text-lg px-8">
+            <a href="https://github.com/diegopadi/agua-segura-guia-andina" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
               <Github className="h-5 w-5" aria-hidden="true" />
               Ver en GitHub
               <ExternalLink className="h-4 w-4" aria-hidden="true" />
@@ -407,19 +318,12 @@ bun run dev`;
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>
             © 2026 Mi Cole con Agua Segura · 
-            <a 
-              href="https://github.com/diegopadi/agua-segura-guia-andina/blob/main/LICENSE" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary hover:underline ml-1"
-            >
+            <a href="https://github.com/diegopadi/agua-segura-guia-andina/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">
               Licencia MIT
             </a>
           </p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default CodigoAbierto;
