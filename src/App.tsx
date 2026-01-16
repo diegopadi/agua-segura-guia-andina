@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
+import CodigoAbierto from "./pages/CodigoAbierto";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -59,8 +60,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public survey route - NO AUTH REQUIRED */}
+            {/* Public routes - NO AUTH REQUIRED */}
             <Route path="/encuesta/:token" element={<PublicSurvey />} />
+            <Route path="/codigo-abierto" element={<CodigoAbierto />} />
 
             {/* Protected routes - AUTH REQUIRED */}
             <Route

@@ -4,11 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/useAuth";
 import { WaterLogo } from "@/components/WaterLogo";
+import { Code } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Ingrese un email válido"),
@@ -119,6 +119,19 @@ export function LoginForm({ onSuccess, onRegisterClick }: LoginFormProps) {
               >
                 Registrarse como docente
               </Button>
+            </p>
+          </div>
+
+          {/* Open Source Link */}
+          <div className="mt-4 pt-4 border-t border-muted">
+            <p className="text-sm text-center">
+              <a 
+                href="/codigo-abierto"
+                className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium"
+              >
+                <Code className="h-4 w-4" aria-hidden="true" />
+                ¡Esta app es código abierto! Haz click aquí
+              </a>
             </p>
           </div>
         </CardContent>
