@@ -60,13 +60,8 @@ bun run dev`;
     },
     { 
       title: "Integración CNPIE", 
-      status: "in-progress", 
+      status: "completed", 
       description: "Postulación al Concurso Nacional 2026"
-    },
-    { 
-      title: "Analítica Hídrica Regional", 
-      status: "planned", 
-      description: "Dashboards para gobiernos regionales"
     },
   ];
 
