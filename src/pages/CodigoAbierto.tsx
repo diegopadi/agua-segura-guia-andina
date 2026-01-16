@@ -320,7 +320,7 @@ bun run dev`;
             {/* Timeline line */}
             <div className="absolute top-8 left-0 right-0 h-1 bg-muted hidden md:block" aria-hidden="true" />
 
-            <div className="grid md:grid-cols-3 gap-6 mx-0">
+            <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
               {roadmapItems.map((item, index) => (
                 <Card
                   key={index}
