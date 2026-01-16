@@ -13,6 +13,7 @@ import {
   Database,
   RefreshCw,
   GraduationCap,
+  Code,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { WaterLogo } from "@/components/WaterLogo";
@@ -80,6 +81,11 @@ const etapasItems = [
 ];
 
 const footerItems = [
+  {
+    title: "Código Abierto",
+    url: "/codigo-abierto",
+    icon: Code,
+  },
   {
     title: "Ayuda",
     url: "/ayuda",
